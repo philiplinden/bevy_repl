@@ -1,15 +1,17 @@
 [package]
 name = "bevy_repl"
 version = "0.1.0"
-edition = "2021"
-description = "A simple REPL plugin for Bevy applications"
+edition = "2024"
+description = "Add a REPL to headless Bevy applications"
 license = "MIT"
 repository = "https://github.com/philiplinden/bevy_repl"
 keywords = ["bevy", "repl", "console", "debugging"]
 categories = ["game-development", "development-tools"]
 
 [dependencies]
-bevy = "0.16"
+bevy = { version = "0.16.1", default-features = false, features = ["bevy_log"]}
+clap = { version = "4.5", features = ["derive"] }
+
 # Set max log levels. This helps avoid unwanted low-severity log spam, which can affect performance.
 log = { version = "0.4", features = [
     "max_level_debug",
@@ -19,6 +21,18 @@ tracing = { version = "0.1", features = [
     "max_level_debug",
     "release_max_level_warn",
 ] }
+trie-rs = { version = "0.4.2", optional = true }
+
+[features]
+default = ["dev"]
+dev = ["bevy/dynamic_linking"]
+history = []
+suggestions = ["trie-rs"]
+diagnostics = [
+    "bevy/bevy_dev_tools",
+    "bevy/sysinfo_plugin",
+]
+
 
 # Idiomatic Bevy code often triggers these lints, and the CI workflow treats them as errors.
 # In some cases they may still signal poor code quality however, so consider commenting out these lines.
