@@ -10,7 +10,6 @@ impl ReplCommand for CloseReplCommand {
     fn command(&self) -> Command {
         Command::new("close")
             .about("Close the REPL but do not exit the application")
-            .aliases(["quit", "exit", "q"])
     }
 
     fn execute(&self, commands: &mut Commands, _matches: &clap::ArgMatches) -> ReplResult<String> {

@@ -34,10 +34,6 @@ default = [
     "dev",
 ]
 dev = ["bevy/dynamic_linking"]
-diagnostics = [
-    "bevy/bevy_dev_tools",
-    "bevy/sysinfo_plugin",
-]
 custom-history-file = ["rustyline/with-file-history"]
 # Derive feature enables the separate derive crate
 derive = ["bevy_repl_derive"]
