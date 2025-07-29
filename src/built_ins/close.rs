@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use crate::{ReplCommand, ReplResult, ReplDisableEvent};
-use clap::{Command, ArgMatches};
+use clap::Command;
 
 /// Close command - closes the REPL but does not exit the application
 #[derive(Default, Clone)]

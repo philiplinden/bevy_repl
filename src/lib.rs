@@ -316,7 +316,6 @@ impl ReplThreadManager {
 pub struct Repl {
     enabled: bool,
     thread_manager: ReplThreadManager,
-    config: ReplConfig,
 }
 
 impl Repl {
@@ -331,7 +330,6 @@ impl Repl {
         Self {
             enabled: config.enabled_on_startup,
             thread_manager: ReplThreadManager::new(config.clone()),
-            config: config,
         }
     }
     
