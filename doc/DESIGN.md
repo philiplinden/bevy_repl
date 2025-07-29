@@ -56,6 +56,16 @@ Entity 0:
 game>
 ```
 
+To add or remove features from `clap` or `rustyline`, you can enable or disable
+features in your `Cargo.toml` file alongside the `bevy_repl` dependency.
+
+```toml
+[dependencies]
+bevy_repl = "0.1.0"
+clap = { version = "4.5", features = ["derive", "suggestions", "color"] }
+rustyline = { version = "16.0", features = ["with-file-history", "with-dirs"] }
+```
+
 ## Design Decisions
 
 ### Why a separate thread for input handling?
@@ -87,7 +97,7 @@ parser with features like:
 - Command history
 - Tab completion
 - Syntax highlighting
-- Proven reliability through wide community adoption
+- Wide community adoption
 
 ## Built-in Commands
 
@@ -131,3 +141,11 @@ Total Components: 156
 Total Resources: 42
 Approximate Memory Usage: 2048 bytes
 ```
+
+## Future Features
+
+- [ ] Add command suggestions with `trie-rs` similar to the implementation in
+  `bevy-console`.
+- [ ] Add a `clear` command to clear the terminal.
+- [ ] Add a `history` command to show the command history.
+- [ ] Add a `clear-history` command to clear the command history.
