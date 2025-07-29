@@ -7,14 +7,22 @@ pub mod input;
 pub mod execution;
 pub mod output;
 
+// Re-export the derive macro when the derive feature is enabled  
+#[cfg(feature = "derive")]
+pub use bevy_repl_derive::ReplCommand;
+
 pub mod prelude {
     #[cfg(feature = "diagnostics")]
     pub use crate::built_ins::SysInfoCommand;
     pub use crate::{
-        built_ins::{HelpCommand, QuitCommand, TreeCommand},
+        built_ins::{HelpCommand, QuitCommand, CloseReplCommand},
         registry::ReplCommandRegistration,
     };
-    pub use crate::{Repl, ReplCommand, ReplResult, ReplSet, repl_enabled, ReplConfig};
+    pub use crate::{ReplPlugin, Repl, ReplCommand, ReplResult, ReplSet, repl_enabled, ReplConfig, ReplEnableEvent, ReplDisableEvent, ReplToggleEvent};
+    
+    // Re-export derive macro in prelude
+    #[cfg(feature = "derive")]
+    pub use bevy_repl_derive::ReplCommand;
 }
 
 use crate::{
@@ -30,6 +38,7 @@ use std::{
     collections::BTreeMap,
 };
 use bevy::prelude::*;
+
 
 /// The main REPL plugin
 pub struct ReplPlugin {
@@ -52,12 +61,16 @@ impl Plugin for ReplPlugin {
         let config = self.config.clone();
         let mut repl = Repl::with_config(config.clone());
         if config.enabled_on_startup {
-            enable_repl(&mut repl);
+            repl.enable();
         }
         app.insert_resource(config)
             .insert_resource(repl)
             .insert_resource(ReplCommandRegistry::default())
             .configure_sets(Update, ReplSet::First) // Always runs
+            .add_systems(Update, toggle_repl_system.in_set(ReplSet::First))
+            .add_observer(repl_enable_observer)
+            .add_observer(repl_disable_observer)
+            .add_observer(repl_toggle_observer)
             .add_plugins((
                 ReplInputPlugin,
                 ReplOutputPlugin,
@@ -66,9 +79,8 @@ impl Plugin for ReplPlugin {
 
         if !self.no_built_in_commands {
             app.add_repl_command::<built_ins::HelpCommand>();
-            app.add_repl_command::<built_ins::CloseCommand>();
+            app.add_repl_command::<built_ins::CloseReplCommand>();
             app.add_repl_command::<built_ins::QuitCommand>();
-            app.add_repl_command::<built_ins::TreeCommand>();
             #[cfg(feature = "diagnostics")]
             app.add_repl_command::<built_ins::SysInfoCommand>();
         }
@@ -80,45 +92,61 @@ pub fn repl_enabled(repl: Res<Repl>) -> bool {
     repl.is_enabled()
 }
 
+/// Event to enable the REPL
+#[derive(Event)]
+pub struct ReplEnableEvent;
+
+/// Event to disable the REPL
+#[derive(Event)]
+pub struct ReplDisableEvent;
+
+/// Event to toggle the REPL between enabled and disabled states
+#[derive(Event)]
+pub struct ReplToggleEvent;
+
+
 /// System that handles keyboard input for toggling the REPL
-/// This listens for the configured toggle key and toggles the REPL state
-pub(crate) fn repl_toggle_system(
+/// This listens for the configured toggle key and triggers a toggle event
+pub(crate) fn toggle_repl_system(
     keyboard_input: Res<ButtonInput<KeyCode>>,
     config: Res<ReplConfig>,
-    mut repl: ResMut<Repl>,
+    mut commands: Commands,
 ) {
     // Only process toggle if a key is configured
     if let Some(toggle_key) = config.toggle_key {
         if keyboard_input.just_pressed(toggle_key) {
-            repl.toggle();
-
-            // Log the state change
-            if repl.is_enabled() {
-                info!("REPL enabled");
-            } else {
-                info!("REPL disabled");
-            }
+            commands.trigger(ReplToggleEvent);
         }
     }
 }
 
-/// Enable the REPL
-pub fn enable_repl(repl: &mut Repl) {
+/// Observer that handles REPL enable events
+fn repl_enable_observer(
+    _trigger: Trigger<ReplEnableEvent>,
+    mut repl: ResMut<Repl>,
+) {
     info!("Starting Bevy REPL...");
     info!("Type 'help' for available commands, 'quit' to exit.");
     repl.enable();
 }
 
-/// Disable the REPL
-pub fn disable_repl(repl: &mut Repl) {
+/// Observer that handles REPL disable events
+fn repl_disable_observer(
+    _trigger: Trigger<ReplDisableEvent>,
+    mut repl: ResMut<Repl>,
+) {
     info!("Stopping Bevy REPL...");
     repl.disable();
 }
 
-/// Toggle the REPL between enabled and disabled states
-pub fn toggle_repl(repl: &mut Repl) {
+/// Observer that handles REPL toggle events
+fn repl_toggle_observer(
+    _trigger: Trigger<ReplToggleEvent>,
+    mut repl: ResMut<Repl>,
+) {
     repl.toggle();
 
+    // Log the state change
     if repl.is_enabled() {
         info!("REPL enabled");
     } else {
@@ -126,9 +154,46 @@ pub fn toggle_repl(repl: &mut Repl) {
     }
 }
 
+/// Trigger the REPL to be enabled
+/// Send this event to enable the REPL through the trigger system
+pub fn enable_repl(mut commands: Commands) {
+    commands.trigger(ReplEnableEvent);
+}
+
+/// Trigger the REPL to be disabled  
+/// Send this event to disable the REPL through the trigger system
+pub fn disable_repl(mut commands: Commands) {
+    commands.trigger(ReplDisableEvent);
+}
+
+/// Trigger the REPL to toggle between enabled and disabled states
+/// Send this event to toggle the REPL through the trigger system
+pub fn toggle_repl(mut commands: Commands) {
+    commands.trigger(ReplToggleEvent);
+}
+
+/// Trait for REPL commands
+/// Use `execute` for commands that don't need world access
+/// Use `execute_with_world` for commands that need world access
 pub trait ReplCommand: Send + Sync + 'static {
     fn command(&self) -> clap::Command;
-    fn execute(&self, world: &mut World, matches: &clap::ArgMatches) -> ReplResult<String>;
+    
+    /// Execute command with limited access (for simple commands)
+    fn execute(&self, _commands: &mut Commands, _matches: &clap::ArgMatches) -> ReplResult<String> {
+        // Default implementation for commands that don't need world access
+        Ok("Command not implemented".to_string())
+    }
+    
+    /// Execute command with full world access (for complex commands)
+    fn execute_with_world(&self, _world: &World, commands: &mut Commands, matches: &clap::ArgMatches) -> ReplResult<String> {
+        // Default: fall back to regular execute
+        self.execute(commands, matches)
+    }
+    
+    /// Whether this command needs world access
+    fn needs_world_access(&self) -> bool {
+        false
+    }
 }
 
 pub type ReplResult<T> = Result<T, Box<dyn std::error::Error + Send + Sync>>;

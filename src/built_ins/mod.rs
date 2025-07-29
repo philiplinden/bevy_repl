@@ -1,15 +1,13 @@
 mod help;
-mod tree;
 mod quit;
 mod close;
 
+#[cfg(feature = "diagnostics")]
+mod sysinfo;
+
 pub use help::HelpCommand;
-pub use close::CloseCommand;
+pub use close::CloseReplCommand;
 pub use quit::QuitCommand;
-pub use tree::TreeCommand;
 
 #[cfg(feature = "diagnostics")]
-mod diagnostics {
-    mod sysinfo;
-    pub use sysinfo::SysInfoCommand;
-}
+pub use sysinfo::SysInfoCommand;

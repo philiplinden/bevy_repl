@@ -5,6 +5,7 @@ use crate::{ReplCommand, ReplResult};
 #[derive(Resource, Default)]
 pub struct ReplCommandRegistry {
     commands: HashMap<String, Box<dyn ReplCommand>>,
+    world_access_commands: HashMap<String, Box<dyn ReplCommand>>,
     app: Option<clap::Command>, // Built dynamically from registered commands
 }
 
@@ -21,9 +22,16 @@ impl ReplCommandRegistry {
         self.commands.contains_key(name)
     }
     
-    pub fn register(&mut self, command: impl ReplCommand + 'static) {
+    pub fn register(&mut self, command: impl ReplCommand + Clone + 'static) {
         let name = command.command().get_name().to_string();
-        self.commands.insert(name, Box::new(command));
+        let needs_world = command.needs_world_access();
+        
+        let command_clone = command.clone();
+        if needs_world {
+            self.world_access_commands.insert(name.clone(), Box::new(command_clone));
+        } else {
+            self.commands.insert(name.clone(), Box::new(command_clone));
+        }
         self.rebuild_app();
     }
 
@@ -50,20 +58,56 @@ impl ReplCommandRegistry {
             
             if let Some((name, sub_matches)) = matches.subcommand() {
                 if let Some(command) = self.get_command(name) {
-                    command.execute(commands, sub_matches)
+                    command.as_ref().execute(commands, sub_matches)
                 } else {
                     Ok(format!("Unknown command: `{}`. Use 'help' to see available commands.", name))
                 }
             } else {
                 // Run help command if no command is given
                 if let Some(help_command) = self.get_command("help") {
-                    help_command.execute(commands, &matches)
+                    help_command.as_ref().execute(commands, &matches)
                 } else {
                     Ok("No command specified. Help command not found.".to_string())
                 }
             }
         } else {
             Ok("No commands registered. Register commands with `add_repl_command`.".to_string())
+        }
+    }
+
+    pub fn parse_and_execute_with_world(
+        &self, 
+        input: &str, 
+        world: &mut World, 
+        commands: &mut Commands
+    ) -> ReplResult<String> {
+        if let Some(app) = &self.app {
+            let matches = app.clone().try_get_matches_from(input.split_whitespace())?;
+            
+            if let Some((name, sub_matches)) = matches.subcommand() {
+                if let Some(command) = self.get_command(name) {
+                    if command.needs_world_access() {
+                        command.execute_with_world(world, commands, sub_matches)
+                    } else {
+                        command.execute(commands, sub_matches)
+                    }
+                } else {
+                    Ok(format!("Unknown command: `{}`", name))
+                }
+            } else {
+                // Handle help case
+                if let Some(help_command) = self.get_command("help") {
+                    if help_command.needs_world_access() {
+                        help_command.execute_with_world(world, commands, &matches)
+                    } else {
+                        help_command.execute(commands, &matches)
+                    }
+                } else {
+                    Ok("No command specified.".to_string())
+                }
+            }
+        } else {
+            Ok("No commands registered.".to_string())
         }
     }
 }
@@ -90,11 +134,11 @@ pub trait ReplCommandRegistration {
     /// #     fn execute(&self, _: &mut Commands, _: &clap::ArgMatches) -> ReplResult<String> { Ok("".to_string()) }
     /// # }
     /// ```
-    fn add_repl_command<T: ReplCommand + 'static>(&mut self) -> &mut Self;
+    fn add_repl_command<T: ReplCommand + Default + Clone + 'static>(&mut self) -> &mut Self;
 }
 
 impl ReplCommandRegistration for App {
-    fn add_repl_command<T: ReplCommand + 'static>(&mut self) -> &mut Self {
+    fn add_repl_command<T: ReplCommand + Default + Clone + 'static>(&mut self) -> &mut Self {
         self.add_systems(Startup, |mut registry: ResMut<ReplCommandRegistry>| {
             registry.register(T::default());
         });

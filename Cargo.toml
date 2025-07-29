@@ -1,3 +1,6 @@
+[workspace]
+members = [".", "bevy_repl_derive"]
+
 [package]
 name = "bevy_repl"
 version = "0.1.0"
@@ -12,6 +15,9 @@ categories = ["game-development", "development-tools"]
 bevy = { version = "0.16.1", default-features = false, features = ["bevy_log"]}
 clap = { version = "4.5" }
 rustyline = { version = "16.0"  }
+
+# Derive support via separate crate
+bevy_repl_derive = { version = "0.1.0", path = "./bevy_repl_derive", optional = true }
 
 # Set max log levels. This helps avoid unwanted low-severity log spam, which can affect performance.
 log = { version = "0.4", features = [
@@ -33,6 +39,8 @@ diagnostics = [
     "bevy/sysinfo_plugin",
 ]
 custom-history-file = ["rustyline/with-file-history"]
+# Derive feature enables the separate derive crate
+derive = ["bevy_repl_derive"]
 
 [[example]]
 name = "minimal"
@@ -45,7 +53,7 @@ path = "examples/complete.rs"
 [[example]]
 name = "derive"
 path = "examples/derive.rs"
-features = ["derive"]
+required-features = ["derive"]
 
 
 # Idiomatic Bevy code often triggers these lints, and the CI workflow treats them as errors.

@@ -15,7 +15,7 @@ fn main() {
     app.run();
 }
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 struct SpawnEnemyCommand;
 
 impl ReplCommand for SpawnEnemyCommand {

@@ -16,7 +16,6 @@ of it. You have been warned.
 | --- | --- |
 | `help` | List all available commands |
 | `quit` | Gracefully terminate the application |
-| `tree` | List entities with components as a tree |
 | `sysinfo` | Show system information (requires `diagnostics` feature) |
 
 ## Usage

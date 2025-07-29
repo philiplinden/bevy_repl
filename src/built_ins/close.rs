@@ -1,24 +1,20 @@
 use bevy::prelude::*;
-use crate::{Repl, disable_repl, ReplCommand, ReplResult};
+use crate::{ReplCommand, ReplResult, ReplDisableEvent};
 use clap::{Command, ArgMatches};
 
 /// Close command - closes the REPL but does not exit the application
-#[derive(Default)]
-pub struct CloseCommand;
+#[derive(Default, Clone)]
+pub struct CloseReplCommand;
 
-impl ReplCommand for CloseCommand {
+impl ReplCommand for CloseReplCommand {
     fn command(&self) -> Command {
         Command::new("close")
             .about("Close the REPL but do not exit the application")
             .aliases(["quit", "exit", "q"])
     }
 
-    fn execute(&self, world: &mut World, _matches: &clap::ArgMatches) -> ReplResult<String> {
-        if let Some(mut repl) = world.get_resource_mut::<Repl>() {
-            disable_repl(&mut repl);
-            Ok("REPL disabled. Application will continue running.".to_string())
-        } else {
-            Err("REPL not running".into())
-        }
+    fn execute(&self, commands: &mut Commands, _matches: &clap::ArgMatches) -> ReplResult<String> {
+        commands.trigger(ReplDisableEvent);
+        Ok("REPL disabled. Application will continue running.".to_string())
     }
 }

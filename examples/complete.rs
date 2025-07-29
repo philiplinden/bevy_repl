@@ -16,7 +16,7 @@ fn main() {
 // ============================================================================
 
 /// Spawn a player entity with given name
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct SpawnPlayerCommand;
 
 impl ReplCommand for SpawnPlayerCommand {
@@ -56,7 +56,7 @@ impl ReplCommand for SpawnPlayerCommand {
 }
 
 /// Teleport an entity to specific coordinates
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct TeleportCommand;
 
 impl ReplCommand for TeleportCommand {
@@ -90,7 +90,7 @@ impl ReplCommand for TeleportCommand {
             )
     }
 
-    fn execute(&self, commands: &mut Commands, matches: &clap::ArgMatches) -> ReplResult<String> {
+    fn execute(&self, _commands: &mut Commands, matches: &clap::ArgMatches) -> ReplResult<String> {
         let entity_id: u32 = matches.get_one::<String>("entity")
             .unwrap()
             .parse()
@@ -118,7 +118,7 @@ impl ReplCommand for TeleportCommand {
 }
 
 /// List all entities in the world
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct ListEntitiesCommand;
 
 impl ReplCommand for ListEntitiesCommand {

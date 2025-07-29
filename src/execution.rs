@@ -1,5 +1,6 @@
 use crate::{
-    Repl, ReplSet, input::ReplCommandQueue, registry::ReplCommandRegistry, repl_enabled,
+    ReplSet, input::ReplCommandQueue, registry::ReplCommandRegistry, repl_enabled,
+    output::PrintReplLine,
 };
 use bevy::prelude::*;
 
@@ -13,25 +14,65 @@ impl Plugin for ReplExecutionPlugin {
                 .run_if(repl_enabled)
                 .after(ReplSet::Input),
         )
-        .add_systems(Update, (command_execution_system,).in_set(ReplSet::Execution));
+        .add_systems(Update, (command_execution_with_world_access,).in_set(ReplSet::Execution));
     }
 }
 
+#[allow(unused_variables, unused_mut)]
 /// System that executes commands from the registry
-fn command_execution_system(
+fn command_execution_with_world_access(
     mut command_queue: ResMut<ReplCommandQueue>,
-    registry: ResMut<ReplCommandRegistry>,
+    registry: Res<ReplCommandRegistry>,
     mut commands: Commands,
-    repl: ResMut<Repl>,
+    world: &World,
+    mut print_events: EventWriter<PrintReplLine>,
 ) {
-    while let Some(command_input) = command_queue.commands.pop_front() {
-        match registry.parse_and_execute(&command_input, &mut commands) {
-            Ok(output) => {
-                repl.send_output(output);
+    // Process all commands in the queue
+    while let Some(input) = command_queue.commands.pop_front() {
+        let input = input.trim();
+        if input.is_empty() {
+            continue;
+        }
+
+        // Parse the command using clap
+        if let Some(app) = registry.get_app() {
+            let mut app_clone = app.clone();
+            match app_clone.try_get_matches_from(input.split_whitespace()) {
+                Ok(matches) => {
+                    // Get the subcommand name
+                    if let Some((command_name, sub_matches)) = matches.subcommand() {
+                        if let Some(command) = registry.get_command(command_name) {
+                            let result = if command.needs_world_access() {
+                                command.execute_with_world(world, &mut commands, sub_matches)
+                            } else {
+                                command.execute(&mut commands, sub_matches)
+                            };
+
+                            match result {
+                                Ok(output) => {
+                                    if !output.is_empty() {
+                                        print_events.write(PrintReplLine(output));
+                                    }
+                                }
+                                Err(e) => {
+                                    print_events.write(PrintReplLine(format!("Error: {}", e)));
+                                }
+                            }
+                        } else {
+                            print_events.write(PrintReplLine(format!("Unknown command: {}", command_name)));
+                        }
+                    } else {
+                        // No subcommand provided, show help
+                        let help_output = "Type 'help' for available commands".to_string();
+                        print_events.write(PrintReplLine(help_output));
+                    }
+                }
+                Err(e) => {
+                    print_events.write(PrintReplLine(format!("Command parse error: {}", e)));
+                }
             }
-            Err(e) => {
-                repl.send_output(format!("Error: {}", e));
-            }
+        } else {
+            print_events.write(PrintReplLine("No commands registered".to_string()));
         }
     }
 }

@@ -7,137 +7,39 @@ use bevy_repl::prelude::*;
 
 fn main() {
     App::new()
+        .add_plugins(DefaultPlugins)
         .add_plugins(ReplPlugin::default())
         // Register custom commands using the derive approach
-        .add_repl_command::<SpawnPlayerCommand>()
-        .add_repl_command::<TeleportCommand>()
-        .add_repl_command::<ListEntitiesCommand>()
+        .add_repl_command::<HelloCommand>()
+        .add_repl_command::<StatusCommand>()
+        .add_repl_command::<CustomCommand>()
         .run();
 }
 
-// ============================================================================
-// DERIVE APPROACH (Derive Feature) - Automatic Implementation
-// ============================================================================
+/// Simple hello command
+#[derive(ReplCommand)]
+#[command(name = "hello", about = "Say hello to the world")]
+pub struct HelloCommand;
 
-/// Spawn a player entity with given name
-#[derive(ReplCommand, Default)]
-#[command(name = "spawn-player", about = "Spawn a new player entity")]
-pub struct SpawnPlayerCommand {
-    #[arg(help = "Player name", required = true)]
-    name: String,
-    
-    #[arg(help = "Starting health", default_value = "100")]
-    health: i32,
-}
+/// Status command with custom implementation
+#[derive(ReplCommand)]
+#[command(name = "status", about = "Show application status")]
+pub struct StatusCommand;
 
-impl SpawnPlayerCommand {
-    fn execute(&self, commands: &mut Commands) -> ReplResult<String> {
-        commands.spawn((
-            Name::new(self.name.clone()),
-            Transform::from_xyz(0.0, 0.0, 0.0),
-            Player { health: self.health },
-        ));
-
-        Ok(format!("Spawned player '{}' with {} health", self.name, self.health))
+impl StatusCommand {
+    // You can still override the default execute method
+    fn execute(&self, _commands: &mut Commands, _matches: &clap::ArgMatches) -> ReplResult<String> {
+        Ok("Application is running smoothly!".to_string())
     }
 }
 
-/// Teleport an entity to specific coordinates
-#[derive(ReplCommand, Default)]
-#[command(name = "teleport", about = "Teleport an entity to coordinates")]
-pub struct TeleportCommand {
-    #[arg(help = "Entity ID to teleport", required = true)]
-    entity: u32,
-    
-    #[arg(help = "X coordinate", required = true)]
-    x: f32,
-    
-    #[arg(help = "Y coordinate", required = true)]
-    y: f32,
-    
-    #[arg(help = "Z coordinate", default_value = "0")]
-    z: f32,
-}
+/// Custom command with aliases
+#[derive(ReplCommand)]
+#[command(name = "custom", about = "A custom command with aliases", aliases = ["c", "cust"])]
+pub struct CustomCommand;
 
-impl TeleportCommand {
-    fn execute(&self, _commands: &mut Commands) -> ReplResult<String> {
-        // In a real implementation, you'd query for the entity and update its transform
-        Ok(format!("Teleported entity {} to ({}, {}, {})", self.entity, self.x, self.y, self.z))
+impl CustomCommand {
+    fn execute(&self, _commands: &mut Commands, _matches: &clap::ArgMatches) -> ReplResult<String> {
+        Ok("Custom command executed! Available aliases: c, cust".to_string())
     }
 }
-
-/// List all entities in the world
-#[derive(ReplCommand, Default)]
-#[command(name = "list-entities", about = "List all entities in the world")]
-pub struct ListEntitiesCommand {
-    #[arg(help = "Filter by component type", long, short)]
-    filter: Option<String>,
-}
-
-impl ListEntitiesCommand {
-    fn execute(&self, _commands: &mut Commands) -> ReplResult<String> {
-        if let Some(filter_type) = &self.filter {
-            Ok(format!("Listing entities with component: {}", filter_type))
-        } else {
-            Ok("Listing all entities in the world".to_string())
-        }
-    }
-}
-
-// ============================================================================
-// COMPONENTS
-// ============================================================================
-
-#[derive(Component)]
-struct Player {
-    health: i32,
-}
-
-// ============================================================================
-// ADVANCED DERIVE FEATURES (Hypothetical)
-// ============================================================================
-
-/// Example of more advanced derive features that could be implemented
-#[derive(ReplCommand, Default)]
-#[command(name = "advanced", about = "Advanced command with validation")]
-pub struct AdvancedCommand {
-    #[arg(help = "Player name", required = true)]
-    #[validate(length(min = 3, max = 20))]
-    name: String,
-    
-    #[arg(help = "Health value", required = true)]
-    #[validate(range(min = 1, max = 1000))]
-    health: i32,
-    
-    #[arg(help = "Position", required = true)]
-    #[validate(custom = "validate_position")]
-    position: Vec3,
-    
-    #[arg(help = "Enable debug mode", long, short)]
-    debug: bool,
-}
-
-impl AdvancedCommand {
-    fn execute(&self, commands: &mut Commands) -> ReplResult<String> {
-        if self.debug {
-            println!("Debug: Spawning player with position {:?}", self.position);
-        }
-        
-        commands.spawn((
-            Name::new(self.name.clone()),
-            Transform::from_translation(self.position),
-            Player { health: self.health },
-        ));
-
-        Ok(format!("Spawned advanced player '{}'", self.name))
-    }
-}
-
-// Custom validation function (would be part of the derive macro)
-fn validate_position(pos: &Vec3) -> Result<(), String> {
-    if pos.x.abs() > 1000.0 || pos.y.abs() > 1000.0 || pos.z.abs() > 1000.0 {
-        Err("Position coordinates must be within ±1000".to_string())
-    } else {
-        Ok(())
-    }
-} 
