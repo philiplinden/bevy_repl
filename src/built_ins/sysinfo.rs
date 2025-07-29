@@ -32,10 +32,6 @@ impl ReplCommand for SysInfoCommand {
         let resource_count = world.resources().len();
         output.push_str(&format!("Total Resources: {}\n", resource_count));
         
-        // Archetype count
-        let archetype_count = world.archetypes().len();
-        output.push_str(&format!("Total Archetypes: {}\n", archetype_count));
-        
         // Memory usage (approximate)
         let total_memory = world.archetypes()
             .map(|archetype| archetype.len() * archetype.layout().size())

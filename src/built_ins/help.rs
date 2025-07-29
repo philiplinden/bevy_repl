@@ -1,6 +1,5 @@
 use bevy::prelude::*;
-use crate::repl::ReplCommand;
-use crate::repl::ReplResult;
+use crate::{ReplCommand, ReplResult, ReplCommandRegistry};
 use clap::{Command, Arg, ArgMatches};
 
 /// Help command - lists all available commands
@@ -43,9 +42,5 @@ impl ReplCommand for HelpCommand {
             output.push_str("\nUse 'help <command>' for detailed help on a specific command.");
             Ok(output)
         }
-    }
-
-    fn name(&self) -> &'static str {
-        "help"
     }
 }

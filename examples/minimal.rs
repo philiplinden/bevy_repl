@@ -5,7 +5,7 @@ fn main() {
     let mut app = App::new();
 
     app.add_plugins(ReplPlugin::default())
-        .register_command::<SpawnEnemyCommand>();
+        .add_repl_command::<SpawnEnemyCommand>();
 
     // Run in headless mode at 60 fps
     app.add_plugins(bevy::app::ScheduleRunnerPlugin::run_loop(
@@ -19,19 +19,15 @@ fn main() {
 struct SpawnEnemyCommand;
 
 impl ReplCommand for SpawnEnemyCommand {
-    fn name(&self) -> &'static str {
-        "spawn-enemy"
-    }
-
     fn command(&self) -> clap::Command {
         clap::Command::new("spawn-enemy")
             .about("Spawns an enemy entity")
             .arg(clap::Arg::new("health").required(false))
     }
 
-    fn execute(&self, world: &mut World, matches: &clap::ArgMatches) -> ReplResult<String> {
+    fn execute(&self, commands: &mut Commands, matches: &clap::ArgMatches) -> ReplResult<String> {
         let health = matches.get_one::<i32>("health").unwrap_or(&100);
-        world.spawn((
+        commands.spawn((
             Name::new("Enemy"),
             Transform::from_xyz(5.0, 0.0, 0.0),
             Health { value: *health },

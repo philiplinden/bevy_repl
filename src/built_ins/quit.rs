@@ -1,6 +1,5 @@
 use bevy::prelude::*;
-use crate::repl::ReplCommand;
-use crate::repl::ReplResult;
+use crate::{ReplCommand, ReplResult};
 use clap::{Command, ArgMatches};
 
 /// Quit/Exit command - graceful shutdown
@@ -13,18 +12,8 @@ impl ReplCommand for QuitCommand {
             .about("Gracefully terminate the application")
             .aliases(["exit", "q"])
     }
-
-    // In command.rs QuitCommand
     fn execute(&self, world: &mut World, _matches: &clap::ArgMatches) -> ReplResult<String> {
-        if let Some(repl_state) = world.get_resource_mut::<ReplState>() {
-            repl_state.request_quit();
-            Ok("Shutting down...".to_string())
-        } else {
-            Err("REPL not running".into())
-        }
-    }
-
-    fn name(&self) -> &'static str {
-        "quit"
+        world.send_event(AppExit::Success);
+        Ok("Shutting down application...".to_string())
     }
 }

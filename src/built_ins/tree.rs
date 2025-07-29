@@ -1,13 +1,12 @@
+use bevy::prelude::*;
+use crate::{ReplCommand, ReplResult};
+use clap::{Command, Arg, ArgMatches};
 
 /// Tree command - list entities with components as a tree
 #[derive(Default)]
 pub struct TreeCommand;
 
 impl ReplCommand for TreeCommand {
-    fn name(&self) -> &'static str {
-        "tree"
-    }
-
     fn command(&self) -> Command {
         Command::new("tree")
             .about("List entities with components as a tree")

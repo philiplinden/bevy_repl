@@ -80,6 +80,49 @@ read user input directly in the main thread, it would:
 **Solution:** Move input handling to a separate thread that can block safely while
 the main game continues running.
 
+### Why use a resource queue instead of events for command processing?
+
+**Problem:** Commands need to be processed across multiple frames and may require
+complex state management, retry logic, and error handling.
+
+**Solution:** Use a `ReplCommandQueue` resource instead of Bevy's event system.
+
+**Benefits of Resource Queue over Events:**
+
+- **Cross-frame processing**: Commands can be processed across multiple frames if needed
+- **Error handling**: Can implement retry logic for failed commands
+- **Queue inspection**: Can show pending commands to users or implement queue management
+- **Batching**: Can process multiple commands in one frame if desired
+- **State management**: Can track command execution state and metadata
+- **Manual control**: Full control over when commands are added/removed from the queue
+
+**Example advantages:**
+
+```rust
+// Can implement retry logic
+if command_failed {
+    command_queue.commands.push_front(failed_command); // Retry
+}
+
+// Can show queue status
+repl.send_output(format!("{} commands pending", command_queue.commands.len()));
+
+// Can batch process commands
+let batch_size = 5;
+for _ in 0..batch_size {
+    if let Some(cmd) = command_queue.commands.pop_front() {
+        // Process command
+    }
+}
+```
+
+**Events would be limiting because:**
+
+- Events are automatically cleared after being read
+- Events are designed for immediate, same-frame processing
+- Events don't support complex state management
+- Events can't be inspected or modified after being sent
+
 ### Why use `clap` and `rustyline`?
 
 The REPL uses two key libraries for handling user interaction:
@@ -98,6 +141,85 @@ parser with features like:
 - Tab completion
 - Syntax highlighting
 - Wide community adoption
+
+### Why use a three-thread architecture with channels?
+
+**Problem:** The REPL needs to handle user input without blocking the main game loop,
+while also managing output display and command processing.
+
+**Solution:** Use a `ReplThreadManager` with three coordinated threads communicating
+via channels.
+
+**Thread Architecture:**
+
+```text
+[Main Bevy Thread] ←→ [Rustyline Input Thread] ←→ [Output Thread]
+```
+
+**Channel Communication:**
+
+**Input Channel (`input_tx`/`input_rx`):**
+
+- **Rustyline thread** → **Main thread**: Sends user commands
+- `input_tx.send(line)` - Rustyline sends typed commands
+- `input_rx.try_recv()` - Main thread receives commands
+
+**Output Channel (`output_tx`/`output_rx`):**
+
+- **Main thread** → **Output thread**: Sends command results
+- `output_tx.send(result)` - Main thread sends command output
+- `output_rx.recv()` - Output thread prints results
+
+**How Each Thread Works:**
+
+**Rustyline Input Thread:**
+
+```rust
+while !quit_flag.load(Ordering::Relaxed) {
+    match rl.readline(&prompt) {
+        Ok(line) => {
+            rl.add_history_entry(&line).ok();
+            input_tx.send(line).ok(); // Send to main thread
+        }
+    }
+}
+```
+
+**Main Bevy Thread:**
+
+```rust
+// Receives commands from rustyline thread
+while let Some(input) = self.try_recv_input() {
+    // Process command
+    let result = registry.parse_and_execute(&input, &mut world);
+    self.send_output(result); // Send to output thread
+}
+```
+
+**Output Thread:**
+
+```rust
+while let Ok(output) = output_rx.recv() {
+    println!("{}", output); // Print to terminal
+}
+```
+
+**Benefits:**
+
+- **Non-blocking**: Main thread never blocks on I/O
+- **Responsive**: Game continues running while waiting for input
+- **Thread-safe**: Channels handle synchronization
+- **Clean shutdown**: Quit flag coordinates all threads
+- **Dynamic lifecycle**: Threads can be spawned/killed when REPL is enabled/disabled
+
+**Flow:**
+
+1. User types command → Rustyline thread captures it
+2. Command sent via channel → Main thread processes it
+3. Result sent via channel → Output thread prints it
+4. All threads coordinate via quit flag for shutdown
+
+This creates a **fully asynchronous REPL** that doesn't interfere with the game loop.
 
 ## Built-in Commands
 
