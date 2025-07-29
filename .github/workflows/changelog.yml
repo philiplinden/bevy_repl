@@ -1,0 +1,82 @@
+name: Changelog
+
+on:
+  pull_request:
+    branches:
+      - "main"
+    paths-ignore: # don't trigger on changes to these files
+      - "CHANGELOG.md"
+  push:
+    branches:
+      - "main"
+    paths-ignore: # don't trigger on changes to these files
+      - "CHANGELOG.md"
+
+jobs:
+  update-changelog:
+    name: Update changelog
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          ref: ${{ github.event.pull_request.head.ref }}
+          # Setting the fetch depth to zero is important!
+          # Otherwise, you might end up getting empty changelogs or git ref
+          # errors depending on arguments passed to git-cliff.
+          fetch-depth: 0
+
+      - name: Generate an incremental changelog
+        uses: orhun/git-cliff-action@main
+        id: short_changelog
+        with:
+          config: cliff.toml
+          args: --latest --no-exec --bump --unreleased --github-repo ${{ github.repository }}
+        env:
+          OUTPUT: short_changelog.md
+
+      - name: Generate a full changelog
+        uses: orhun/git-cliff-action@main
+        id: full_changelog
+        with:
+          config: cliff.toml
+          args: --latest --no-exec --github-repo ${{ github.repository }}
+        env:
+          OUTPUT: CHANGELOG.md
+
+      - name: Commit updated full changelog
+        uses: EndBug/add-and-commit@v9
+        with:
+          message: "Update changelog"
+          add: "CHANGELOG.md"
+          push: true
+
+      - name: Read changelog files
+        id: read_files
+        run: |
+          # Read the files directly without JSON escaping
+          SHORT_CHANGELOG=$(cat short_changelog.md)
+          FULL_CHANGELOG=$(cat CHANGELOG.md)
+          # Use multi-line delimiters to preserve formatting
+          EOF=$(dd if=/dev/urandom bs=15 count=1 status=none | base64 | tr -d '+=/')
+          echo "short_changelog_content<<$EOF" >> $GITHUB_OUTPUT
+          echo "$SHORT_CHANGELOG" >> $GITHUB_OUTPUT
+          echo "$EOF" >> $GITHUB_OUTPUT
+
+          echo "full_changelog_content<<$EOF" >> $GITHUB_OUTPUT
+          echo "$FULL_CHANGELOG" >> $GITHUB_OUTPUT
+          echo "$EOF" >> $GITHUB_OUTPUT
+
+      - name: Update PR with changelog
+        uses: mshick/add-pr-comment@v2
+        if: ${{ github.event_name == 'pull_request' }}
+        with:
+          message: |
+            ${{ steps.read_files.outputs.short_changelog_content }}
+
+            <details>
+            <summary>📜 Full Changelog</summary>
+
+            ${{ steps.read_files.outputs.full_changelog_content }}
+            </details>
