@@ -44,15 +44,13 @@ The developer can then type commands to interact with the game. The REPL will
 display the output of the command in the terminal.
 
 ```shell
-game> tree
+game> spawn-player Bob
 ```
 
 ```shell
 INFO: 2025-07-28T12:00:00.000Z: bevy_repl: Starting REPL
-game> tree
-Entity 0:
-  - bevy_core::name::Name
-  - bevy_transform::components::transform::Transform
+game> spawn-player Bob
+Spawned player: Bob
 game>
 ```
 
@@ -221,53 +219,64 @@ while let Ok(output) = output_rx.recv() {
 
 This creates a **fully asynchronous REPL** that doesn't interfere with the game loop.
 
+## Current Limitations
+
+### World Access Not Supported
+
+**Issue:** Commands that need to read from the Bevy `World` (like inspecting
+entities, components, or resources) are not currently supported due to a
+fundamental Bevy ECS constraint.
+
+**Technical Problem:** The command execution system requires both:
+
+- `Commands` parameter for mutable world access (spawning entities, sending events)
+- `&World` parameter for immutable world access (reading entities, components, resources)
+
+**Bevy ECS Conflict:** Having both `Commands` and `&World` in the same system
+violates Rust's borrowing rules, causing a runtime panic: `&World` conflicts
+with a previous mutable system parameter. Allowing this would break Rust's
+mutability rules
+
+**Impact:** This prevents implementing commands like:
+
+- `help` - Cannot read the command registry from world resources
+- `sysinfo` - Cannot read diagnostics or entity counts
+- `tree` - Cannot inspect entities and their components
+- Custom commands that need to query the world state
+
+**Current Workaround:** Only commands that work with `Commands` (spawning, events, basic operations) are supported.
+
+**Future Solutions:** Potential approaches to resolve this:
+
+1. **Exclusive Systems** - Use `&mut World` instead of individual parameters
+2. **Split Command Types** - Separate systems for read-only vs write commands  
+3. **Deferred Execution** - Queue world-reading operations for later execution
+4. **Command Buffer Pattern** - Collect world data in one frame, execute commands in another
+
+This is a known architectural limitation that will be addressed in future versions.
+
 ## Built-in Commands
 
-### `tree`
+### `quit`
 
-The `tree` command lists all entities in the world with their components.
+Gracefully shuts down the Bevy application by sending an `AppExit::Success` event.
 
-Running `tree` might show:
+### `close`
 
-```shell
-Entity Tree:
-Entity 0:
-  - bevy_core::name::Name
-  - bevy_transform::components::transform::Transform
-
-Entity 1:
-  - bevy_core::name::Name
-  - bevy_transform::components::transform::Transform
-  - Health
-
-Entity 2:
-  - bevy_core::name::Name
-  - bevy_transform::components::transform::Transform
-  - bevy_core::camera::camera::Camera3d
-```
-
-### `sysinfo`
-
-The `sysinfo` command shows information about the system, including the number of
-entities, components, resources, memory usage, and other system information
-provided by the `diagnostics` Bevy feature.
-
-Running `sysinfo` might show:
-
-```shell
-System Information:
-==================
-
-Total Entities: 3
-Total Components: 156
-Total Resources: 42
-Approximate Memory Usage: 2048 bytes
-```
+Disables the REPL but keeps the application running. The REPL can be re-enabled via toggle key (if configured) or programmatically.
 
 ## Future Features
 
-- [ ] Add command suggestions with `trie-rs` similar to the implementation in
-  `bevy-console`.
-- [ ] Add a `clear` command to clear the terminal.
-- [ ] Add a `history` command to show the command history.
-- [ ] Add a `clear-history` command to clear the command history.
+### High Priority
+
+- [ ] **Resolve World Access Limitation** - Implement one of the proposed solutions to enable commands that read from the Bevy `World`
+- [ ] **Restore Built-in Commands** - Re-implement `help`, `sysinfo`, and `tree` commands once world access is resolved
+
+### Enhancement Features  
+
+- [ ] Add command suggestions with `trie-rs` similar to the implementation in `bevy-console`
+- [ ] Add a `clear` command to clear the terminal
+- [ ] Add a `history` command to show the command history
+- [ ] Add a `clear-history` command to clear the command history
+- [ ] Add tab completion for command names and arguments
+- [ ] Add command aliases and shortcuts

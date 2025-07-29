@@ -12,10 +12,8 @@ pub mod output;
 pub use bevy_repl_derive::ReplCommand;
 
 pub mod prelude {
-    #[cfg(feature = "diagnostics")]
-    pub use crate::built_ins::SysInfoCommand;
     pub use crate::{
-        built_ins::{HelpCommand, QuitCommand, CloseReplCommand},
+        built_ins::{QuitCommand, CloseReplCommand},
         registry::ReplCommandRegistration,
     };
     pub use crate::{ReplPlugin, Repl, ReplCommand, ReplResult, ReplSet, repl_enabled, ReplConfig, ReplEnableEvent, ReplDisableEvent, ReplToggleEvent};
@@ -78,11 +76,8 @@ impl Plugin for ReplPlugin {
             ));
 
         if !self.no_built_in_commands {
-            app.add_repl_command::<built_ins::HelpCommand>();
             app.add_repl_command::<built_ins::CloseReplCommand>();
             app.add_repl_command::<built_ins::QuitCommand>();
-            #[cfg(feature = "diagnostics")]
-            app.add_repl_command::<built_ins::SysInfoCommand>();
         }
     }
 }
@@ -108,12 +103,12 @@ pub struct ReplToggleEvent;
 /// System that handles keyboard input for toggling the REPL
 /// This listens for the configured toggle key and triggers a toggle event
 pub(crate) fn toggle_repl_system(
-    keyboard_input: Res<ButtonInput<KeyCode>>,
+    keyboard_input: Option<Res<ButtonInput<KeyCode>>>,
     config: Res<ReplConfig>,
     mut commands: Commands,
 ) {
-    // Only process toggle if a key is configured
-    if let Some(toggle_key) = config.toggle_key {
+    // Only process toggle if input resource exists and a key is configured
+    if let (Some(keyboard_input), Some(toggle_key)) = (keyboard_input, config.toggle_key) {
         if keyboard_input.just_pressed(toggle_key) {
             commands.trigger(ReplToggleEvent);
         }
@@ -173,26 +168,12 @@ pub fn toggle_repl(mut commands: Commands) {
 }
 
 /// Trait for REPL commands
-/// Use `execute` for commands that don't need world access
-/// Use `execute_with_world` for commands that need world access
 pub trait ReplCommand: Send + Sync + 'static {
     fn command(&self) -> clap::Command;
     
-    /// Execute command with limited access (for simple commands)
+    /// Execute command
     fn execute(&self, _commands: &mut Commands, _matches: &clap::ArgMatches) -> ReplResult<String> {
-        // Default implementation for commands that don't need world access
         Ok("Command not implemented".to_string())
-    }
-    
-    /// Execute command with full world access (for complex commands)
-    fn execute_with_world(&self, _world: &World, commands: &mut Commands, matches: &clap::ArgMatches) -> ReplResult<String> {
-        // Default: fall back to regular execute
-        self.execute(commands, matches)
-    }
-    
-    /// Whether this command needs world access
-    fn needs_world_access(&self) -> bool {
-        false
     }
 }
 

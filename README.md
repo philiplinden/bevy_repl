@@ -10,13 +10,18 @@ mode, and takes heavy inspiration from that crate.
 **Warning**: This is my first public Bevy plugin, and I vibe-coded a large part
 of it. You have been warned.
 
+**Current Limitation**: Commands that need to read from the Bevy `World`
+(inspecting entities, components, resources) are not yet supported due to Bevy
+ECS system parameter conflicts. Only commands that use `Commands` for spawning
+entities, sending events, and basic operations currently work. See
+[doc/DESIGN.md](doc/DESIGN.md) for technical details.
+
 ## Built-in Commands
 
 | Command | Description |
 | --- | --- |
-| `help` | List all available commands |
+| `close` | Close the REPL but do not exit the application |
 | `quit` | Gracefully terminate the application |
-| `sysinfo` | Show system information (requires `diagnostics` feature) |
 
 ## Usage
 
@@ -36,7 +41,7 @@ fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
         .add_plugins(ReplPlugin::default())
-        .register_command::<CustomGameCommand>()
+        .add_repl_command::<CustomGameCommand>()
         .run();
 }
 
@@ -50,7 +55,7 @@ fn main_with_config() {
     App::new()
         .add_plugins(DefaultPlugins)
         .add_plugins(ReplPlugin::with_config(config))
-        .register_command::<CustomGameCommand>()
+        .add_repl_command::<CustomGameCommand>()
         .run();
 }
 
@@ -66,9 +71,9 @@ impl ReplCommand for CustomGameCommand {
             .arg(clap::Arg::new("name").required(true))
     }
     
-    fn execute(&self, world: &mut World, matches: &clap::ArgMatches) -> ReplResult<String> {
+    fn execute(&self, commands: &mut Commands, matches: &clap::ArgMatches) -> ReplResult<String> {
         let name = matches.get_one::<String>("name").unwrap();
-        world.spawn(PlayerBundle::new(name.clone()));
+        commands.spawn(PlayerBundle::new(name.clone()));
         Ok(format!("Spawned player: {}", name))
     }
 }
@@ -157,7 +162,6 @@ The following terminal actions are supported by `bevy_repl` through `rustyline`:
 | --- | --- | --- |
 | `dev` | Enable dynamic linking for faster compilation | `true` |
 | `custom-history-file` | Change the default history file for persistent command history saved across sessions (requires `rustyline/with-file-history` feature) | `false` |
-| `diagnostics` | Enable Bevy system information inspection | `false` |
 
 This crate uses `clap` for command parsing and `rustyline` for terminal input
 and history. Both of these dependencies are included with default features.
