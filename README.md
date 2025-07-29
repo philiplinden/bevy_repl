@@ -1,6 +1,7 @@
 # bevy_repl
 
-Add an interactive REPL to a headless Bevy app using `clap` for command parsing.
+Add an interactive REPL to a headless Bevy app using `clap` for command parsing
+and `rustyline` for terminal input.
 
 This crate exists because I wanted to use
 [makspll/bevy-console](https://github.com/makspll/bevy-console) but in headless
@@ -10,11 +11,54 @@ This is my first public Bevy plugin, and I vibe-coded a large part of it.
 
 ## Features
 
+This plugin uses the `rustyline` library to handle terminal input, history, and
+suggestions.
+
+RustyLine supports the following platforms:
+
+- Unix (tested on FreeBSD, Linux and macOS)
+- Windows
+  - cmd.exe
+  - Powershell
+
+The following terminal actions are supported by `bevy_repl` through `rustyline`:
+
+| Action | Description |
+| --- | --- |
+| `Ctrl-A, Home` | Move cursor to the beginning of line |
+| `Ctrl-B, Left` | Move cursor one character left |
+| `Ctrl-E, End` | Move cursor to end of line |
+| `Ctrl-F, Right` | Move cursor one character right (or complete hint if cursor is at the end of line) |
+| `Ctrl-H, Backspace` | Delete character before cursor |
+| `Shift-Tab` | Previous completion |
+| `Ctrl-I, Tab` | Next completion |
+| `Ctrl-K` | Delete from cursor to end of line |
+| `Ctrl-L` | Clear screen |
+| `Ctrl-N, Down` | Next match from history |
+| `Ctrl-P, Up` | Previous match from history |
+| `Ctrl-R` | Reverse Search history (Ctrl-S forward, Ctrl-G cancel) |
+| `Ctrl-V (unix)` | Insert any special character without performing its associated action (#65) |
+| `Ctrl-V (windows)` | Paste from clipboard |
+| `Ctrl-Y` | Paste from Yank buffer |
+
+### Optional Features
+
 | Feature | Description | Default |
 | --- | --- | --- |
-| `diagnostics` | Enable system information commands | `true` |
-| `history` | Enable command history | `true` |
-| `suggestions` | Enable predictive search suggestions | `false` |
+| `dev` | Enable dynamic linking for faster compilation | `true` |
+| `derive` | Enable derive macros for clap and rustyline | `false` |
+| `suggestions` | Enable command suggestions with `clap` | `true` |
+| `color` | Enable colored output with `clap` | `true` |
+| `help` | Enable help text with `clap` | `true` |
+| `usage` | Enable usage information with `clap` | `true` |
+| `env` | Enable environment variable support with `clap` | `true` |
+| `wrap_help` | Enable help text wrapping with `clap` (requires `help` feature) | `true` |
+| `diagnostics` | Enable Bevy system information inspection | `false` |
+| `case-insensitive` | Enable case-insensitive history search with `rustyline` | `true` |
+| `fuzzy-search` | Enable fuzzy history search with `rustyline` | `true` |
+| `save-history` | Enable file history with `rustyline` | `true` |
+| `dir-completions` | Enable directory completion with `rustyline` | `true` |
+| `custom-bindings` | Enable custom key bindings with `rustyline` | `true` |
 
 ## Built-in Commands
 
@@ -32,7 +76,6 @@ Add `ReplPlugin` with `ReplConfig` to customize the REPL behavior.
 ```rust
 use bevy::prelude::*;
 use bevy_repl::{ReplPlugin, ReplConfig, ReplCommandRegistration, ReplCommand, ReplResult};
-use bevy_repl::command::{HelpCommand, QuitCommand, TreeCommand, SysInfoCommand};
 
 fn main() {
     // Option 1: Use default configuration
@@ -47,17 +90,10 @@ fn main() {
 fn main_with_config() {
     let config = ReplConfig::new()
         .with_prompt("game> ")
-        .with_auto_headless(true)
-        .with_headless_args(vec!["--repl".to_string()])
-        .with_headless_env_var(Some("GAME_REPL".to_string()));
 
     App::new()
         .add_plugins(DefaultPlugins)
         .add_plugins(ReplPlugin::with_config(config))
-        .register_command::<HelpCommand>()
-        .register_command::<QuitCommand>()
-        .register_command::<TreeCommand>()
-        .register_command::<SysInfoCommand>()
         .register_command::<CustomGameCommand>()
         .run();
 }
@@ -80,97 +116,16 @@ impl ReplCommand for CustomGameCommand {
         Ok(format!("Spawned player: {}", name))
     }
 }
+```
 
 ## Configuration
 
-The `ReplConfig` allows you to customize the REPL behavior:
-
-### Configuration Options
-
-- **`prompt`** - The prompt string to display (default: `"> "`)
-- **`enabled`** - Whether to enable the REPL on startup (default: `true`)
-- **`auto_headless`** - Whether to start in headless mode automatically (default: `false`)
-- **`headless_args`** - Custom command line arguments to detect headless mode (default: `["--headless", "--server", "--no-gui"]`)
-- **`headless_env_var`** - Environment variable to check for headless mode (default: `Some("BEVY_HEADLESS")`)
-
-### Configuration Methods
+The `ReplConfig` allows you to customize the REPL behavior. See
+[doc/DESIGN.md](doc/DESIGN.md) for more details.
 
 ```rust
 let config = ReplConfig::new()
     .with_prompt("game> ")
-    .with_enabled(true)
-    .with_auto_headless(true)
-    .with_headless_args(vec!["--repl".to_string()])
-    .with_headless_env_var(Some("GAME_REPL".to_string()));
-```
-
-## Built-in Commands
-
-The crate provides several built-in commands that you can register:
-
-### `help`
-Lists all available commands or shows detailed help for a specific command.
-
-```bash
-help              # List all commands
-help spawn_player # Show help for spawn_player command
-```
-
-### `quit` / `exit`
-Gracefully shuts down the application.
-
-```bash
-quit   # Exit the application
-exit   # Same as quit
-q      # Short alias for quit
-```
-
-### `tree`
-Lists entities with their components in a tree structure.
-
-```bash
-tree        # Show all entities
-tree 123    # Show specific entity by ID
-```
-
-### `sysinfo`
-Shows system information including entity count, component count, and memory usage.
-
-```bash
-sysinfo
-```
-
-## Example Output
-
-Running `tree` might show:
-```
-Entity Tree:
-Entity 0:
-  - bevy_core::name::Name
-  - bevy_transform::components::transform::Transform
-
-Entity 1:
-  - bevy_core::name::Name
-  - bevy_transform::components::transform::Transform
-  - Health
-
-Entity 2:
-  - bevy_core::name::Name
-  - bevy_transform::components::transform::Transform
-  - bevy_core::camera::camera::Camera3d
-```
-
-Running `sysinfo` might show:
-```
-System Information:
-==================
-
-Total Entities: 3
-Total Components: 156
-Total Resources: 42
-Total Archetypes: 3
-Approximate Memory Usage: 2048 bytes
-```
 ```
 
 ## License
@@ -178,9 +133,9 @@ Approximate Memory Usage: 2048 bytes
 Except where noted (below and/or in individual files), all code in this
 repository is dual-licensed under either:
 
-* MIT License ([LICENSE-MIT](LICENSE-MIT) or
+- MIT License ([LICENSE-MIT](LICENSE-MIT) or
   [http://opensource.org/licenses/MIT](http://opensource.org/licenses/MIT))
-* Apache License, Version 2.0 ([LICENSE-APACHE](LICENSE-APACHE) or
+- Apache License, Version 2.0 ([LICENSE-APACHE](LICENSE-APACHE) or
   [http://www.apache.org/licenses/LICENSE-2.0](http://www.apache.org/licenses/LICENSE-2.0))
 
 at your option. This means you can select the license you prefer! This

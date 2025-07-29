@@ -2,37 +2,50 @@
 name = "bevy_repl"
 version = "0.1.0"
 edition = "2024"
-description = "Add a REPL to headless Bevy applications"
+description = "Add a REPL powered by clap and rustyline to headless Bevy applications"
 license = "MIT"
 repository = "https://github.com/philiplinden/bevy_repl"
-keywords = ["bevy", "repl", "console", "debugging"]
+keywords = ["bevy", "plugin", "repl", "console", "debugging", "tui", "terminal"]
 categories = ["game-development", "development-tools"]
 
 [dependencies]
-bevy = { version = "0.16.1", default-features = false, features = ["bevy_log"]}
-clap = { version = "4.5", features = ["derive"] }
-
-# Set max log levels. This helps avoid unwanted low-severity log spam, which can affect performance.
-log = { version = "0.4", features = [
-    "max_level_debug",
-    "release_max_level_warn",
-] }
-tracing = { version = "0.1", features = [
-    "max_level_debug",
-    "release_max_level_warn",
-] }
-trie-rs = { version = "0.4.2", optional = true }
+bevy = { version = "0.16.1", default-features = false, features = ["bevy_log"] }
+clap = { version = "4.5", default-features = false}
+rustyline = { version = "16.0.0", default-features = false }
 
 [features]
-default = ["dev"]
-dev = ["bevy/dynamic_linking"]
-history = []
-suggestions = ["trie-rs"]
-diagnostics = [
-    "bevy/bevy_dev_tools",
-    "bevy/sysinfo_plugin",
+default = [
+    "dev",
+    "suggestions",
+    "color",
+    "help",
+    "usage",
+    "env",
+    "wrap_help",
+    "case-insensitive",
+    "fuzzy-search",
+    "save-history",
+    "dir-completions",
+    "custom-bindings",
 ]
+dev = ["bevy/dynamic_linking", "diagnostics"]
+derive = ["clap/derive", "rustyline/derive"]
+suggestions = ["clap/suggestions"]
+color = ["clap/color"]
+help = ["clap/help"]
+usage = ["clap/usage"]
+env = ["clap/env"]
+wrap_help = ["clap/wrap_help"]
+diagnostics = ["bevy/bevy_dev_tools", "bevy/sysinfo_plugin"]
+case-insensitive = ["rustyline/case_insensitive_history_search"]
+fuzzy-search = ["rustyline/with-fuzzy"]
+save-history = ["rustyline/with-file-history"]
+dir-completions = ["rustyline/with-dirs"]
+custom-bindings = ["rustyline/with-custom-bindings"]
 
+[[example]]
+name = "minimal"
+path = "examples/minimal.rs"
 
 # Idiomatic Bevy code often triggers these lints, and the CI workflow treats them as errors.
 # In some cases they may still signal poor code quality however, so consider commenting out these lines.

@@ -2,7 +2,7 @@
 
 pub mod repl;
 pub mod registry;
-pub mod built_ins;
+// pub mod built_ins;
 pub mod error;
 pub mod config;
 pub mod command;
@@ -12,9 +12,10 @@ pub mod history;
 pub mod suggestions;
 
 pub mod prelude {
-    pub use crate::{repl::{ReplCommand, ReplResult}, config::ReplConfig, registry::ReplCommandRegistration, built_ins::{HelpCommand, QuitCommand, TreeCommand}};
-    #[cfg(feature = "diagnostics")]
-    pub use crate::built_ins::SysInfoCommand;
+    pub use crate::{repl::{ReplCommand, ReplResult}, config::ReplConfig, registry::ReplCommandRegistration};
+    // pub use crate::built_ins::{HelpCommand, QuitCommand, TreeCommand};
+    // #[cfg(feature = "diagnostics")]
+    // pub use crate::built_ins::SysInfoCommand;
 }
 
 use crate::{
