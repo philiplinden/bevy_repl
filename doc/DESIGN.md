@@ -31,27 +31,12 @@ fn main() {
 
 The REPL appears as a terminal interface within the game window:
 
-```
+```text
 ┌──────────────────────────────────────────────────────────────────────────────┐
-│ INFO: 2025-07-28T12:00:00.000Z: bevy_repl: Starting REPL                    │
-│ INFO: 2025-07-28T12:00:00.000Z: bevy_repl: Type 'help' for commands        │
+│ INFO: 2025-07-28T12:00:00.000Z: bevy_repl: Starting REPL                     │
+│ INFO: 2025-07-28T12:00:00.000Z: bevy_repl: Type 'help' for commands          │
 │                                                                              │
-│ [Game logs and command output appear here...]                               │
-│                                                                              │
-│                                                                              │
-│                                                                              │
-│                                                                              │
-│                                                                              │
-│                                                                              │
-│                                                                              │
-│                                                                              │
-│                                                                              │
-│                                                                              │
-│                                                                              │
-│                                                                              │
-│                                                                              │
-│                                                                              │
-│                                                                              │
+│ [Game logs and command output appear here...]                                │
 │                                                                              │
 │                                                                              │
 │                                                                              │
@@ -308,14 +293,12 @@ pub struct ReplConfig {
 ## Future Features
 
 ### High Priority
-
 - [ ] **Tab Completion**: Intelligent completion for commands and arguments
 - [ ] **Command Suggestions**: Similar command suggestions on typos
 - [ ] **Log Search**: Search functionality within log history
 - [ ] **Custom Themes**: Additional terminal themes and styling options
 
 ### Enhancement Features
-
 - [ ] **Split Views**: Multiple terminal windows for different purposes
 - [ ] **Scripting**: Support for running command scripts
 - [ ] **Macros**: User-defined command macros and shortcuts

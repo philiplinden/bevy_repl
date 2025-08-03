@@ -13,17 +13,14 @@ categories = ["game-development", "development-tools"]
 
 [dependencies]
 bevy = { version = "0.16.1", default-features = false, features = ["bevy_log"]}
-clap = { version = "4.5" }
+clap = { version = "4.5.42" }
 bevy_crossterm = "0.4.0"
 
 # Derive support via separate crate
 bevy_repl_derive = { version = "0.1.0", path = "./bevy_repl_derive", optional = true }
 
-# Set max log levels. This helps avoid unwanted low-severity log spam, which can affect performance.
-log = { version = "0.4", features = [
-    "max_level_debug",
-    "release_max_level_warn",
-] }
+# Error handling and logging
+anyhow = "1.0"
 tracing = { version = "0.1", features = [
     "max_level_debug",
     "release_max_level_warn",

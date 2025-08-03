@@ -1,11 +1,6 @@
 #![doc = include_str ! ("../README.md")]
 
 pub mod built_ins;
-pub mod error;
-pub mod registry;
-pub mod input;
-pub mod execution;
-pub mod output;
 pub mod terminal;
 
 // Re-export the derive macro when the derive feature is enabled  
@@ -17,19 +12,14 @@ pub mod prelude {
         built_ins::{QuitCommand, CloseReplCommand},
         registry::ReplCommandRegistration,
     };
-    pub use crate::{ReplPlugin, Repl, ReplCommand, ReplResult, ReplSet, repl_enabled, ReplConfig, ReplEnableEvent, ReplDisableEvent, ReplToggleEvent};
+    pub use crate::{ReplPlugin, Repl, ReplCommand, ReplResult, ReplSet, ReplConfig};
     
     // Re-export derive macro in prelude
     #[cfg(feature = "derive")]
     pub use bevy_repl_derive::ReplCommand;
 }
 
-use crate::{
-    input::ReplInputPlugin,
-    registry::{ReplCommandRegistry, ReplCommandRegistration},
-    output::ReplOutputPlugin,
-    execution::ReplExecutionPlugin,
-};
+use anyhow::{Context, Result, anyhow, bail, ensure};
     
 use std::{
     collections::BTreeMap,
@@ -40,19 +30,8 @@ use bevy_crossterm::prelude::*;
 
 
 /// The main REPL plugin
-pub struct ReplPlugin {
-    config: ReplConfig,
-    no_built_in_commands: bool,
-}
-
-impl Default for ReplPlugin {
-    fn default() -> Self {
-        Self {
-            config: ReplConfig::default(),
-            no_built_in_commands: false,
-        }
-    }
-}
+#[derive(Default)]
+pub struct ReplPlugin;
 
 impl Plugin for ReplPlugin {
     fn build(&self, app: &mut App) {
@@ -68,137 +47,33 @@ impl Plugin for ReplPlugin {
         app.insert_resource(config)
             .insert_resource(repl)
             .insert_resource(ReplCommandRegistry::default())
-            .configure_sets(Update, ReplSet::First) // Always runs
-            .add_systems(Update, toggle_repl_system.in_set(ReplSet::First))
-            .add_observer(repl_enable_observer)
-            .add_observer(repl_disable_observer)
-            .add_observer(repl_toggle_observer)
-            .add_plugins((
-                ReplInputPlugin,
-                ReplOutputPlugin,
-                ReplExecutionPlugin,
-            ));
+            .configure_sets(Update, ReplSet::First); // Always runs
 
-        if !self.no_built_in_commands {
-            app.add_repl_command::<built_ins::CloseReplCommand>();
-            app.add_repl_command::<built_ins::QuitCommand>();
-        }
-        
         // Add cleanup system
-        app.add_systems(Update, cleanup_on_exit);
+        app.add_systems(Update, exit_on_interrupt);
     }
 }
 
-/// Run condition which does not run any REPL systems if it is disabled
-pub fn repl_enabled(repl: Res<Repl>) -> bool {
-    repl.is_enabled()
-}
-
-/// Event to enable the REPL
-#[derive(Event)]
-pub struct ReplEnableEvent;
-
-/// Event to disable the REPL
-#[derive(Event)]
-pub struct ReplDisableEvent;
-
-/// Event to toggle the REPL between enabled and disabled states
-#[derive(Event)]
-pub struct ReplToggleEvent;
-
-
-/// System that handles keyboard input for toggling the REPL
-/// This listens for the configured toggle key and triggers a toggle event
-pub(crate) fn toggle_repl_system(
-    keyboard_input: Option<Res<ButtonInput<KeyCode>>>,
-    config: Res<ReplConfig>,
-    mut commands: Commands,
+/// This handles the crossterm interrupt event and exits the app.
+/// 
+/// Without this, the terminal might hang with no way to exit the app because
+/// the exit event is not handled.
+fn exit_on_interrupt(
+    mut interrupt_events: EventReader<CrosstermInputEvent>,
+    mut exit: EventWriter<AppExit>,
 ) {
-    // Only process toggle if input resource exists and a key is configured
-    if let (Some(keyboard_input), Some(toggle_key)) = (keyboard_input, config.toggle_key) {
-        if keyboard_input.just_pressed(toggle_key) {
-            commands.trigger(ReplToggleEvent);
+    for event in interrupt_events.read() {
+        if let CrosstermInputEvent::Interrupt = event {
+            exit.send(AppExit::Success);
         }
     }
 }
 
-/// Observer that handles REPL enable events
-fn repl_enable_observer(
-    _trigger: Trigger<ReplEnableEvent>,
-    mut repl: ResMut<Repl>,
-) {
-    info!("Starting Bevy REPL...");
-    info!("Type 'help' for available commands, 'quit' to exit.");
-    repl.enable();
-}
+// Use anyhow::Error directly - this is the standard pattern
+pub type ReplResult<T> = Result<T, anyhow::Error>;
 
-/// Observer that handles REPL disable events
-fn repl_disable_observer(
-    _trigger: Trigger<ReplDisableEvent>,
-    mut repl: ResMut<Repl>,
-) {
-    info!("Stopping Bevy REPL...");
-    repl.disable();
-}
-
-/// Observer that handles REPL toggle events
-fn repl_toggle_observer(
-    _trigger: Trigger<ReplToggleEvent>,
-    mut repl: ResMut<Repl>,
-) {
-    repl.toggle();
-
-    // Log the state change
-    if repl.is_enabled() {
-        info!("REPL enabled");
-    } else {
-        info!("REPL disabled");
-    }
-}
-
-/// Trigger the REPL to be enabled
-/// Send this event to enable the REPL through the trigger system
-pub fn enable_repl(mut commands: Commands) {
-    commands.trigger(ReplEnableEvent);
-}
-
-/// Trigger the REPL to be disabled  
-/// Send this event to disable the REPL through the trigger system
-pub fn disable_repl(mut commands: Commands) {
-    commands.trigger(ReplDisableEvent);
-}
-
-/// Trigger the REPL to toggle between enabled and disabled states
-/// Send this event to toggle the REPL through the trigger system
-pub fn toggle_repl(mut commands: Commands) {
-    commands.trigger(ReplToggleEvent);
-}
-
-/// System that handles cleanup when the app is about to exit
-fn cleanup_on_exit(
-    mut exit_events: EventReader<AppExit>,
-    mut repl: ResMut<Repl>,
-) {
-    for _event in exit_events.read() {
-        info!("Cleaning up REPL before exit...");
-        repl.disable();
-    }
-}
-
-/// Trait for REPL commands
-pub trait ReplCommand: Send + Sync + 'static {
-    fn command(&self) -> clap::Command;
-    
-    /// Execute command
-    fn execute(&self, _commands: &mut Commands, _matches: &clap::ArgMatches) -> ReplResult<String> {
-        Ok("Command not implemented".to_string())
-    }
-}
-
-pub type ReplResult<T> = Result<T, Box<dyn std::error::Error + Send + Sync>>;
-
-#[derive(SystemSet, Debug, Hash, PartialEq, Eq, Clone)]
 /// The SystemSet for console/command related systems
+#[derive(SystemSet, Debug, Hash, PartialEq, Eq, Clone)]
 pub enum ReplSet {
     /// Systems that run before anything else, like toggling the REPL
     First,

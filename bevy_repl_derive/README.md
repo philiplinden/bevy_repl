@@ -30,4 +30,4 @@ struct HelloCommand;
 - Clean, declarative syntax
 - Optional override of default implementations
 
-See the main [`bevy_repl`](../README.md) documentation for complete usage examples. 
+See the main [`bevy_repl`](../README.md) documentation for complete usage examples.
