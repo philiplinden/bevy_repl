@@ -28,6 +28,82 @@ The plugin adds the following commands to the REPL by default.
 | `quit`, `q`, CTRL+C | Gracefully terminate the application |
 | `help` | Show clap help text |
 
+## Design
+
+### Headless mode
+
+["Headless" mode] is when a Bevy app runs in the terminal without a renderer. To
+run Bevy in headless mode, disable all windowing features for Bevy in
+`Cargo.toml`. Then configure the schedule runner to loop forever instead of
+exiting the app after one frame. Running the app from the terminal only displays
+log messages from the engine to the terminal and cannot accept input.
+
+Normally the open window keeps the app running, and the exit event happens when
+closing the window. In headless mode there isn't a window to close, so the app
+runs until we kill the process or another system triggers the `AppExit` event
+with a keycode event reader (like press Q to quit).
+
+["Headless" mode]:
+    https://github.com/bevyengine/bevy/blob/main/examples/app/headless.rs
+
+```toml
+[dependencies]
+bevy = { version = "*", default-features = false }
+# replace "*" with the most recent version of bevy
+```
+
+```rust
+fn main() {
+    let mut app = App::new();
+
+    // Run in headless mode at 60 fps
+    app.add_plugins((
+        MinimalPlugins,
+        bevy::app::ScheduleRunnerPlugin::run_loop(
+            std::time::Duration::from_secs_f64(1.0 / 60.0),
+        )
+    ));
+
+    // Exit with Ctrl+C
+    app.run();
+}
+```
+
+### Console interaction
+
+`bevy_repl` takes the idea of a Half-Life 2 debug console and brings it to
+headless mode, so an app can retain command style interaction without depending
+on windowing, rendering, or UI features. We accomplsh this with a trick: use
+`bevy_crossterm` to create a full text user interface (TUI) that looks just like
+the app running normally in headless mode, but with an area at the bottom that
+supports keyboard input. Technically the app is running with a TUI, not truly
+headless, but TUIs don't need windowing or a renderer so we still accomplish our
+goal.
+
+```text
+┌───your terminal──────────────────────────────────────────────────────────────┐
+│ INFO: 2025-07-28T12:00:00.000Z: bevy_repl: Starting REPL                     │
+│ INFO: 2025-07-28T12:00:00.000Z: bevy_repl: Type 'help' for commands          │
+│                                                                              │
+│ [Game logs and command output appear here...]                                │
+│                                                                              │
+│ > spawn-player Bob                                                           │
+└──────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Command parsing
+
+Use `clap` to parse commands from the REPL's input box.
+
+Register a system to fire in response to a command via triggers.
+
+`app.observe(observer_fn)`
+
+and 
+
+`fn observer_fn(_trigger: Trigger<ClapCommand>) {}`
+
+
 ## License
 
 Except where noted (below and/or in individual files), all code in this
