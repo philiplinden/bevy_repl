@@ -34,9 +34,9 @@ use crate::{
 use std::{
     collections::BTreeMap,
 };
-use crate::terminal::CrosstermTerminal;
+use crate::terminal::BevyCrosstermTerminal;
 use bevy::prelude::*;
-use crossterm::event::KeyEvent;
+use bevy_crossterm::prelude::*;
 
 
 /// The main REPL plugin
@@ -56,6 +56,9 @@ impl Default for ReplPlugin {
 
 impl Plugin for ReplPlugin {
     fn build(&self, app: &mut App) {
+        // Add bevy_crossterm plugin first
+        app.add_plugins(CrosstermPlugin);
+        
         // Insert the configuration resource
         let config = self.config.clone();
         let mut repl = Repl::with_config(config.clone());
@@ -80,6 +83,9 @@ impl Plugin for ReplPlugin {
             app.add_repl_command::<built_ins::CloseReplCommand>();
             app.add_repl_command::<built_ins::QuitCommand>();
         }
+        
+        // Add cleanup system
+        app.add_systems(Update, cleanup_on_exit);
     }
 }
 
@@ -168,6 +174,17 @@ pub fn toggle_repl(mut commands: Commands) {
     commands.trigger(ReplToggleEvent);
 }
 
+/// System that handles cleanup when the app is about to exit
+fn cleanup_on_exit(
+    mut exit_events: EventReader<AppExit>,
+    mut repl: ResMut<Repl>,
+) {
+    for _event in exit_events.read() {
+        info!("Cleaning up REPL before exit...");
+        repl.disable();
+    }
+}
+
 /// Trait for REPL commands
 pub trait ReplCommand: Send + Sync + 'static {
     fn command(&self) -> clap::Command;
@@ -199,7 +216,7 @@ pub enum ReplSet {
 }
 
 pub struct ReplTerminal {
-    terminal: Option<CrosstermTerminal>,
+    terminal: Option<BevyCrosstermTerminal>,
     config: ReplConfig,
 }
 
@@ -222,7 +239,7 @@ impl ReplTerminal {
             return;
         }
         
-        let mut terminal = CrosstermTerminal::new(
+        let mut terminal = BevyCrosstermTerminal::new(
             self.config.prompt.clone(),
             self.config.history_file.clone(),
         );
@@ -243,13 +260,10 @@ impl ReplTerminal {
     
     fn try_recv_input(&mut self) -> Option<String> {
         if let Some(terminal) = &mut self.terminal {
-            if let Ok(Some(event)) = terminal.poll_event() {
-                if let crossterm::event::Event::Key(KeyEvent { code, modifiers, .. }) = event {
-                    return terminal.handle_key(code, modifiers);
-                }
-            }
+            terminal.poll_input()
+        } else {
+            None
         }
-        None
     }
     
     fn send_output(&mut self, output: String) {

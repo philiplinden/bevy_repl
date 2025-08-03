@@ -2,18 +2,21 @@ use bevy::prelude::*;
 use bevy_repl::prelude::*;
 
 fn main() {
-    App::new()
-        .add_plugins(ReplPlugin::default())
+    let mut app = App::new();
+
+    app.add_plugins(ReplPlugin::default())
         // Register custom commands using the basic approach
         .add_repl_command::<SpawnPlayerCommand>()
         .add_repl_command::<TeleportCommand>()
-        .add_repl_command::<ListEntitiesCommand>()
-        .run();
-}
+        .add_repl_command::<ListEntitiesCommand>();
+    
+    // Run in headless mode at 60 fps
+    app.add_plugins(bevy::app::ScheduleRunnerPlugin::run_loop(
+        std::time::Duration::from_secs_f64(1.0 / 60.0),
+    ));
 
-// ============================================================================
-// BASIC APPROACH (Default Feature) - Manual Implementation
-// ============================================================================
+    app.run();
+}
 
 /// Spawn a player entity with given name
 #[derive(Default, Clone)]
@@ -145,10 +148,6 @@ impl ReplCommand for ListEntitiesCommand {
         }
     }
 }
-
-// ============================================================================
-// COMPONENTS
-// ============================================================================
 
 #[derive(Component)]
 struct Player {

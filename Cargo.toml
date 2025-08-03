@@ -14,7 +14,7 @@ categories = ["game-development", "development-tools"]
 [dependencies]
 bevy = { version = "0.16.1", default-features = false, features = ["bevy_log"]}
 clap = { version = "4.5" }
-crossterm = { version = "0.29", features = ["events"] }
+bevy_crossterm = "0.4.0"
 
 # Derive support via separate crate
 bevy_repl_derive = { version = "0.1.0", path = "./bevy_repl_derive", optional = true }

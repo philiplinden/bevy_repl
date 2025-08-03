@@ -1,28 +1,25 @@
 # Design
 
-The REPL is implemented as a Bevy plugin. It is responsible for:
+The REPL is implemented as a Bevy plugin using `bevy_crossterm` to create a virtual terminal interface within the game window. It provides:
 
-- Receiving input from the user via the terminal
-- Parsing the input into a command using `clap`
-- Executing the command using the Bevy ECS
-- Displaying the output in the terminal with other Bevy log messages
+- A terminal emulation layer with input at the bottom and scrollable logs above
+- Command parsing and execution using the Bevy ECS
+- Integration with Bevy's logging system for unified output display
+- Full ECS access for both read and write operations
 
-The REPL is meant to be an alternative to [makspll/bevy-console] for Bevy apps
-that don't need a GUI but still want a console for debugging and development.
+The REPL is designed as an alternative to [makspll/bevy-console] for Bevy apps that want a terminal-like interface without external dependencies.
 
 [makspll/bevy-console]: https://github.com/makspll/bevy-console
 
 ## User Experience
 
-A developer adds the REPL plugin to their Bevy app and configures it with a
-config resource. Custom commands can be added to the REPL by implementing the
-`ReplCommand` trait, which allows you to register a `clap` command with the
-REPL.
+A developer adds the REPL plugin to their Bevy app and configures it with a config resource. Custom commands can be added by implementing the `ReplCommand` trait.
 
 ```rust
 fn main() {
     let config = ReplConfig::new()
         .with_prompt("game> ")
+        .with_terminal_size(80, 25);
 
     App::new()
         .add_plugins(DefaultPlugins)
@@ -32,305 +29,239 @@ fn main() {
 }
 ```
 
-The REPL will then be available in the terminal as a prompt
-shown below the game's log messages.
+The REPL appears as a terminal interface within the game window:
 
-```shell
-INFO: 2025-07-28T12:00:00.000Z: bevy_repl: Starting REPL
-game>
+```
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ INFO: 2025-07-28T12:00:00.000Z: bevy_repl: Starting REPL                    │
+│ INFO: 2025-07-28T12:00:00.000Z: bevy_repl: Type 'help' for commands        │
+│                                                                              │
+│ [Game logs and command output appear here...]                               │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+│ game> spawn-player Bob                                                       │
+└──────────────────────────────────────────────────────────────────────────────┘
 ```
 
-The developer can then type commands to interact with the game. The REPL will
-display the output of the command in the terminal.
+The developer can type commands to interact with the game, with output displayed in the log area above the input line.
 
-```shell
-game> spawn-player Bob
+## Architecture Overview
+
+### Terminal Emulation Layer
+
+The REPL uses `bevy_crossterm` to create a virtual terminal interface:
+
+```rust
+struct TerminalEmulation {
+    layout: TerminalLayout,
+    input: ReplInput,
+    log_capture: LogCapture,
+    renderer: TerminalRenderer,
+}
 ```
 
-```shell
-INFO: 2025-07-28T12:00:00.000Z: bevy_repl: Starting REPL
-game> spawn-player Bob
-Spawned player: Bob
-game>
+**Terminal Layout:**
+- **Input Area**: Fixed bottom line for command input with cursor
+- **Log Area**: Scrollable upper area for logs and command output
+- **Border**: Optional terminal-style border around the interface
+
+**Input Handling:**
+- Real-time character input with cursor positioning
+- Command history navigation (up/down arrows)
+- Tab completion for commands and arguments
+- Special key handling (Ctrl+C, Ctrl+D, etc.)
+
+**Log Integration:**
+- Captures Bevy logs via custom logger implementation
+- Displays logs in scrollable buffer
+- Supports log filtering and search
+- Maintains log history across sessions
+
+### Command System
+
+Commands are processed using the Bevy ECS with full world access:
+
+```rust
+trait ReplCommand: Send + Sync + 'static {
+    fn command(&self) -> clap::Command;
+    fn execute(&self, world: &mut World) -> ReplResult<String>;
+}
 ```
 
-To add or remove features from `clap` or `rustyline`, you can enable or disable
-features in your `Cargo.toml` file alongside the `bevy_repl` dependency.
+**Benefits of Full ECS Access:**
+- Commands can read from and write to the world
+- No threading complications or borrowing conflicts
+- Access to all Bevy systems, components, and resources
+- Support for complex game state queries and modifications
 
-```toml
-[dependencies]
-bevy_repl = "0.1.0"
-clap = { version = "4.5", features = ["derive", "suggestions", "color"] }
-rustyline = { version = "16.0", features = ["with-file-history", "with-dirs"] }
+### Log Capture System
+
+The REPL integrates with Bevy's logging system to capture and display logs:
+
+```rust
+struct LogCapture {
+    log_buffer: VecDeque<LogEntry>,
+    max_logs: usize,
+    scroll_offset: usize,
+    filter_level: log::LevelFilter,
+}
+
+struct LogEntry {
+    level: log::Level,
+    target: String,
+    message: String,
+    timestamp: Instant,
+}
 ```
+
+**Features:**
+- Automatic capture of all Bevy log messages
+- Configurable log levels and filtering
+- Scrollable log history
+- Timestamp and source tracking
+- Color-coded log levels
 
 ## Design Decisions
 
-### Why a separate thread for input handling?
+### Why Terminal Emulation Instead of System Terminal?
 
-**Problem:** Bevy's main thread runs the game loop and ECS systems. If we tried to
-read user input directly in the main thread, it would:
+**Problem:** System terminal integration has several limitations:
+- Platform-specific behavior differences
+- Threading complications and race conditions
+- Limited control over appearance and behavior
+- Poor integration with game UI and styling
 
-- Block the entire game when waiting for user input
-- Prevent the game from running at consistent frame rates
-- Create a poor user experience
-
-**Solution:** Move input handling to a separate thread that can block safely while
-the main game continues running.
-
-### Why use a resource queue instead of events for command processing?
-
-**Problem:** Commands need to be processed across multiple frames and may require
-complex state management, retry logic, and error handling.
-
-**Solution:** Use a `ReplCommandQueue` resource instead of Bevy's event system.
-
-**Benefits of Resource Queue over Events:**
-
-- **Cross-frame processing**: Commands can be processed across multiple frames if needed
-- **Error handling**: Can implement retry logic for failed commands
-- **Queue inspection**: Can show pending commands to users or implement queue management
-- **Batching**: Can process multiple commands in one frame if desired
-- **State management**: Can track command execution state and metadata
-- **Manual control**: Full control over when commands are added/removed from the queue
-
-**Example advantages:**
-
-```rust
-// Can implement retry logic
-if command_failed {
-    command_queue.commands.push_front(failed_command); // Retry
-}
-
-// Can show queue status
-repl.send_output(format!("{} commands pending", command_queue.commands.len()));
-
-// Can batch process commands
-let batch_size = 5;
-for _ in 0..batch_size {
-    if let Some(cmd) = command_queue.commands.pop_front() {
-        // Process command
-    }
-}
-```
-
-**Events would be limiting because:**
-
-- Events are automatically cleared after being read
-- Events are designed for immediate, same-frame processing
-- Events don't support complex state management
-- Events can't be inspected or modified after being sent
-
-### Why use `clap` and `crossterm`?
-
-The REPL uses two key libraries for handling user interaction:
-
-`clap` handles command parsing by providing a robust, well-documented argument
-parser with features like:
-
-- Help message generation
-- Subcommand support
-- Argument validation
-- Strong community support
-
-`crossterm` manages terminal input with capabilities including:
-
-- Non-blocking event-driven input
-- Cross-platform terminal manipulation
-- Raw mode support
-- Command history
-- Line editing capabilities
-
-### Why re-implement clap derive instead of using clap's derive macros?
-
-**Problem:** We need to provide a clean, Bevy-specific API for command definition while leveraging clap's robust argument parsing capabilities.
-
-**Solution:** Re-implement clap derive functionality in our own `bevy_repl_derive` macro rather than using clap's derive macros directly.
-
-**Benefits of Re-implementation:**
-
-- **Bevy Integration**: Our macro generates Bevy-specific code (access to `Commands`, ECS patterns)
-- **Simplified API**: Users only need `#[derive(ReplCommand)]` instead of implementing traits manually
-- **Custom Execution Flow**: We control how arguments flow into the `run()` method with direct field access
-- **No Additional Dependencies**: Doesn't require clap's `derive` feature, keeping dependencies minimal
-
-**Example of our approach:**
-
-```rust
-#[derive(ReplCommand)]
-#[command(name = "spawn", about = "Spawn an entity")]
-pub struct SpawnCommand {
-    #[arg(help = "The name of the entity")]
-    name: String,
-    
-    #[arg(short, long, default_value = "100")]
-    health: i32,
-}
-
-impl SpawnCommand {
-    fn run(&self, commands: &mut Commands) -> ReplResult<String> {
-        // Direct field access with automatic parsing!
-        commands.spawn(Health { value: self.health });
-        Ok(format!("Spawned {} with {} health", self.name, self.health))
-    }
-}
-```
-
-**Alternative approach using clap derive:**
-
-```rust
-#[derive(Parser)]
-#[command(name = "spawn", about = "Spawn an entity")]
-pub struct SpawnCommand {
-    #[arg(help = "The name of the entity")]
-    name: String,
-    
-    #[arg(short, long, default_value = "100")]
-    health: i32,
-}
-
-impl ReplCommand for SpawnCommand {
-    fn command(&self) -> clap::Command {
-        SpawnCommand::command()
-    }
-    
-    fn execute(&self, commands: &mut Commands, matches: &clap::ArgMatches) -> ReplResult<String> {
-        let args = SpawnCommand::from_arg_matches(matches)?;
-        // More boilerplate to access fields
-        commands.spawn(Health { value: args.health });
-        Ok(format!("Spawned {} with {} health", args.name, args.health))
-    }
-}
-```
-
-**Trade-offs:**
-
-**Re-implementation Pros:**
-
-- Cleaner user experience with less boilerplate
-- Full control over generated code
-- Bevy-specific optimizations
-- No dependency on clap's derive feature
-
-**Re-implementation Cons:**
-
-- Duplicating clap's attribute parsing logic
-- Need to maintain compatibility with clap's API
-- More complex macro implementation
-- Risk of falling behind clap's features
-
-**Decision:** The re-implementation approach was chosen to prioritize user experience and Bevy integration over leveraging clap's derive macros directly. This aligns with the project's goal of providing a seamless, Bevy-native REPL experience.
-
-### Why use a single-thread architecture with crossterm?
-
-**Problem:** The REPL needs to handle user input without blocking the main game loop,
-while also managing output display and command processing.
-
-**Solution:** Use a `CrosstermTerminal` with event-driven input processing integrated
-directly into Bevy's main thread.
-
-**Architecture:**
-
-```text
-[Main Bevy Thread with Crossterm Terminal]
-```
-
-**Event-Driven Input Processing:**
-
-**Non-blocking Event Polling:**
-
-- **Main thread** polls for terminal events every frame
-- `event::poll(Duration::from_millis(0))` - Non-blocking event check
-- `event::read()` - Read available events immediately
-
-**Integrated Output Handling:**
-
-- **Main thread** directly prints to terminal
-- Direct terminal manipulation via crossterm
-- Synchronized with game loop execution
-
-**How It Works:**
-
-**Event Polling in Main Thread:**
-
-```rust
-fn repl_input_system(mut terminal: ResMut<CrosstermTerminal>) {
-    if let Ok(Some(event)) = terminal.poll_event() {
-        match event {
-            Event::Key(KeyEvent { code: KeyCode::Enter, .. }) => {
-                let command = terminal.get_current_line();
-                // Process command immediately
-            }
-            Event::Key(KeyEvent { code, .. }) => {
-                terminal.handle_key(code); // Update prompt buffer
-            }
-        }
-    }
-}
-```
-
-**Direct Terminal Output:**
-
-```rust
-fn repl_output_system(mut terminal: ResMut<CrosstermTerminal>) {
-    terminal.print_output(&result); // Direct terminal printing
-}
-```
+**Solution:** Use `bevy_crossterm` to create a virtual terminal within the game window.
 
 **Benefits:**
+- **Cross-platform consistency**: Same behavior on all platforms
+- **Full control**: Complete control over appearance and behavior
+- **Better integration**: Seamless integration with game UI
+- **No threading issues**: Everything runs in the main thread
+- **Styling flexibility**: Can be themed and styled like other game elements
 
-- **Simpler architecture**: No thread coordination or channels needed
-- **Lower overhead**: Single thread resource usage
-- **Better integration**: Natural fit with Bevy's event-driven systems
-- **Easier debugging**: All code runs in main thread
-- **Non-blocking**: Event polling never blocks the game loop
-- **Responsive**: Game continues running at consistent frame rates
+### Why Full ECS Access Instead of Limited Commands?
 
-**Flow:**
+**Problem:** Previous approaches limited commands to only `Commands` parameter, preventing:
+- World state inspection commands (`help`, `sysinfo`, `tree`)
+- Commands that need to read components or resources
+- Complex game state queries and modifications
 
-1. User types command → Event polled in main thread
-2. Command processed immediately → Main thread handles execution
-3. Result printed directly → Terminal output synchronized with game loop
+**Solution:** Use `&mut World` parameter for all commands.
 
-This creates a **fully integrated REPL** that operates seamlessly within Bevy's event loop.
+**Benefits:**
+- **Complete access**: Commands can read and write to the world
+- **No limitations**: Support for all types of game operations
+- **Simpler API**: Single parameter for all world access needs
+- **Future-proof**: Supports any future Bevy ECS features
 
-## Current Limitations
+### Why Integrated Log Capture Instead of Separate Output?
 
-### World Access Not Supported
+**Problem:** Separate output systems create:
+- Disconnected user experience
+- Difficulty tracking command context
+- Inconsistent formatting and styling
+- Complex output synchronization
 
-**Issue:** Commands that need to read from the Bevy `World` (like inspecting
-entities, components, or resources) are not currently supported due to a
-fundamental Bevy ECS constraint.
+**Solution:** Integrate log capture directly into the terminal emulation.
 
-**Technical Problem:** The command execution system requires both:
+**Benefits:**
+- **Unified experience**: All output appears in the same interface
+- **Context preservation**: Logs and commands are visually connected
+- **Consistent styling**: Uniform appearance across all output
+- **Better debugging**: Easy to correlate commands with their effects
 
-- `Commands` parameter for mutable world access (spawning entities, sending events)
-- `&World` parameter for immutable world access (reading entities, components, resources)
+### Why bevy_crossterm Instead of Custom Terminal Implementation?
 
-**Bevy ECS Conflict:** Having both `Commands` and `&World` in the same system
-violates Rust's borrowing rules, causing a runtime panic: `&World` conflicts
-with a previous mutable system parameter. Allowing this would break Rust's
-mutability rules
+**Problem:** Custom terminal implementation would require:
+- Extensive cross-platform terminal manipulation code
+- Complex input handling and event processing
+- Terminal state management and restoration
+- Significant maintenance burden
 
-**Impact:** This prevents implementing commands like:
+**Solution:** Leverage `bevy_crossterm`'s mature terminal emulation.
 
-- `help` - Cannot read the command registry from world resources
-- `sysinfo` - Cannot read diagnostics or entity counts
-- `tree` - Cannot inspect entities and their components
-- Custom commands that need to query the world state
+**Benefits:**
+- **Proven reliability**: Well-tested cross-platform terminal library
+- **Rich features**: Built-in support for colors, styling, input handling
+- **Active maintenance**: Regular updates and bug fixes
+- **Bevy integration**: Designed specifically for Bevy applications
 
-**Current Workaround:** Only commands that work with `Commands` (spawning, events, basic operations) are supported.
+## Implementation Details
 
-**Future Solutions:** Potential approaches to resolve this:
+### Terminal Layout Management
 
-1. **Exclusive Systems** - Use `&mut World` instead of individual parameters
-2. **Split Command Types** - Separate systems for read-only vs write commands  
-3. **Deferred Execution** - Queue world-reading operations for later execution
-4. **Command Buffer Pattern** - Collect world data in one frame, execute commands in another
+The terminal layout is managed through a dedicated system:
 
-This is a known architectural limitation that will be addressed in future versions.
+```rust
+fn terminal_layout_system(
+    mut terminal: ResMut<TerminalEmulation>,
+    window_query: Query<&Window>,
+) {
+    let window = window_query.single();
+    terminal.layout.update_size(window.width(), window.height());
+}
+```
+
+**Layout Features:**
+- Responsive sizing based on window dimensions
+- Fixed input area height with flexible log area
+- Automatic text wrapping and overflow handling
+- Support for different terminal themes and styles
+
+### Input Processing Pipeline
+
+Input is processed through a multi-stage pipeline:
+
+1. **Raw Input Capture**: `bevy_crossterm` captures keyboard events
+2. **Input Processing**: Convert events to text input and special commands
+3. **Command Parsing**: Use `clap` to parse commands and arguments
+4. **Command Execution**: Execute commands with full world access
+5. **Output Display**: Display results in the log area
+
+### Log Integration
+
+Logs are captured using a custom Bevy logger:
+
+```rust
+struct ReplLogger {
+    log_capture: Arc<Mutex<LogCapture>>,
+    inner_logger: Box<dyn log::Log>,
+}
+```
+
+**Integration Points:**
+- Intercepts all Bevy log messages
+- Formats logs for terminal display
+- Maintains log history and scroll state
+- Provides filtering and search capabilities
 
 ## Built-in Commands
+
+### `help`
+
+Displays available commands and their descriptions. This command can now read from the command registry since it has full world access.
 
 ### `quit`
 
@@ -338,20 +269,55 @@ Gracefully shuts down the Bevy application by sending an `AppExit::Success` even
 
 ### `close`
 
-Disables the REPL but keeps the application running. The REPL can be re-enabled via toggle key (if configured) or programmatically.
+Disables the REPL but keeps the application running. The REPL can be re-enabled via toggle key or programmatically.
+
+### `clear`
+
+Clears the log area while preserving the input line.
+
+### `sysinfo`
+
+Displays system information including entity counts, resource usage, and performance metrics.
+
+### `tree`
+
+Shows a tree view of entities and their components, demonstrating full world access capabilities.
+
+## Configuration Options
+
+```rust
+pub struct ReplConfig {
+    pub prompt: String,
+    pub terminal_size: (u16, u16),
+    pub toggle_key: Option<KeyCode>,
+    pub enabled_on_startup: bool,
+    pub history_file: Option<String>,
+    pub max_logs: usize,
+    pub log_level: log::LevelFilter,
+    pub theme: TerminalTheme,
+}
+```
+
+**Configuration Features:**
+- Customizable prompt and terminal size
+- Keyboard toggle for enabling/disabling
+- Command history persistence
+- Log buffer size and filtering
+- Terminal styling and themes
 
 ## Future Features
 
 ### High Priority
 
-- [ ] **Resolve World Access Limitation** - Implement one of the proposed solutions to enable commands that read from the Bevy `World`
-- [ ] **Restore Built-in Commands** - Re-implement `help`, `sysinfo`, and `tree` commands once world access is resolved
+- [ ] **Tab Completion**: Intelligent completion for commands and arguments
+- [ ] **Command Suggestions**: Similar command suggestions on typos
+- [ ] **Log Search**: Search functionality within log history
+- [ ] **Custom Themes**: Additional terminal themes and styling options
 
-### Enhancement Features  
+### Enhancement Features
 
-- [ ] Add command suggestions with `trie-rs` similar to the implementation in `bevy-console`
-- [ ] Add a `clear` command to clear the terminal
-- [ ] Add a `history` command to show the command history
-- [ ] Add a `clear-history` command to clear the command history
-- [ ] Add tab completion for command names and arguments
-- [ ] Add command aliases and shortcuts
+- [ ] **Split Views**: Multiple terminal windows for different purposes
+- [ ] **Scripting**: Support for running command scripts
+- [ ] **Macros**: User-defined command macros and shortcuts
+- [ ] **Export**: Export log history and command sessions
+- [ ] **Remote Access**: Network-based REPL access for debugging
