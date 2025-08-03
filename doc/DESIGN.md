@@ -121,7 +121,7 @@ for _ in 0..batch_size {
 - Events don't support complex state management
 - Events can't be inspected or modified after being sent
 
-### Why use `clap` and `rustyline`?
+### Why use `clap` and `crossterm`?
 
 The REPL uses two key libraries for handling user interaction:
 
@@ -133,153 +133,13 @@ parser with features like:
 - Argument validation
 - Strong community support
 
-`rustyline` manages terminal input with capabilities including:
+`crossterm` manages terminal input with capabilities including:
 
+- Non-blocking event-driven input
+- Cross-platform terminal manipulation
+- Raw mode support
 - Command history
-- Tab completion
-- Syntax highlighting
-- Wide community adoption
-
-### Why use a three-thread architecture with channels?
-
-**Problem:** The REPL needs to handle user input without blocking the main game loop,
-while also managing output display and command processing.
-
-**Solution:** Use a `ReplThreadManager` with three coordinated threads communicating
-via channels.
-
-**Thread Architecture:**
-
-```text
-[Main Bevy Thread] ←→ [Rustyline Input Thread] ←→ [Output Thread]
-```
-
-**Channel Communication:**
-
-**Input Channel (`input_tx`/`input_rx`):**
-
-- **Rustyline thread** → **Main thread**: Sends user commands
-- `input_tx.send(line)` - Rustyline sends typed commands
-- `input_rx.try_recv()` - Main thread receives commands
-
-**Output Channel (`output_tx`/`output_rx`):**
-
-- **Main thread** → **Output thread**: Sends command results
-- `output_tx.send(result)` - Main thread sends command output
-- `output_rx.recv()` - Output thread prints results
-
-**How Each Thread Works:**
-
-**Rustyline Input Thread:**
-
-```rust
-while !quit_flag.load(Ordering::Relaxed) {
-    match rl.readline(&prompt) {
-        Ok(line) => {
-            rl.add_history_entry(&line).ok();
-            input_tx.send(line).ok(); // Send to main thread
-        }
-    }
-}
-```
-
-**Main Bevy Thread:**
-
-```rust
-// Receives commands from rustyline thread
-while let Some(input) = self.try_recv_input() {
-    // Process command
-    let result = registry.parse_and_execute(&input, &mut world);
-    self.send_output(result); // Send to output thread
-}
-```
-
-**Output Thread:**
-
-```rust
-while let Ok(output) = output_rx.recv() {
-    println!("{}", output); // Print to terminal
-}
-```
-
-**Benefits:**
-
-- **Non-blocking**: Main thread never blocks on I/O
-- **Responsive**: Game continues running while waiting for input
-- **Thread-safe**: Channels handle synchronization
-- **Clean shutdown**: Quit flag coordinates all threads
-- **Dynamic lifecycle**: Threads can be spawned/killed when REPL is enabled/disabled
-
-**Flow:**
-
-1. User types command → Rustyline thread captures it
-2. Command sent via channel → Main thread processes it
-3. Result sent via channel → Output thread prints it
-4. All threads coordinate via quit flag for shutdown
-
-This creates a **fully asynchronous REPL** that doesn't interfere with the game loop.
-
-## Current Limitations
-
-### World Access Not Supported
-
-**Issue:** Commands that need to read from the Bevy `World` (like inspecting
-entities, components, or resources) are not currently supported due to a
-fundamental Bevy ECS constraint.
-
-**Technical Problem:** The command execution system requires both:
-
-- `Commands` parameter for mutable world access (spawning entities, sending events)
-- `&World` parameter for immutable world access (reading entities, components, resources)
-
-**Bevy ECS Conflict:** Having both `Commands` and `&World` in the same system
-violates Rust's borrowing rules, causing a runtime panic: `&World` conflicts
-with a previous mutable system parameter. Allowing this would break Rust's
-mutability rules
-
-**Impact:** This prevents implementing commands like:
-
-- `help` - Cannot read the command registry from world resources
-- `sysinfo` - Cannot read diagnostics or entity counts
-- `tree` - Cannot inspect entities and their components
-- Custom commands that need to query the world state
-
-**Current Workaround:** Only commands that work with `Commands` (spawning, events, basic operations) are supported.
-
-**Future Solutions:** Potential approaches to resolve this:
-
-1. **Exclusive Systems** - Use `&mut World` instead of individual parameters
-2. **Split Command Types** - Separate systems for read-only vs write commands  
-3. **Deferred Execution** - Queue world-reading operations for later execution
-4. **Command Buffer Pattern** - Collect world data in one frame, execute commands in another
-
-This is a known architectural limitation that will be addressed in future versions.
-
-## Built-in Commands
-
-### `quit`
-
-Gracefully shuts down the Bevy application by sending an `AppExit::Success` event.
-
-### `close`
-
-Disables the REPL but keeps the application running. The REPL can be re-enabled via toggle key (if configured) or programmatically.
-
-## Future Features
-
-### High Priority
-
-- [ ] **Resolve World Access Limitation** - Implement one of the proposed solutions to enable commands that read from the Bevy `World`
-- [ ] **Restore Built-in Commands** - Re-implement `help`, `sysinfo`, and `tree` commands once world access is resolved
-
-### Enhancement Features  
-
-- [ ] Add command suggestions with `trie-rs` similar to the implementation in `bevy-console`
-- [ ] Add a `clear` command to clear the terminal
-- [ ] Add a `history` command to show the command history
-- [ ] Add a `clear-history` command to clear the command history
-- [ ] Add tab completion for command names and arguments
-- [ ] Add command aliases and shortcuts
+- Line editing capabilities
 
 ### Why re-implement clap derive instead of using clap's derive macros?
 
@@ -360,3 +220,138 @@ impl ReplCommand for SpawnCommand {
 - Risk of falling behind clap's features
 
 **Decision:** The re-implementation approach was chosen to prioritize user experience and Bevy integration over leveraging clap's derive macros directly. This aligns with the project's goal of providing a seamless, Bevy-native REPL experience.
+
+### Why use a single-thread architecture with crossterm?
+
+**Problem:** The REPL needs to handle user input without blocking the main game loop,
+while also managing output display and command processing.
+
+**Solution:** Use a `CrosstermTerminal` with event-driven input processing integrated
+directly into Bevy's main thread.
+
+**Architecture:**
+
+```text
+[Main Bevy Thread with Crossterm Terminal]
+```
+
+**Event-Driven Input Processing:**
+
+**Non-blocking Event Polling:**
+
+- **Main thread** polls for terminal events every frame
+- `event::poll(Duration::from_millis(0))` - Non-blocking event check
+- `event::read()` - Read available events immediately
+
+**Integrated Output Handling:**
+
+- **Main thread** directly prints to terminal
+- Direct terminal manipulation via crossterm
+- Synchronized with game loop execution
+
+**How It Works:**
+
+**Event Polling in Main Thread:**
+
+```rust
+fn repl_input_system(mut terminal: ResMut<CrosstermTerminal>) {
+    if let Ok(Some(event)) = terminal.poll_event() {
+        match event {
+            Event::Key(KeyEvent { code: KeyCode::Enter, .. }) => {
+                let command = terminal.get_current_line();
+                // Process command immediately
+            }
+            Event::Key(KeyEvent { code, .. }) => {
+                terminal.handle_key(code); // Update prompt buffer
+            }
+        }
+    }
+}
+```
+
+**Direct Terminal Output:**
+
+```rust
+fn repl_output_system(mut terminal: ResMut<CrosstermTerminal>) {
+    terminal.print_output(&result); // Direct terminal printing
+}
+```
+
+**Benefits:**
+
+- **Simpler architecture**: No thread coordination or channels needed
+- **Lower overhead**: Single thread resource usage
+- **Better integration**: Natural fit with Bevy's event-driven systems
+- **Easier debugging**: All code runs in main thread
+- **Non-blocking**: Event polling never blocks the game loop
+- **Responsive**: Game continues running at consistent frame rates
+
+**Flow:**
+
+1. User types command → Event polled in main thread
+2. Command processed immediately → Main thread handles execution
+3. Result printed directly → Terminal output synchronized with game loop
+
+This creates a **fully integrated REPL** that operates seamlessly within Bevy's event loop.
+
+## Current Limitations
+
+### World Access Not Supported
+
+**Issue:** Commands that need to read from the Bevy `World` (like inspecting
+entities, components, or resources) are not currently supported due to a
+fundamental Bevy ECS constraint.
+
+**Technical Problem:** The command execution system requires both:
+
+- `Commands` parameter for mutable world access (spawning entities, sending events)
+- `&World` parameter for immutable world access (reading entities, components, resources)
+
+**Bevy ECS Conflict:** Having both `Commands` and `&World` in the same system
+violates Rust's borrowing rules, causing a runtime panic: `&World` conflicts
+with a previous mutable system parameter. Allowing this would break Rust's
+mutability rules
+
+**Impact:** This prevents implementing commands like:
+
+- `help` - Cannot read the command registry from world resources
+- `sysinfo` - Cannot read diagnostics or entity counts
+- `tree` - Cannot inspect entities and their components
+- Custom commands that need to query the world state
+
+**Current Workaround:** Only commands that work with `Commands` (spawning, events, basic operations) are supported.
+
+**Future Solutions:** Potential approaches to resolve this:
+
+1. **Exclusive Systems** - Use `&mut World` instead of individual parameters
+2. **Split Command Types** - Separate systems for read-only vs write commands  
+3. **Deferred Execution** - Queue world-reading operations for later execution
+4. **Command Buffer Pattern** - Collect world data in one frame, execute commands in another
+
+This is a known architectural limitation that will be addressed in future versions.
+
+## Built-in Commands
+
+### `quit`
+
+Gracefully shuts down the Bevy application by sending an `AppExit::Success` event.
+
+### `close`
+
+Disables the REPL but keeps the application running. The REPL can be re-enabled via toggle key (if configured) or programmatically.
+
+## Future Features
+
+### High Priority
+
+- [ ] **Resolve World Access Limitation** - Implement one of the proposed solutions to enable commands that read from the Bevy `World`
+- [ ] **Restore Built-in Commands** - Re-implement `help`, `sysinfo`, and `tree` commands once world access is resolved
+
+### Enhancement Features  
+
+- [ ] Add command suggestions with `trie-rs` similar to the implementation in `bevy-console`
+- [ ] Add a `clear` command to clear the terminal
+- [ ] Add a `history` command to show the command history
+- [ ] Add a `clear-history` command to clear the command history
+- [ ] Add tab completion for command names and arguments
+- [ ] Add command aliases and shortcuts

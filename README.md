@@ -115,8 +115,7 @@ let config = ReplConfig::new()
     .with_history_file(".my_app_history"); // Separate history for your app
 ```
 
-By default, `rustyline` saves command history to `~/.rustyline_history`. You can
-customize this by passing a custom history file to `ReplConfig`. This allows
+By default, no history file is used. You can customize this by passing a custom history file to `ReplConfig`. This allows
 different Bevy applications to have separate command histories.
 
 ```rust
@@ -126,17 +125,17 @@ let config = ReplConfig::new()
 
 ## Features
 
-This plugin uses `clap` for command parsing and `rustyline` for terminal input,
+This plugin uses `clap` for command parsing and `crossterm` for terminal input,
 history, and familiar terminal key bindings. Write custom commands with `clap`
 and register them with the REPL to interact with ECS systems, components, and
 resources from the terminal. Search your command history, tab complete commands,
 and navigate your command history with the usual terminal key bindings.
 
 The REPL runs with the game loop but operates in your terminal, so you can use
-it on any platform that `rustyline` supports. It runs on a separate thread so as
-to not block the game loop.
+it on any platform that `crossterm` supports. It runs in the main thread using
+event-driven input processing to avoid blocking the game loop.
 
-The following terminal actions are supported by `bevy_repl` through `rustyline`:
+The following terminal actions are supported by `bevy_repl` through `crossterm`:
 
 | Action | Description |
 | --- | --- |
@@ -161,9 +160,9 @@ The following terminal actions are supported by `bevy_repl` through `rustyline`:
 | Feature | Description | Default |
 | --- | --- | --- |
 | `dev` | Enable dynamic linking for faster compilation | `true` |
-| `custom-history-file` | Change the default history file for persistent command history saved across sessions (requires `rustyline/with-file-history` feature) | `false` |
+| `custom-history-file` | Change the default history file for persistent command history saved across sessions | `false` |
 
-This crate uses `clap` for command parsing and `rustyline` for terminal input
+This crate uses `clap` for command parsing and `crossterm` for terminal input
 and history. Both of these dependencies are included with default features.
 You can enable or disable features by configuring these dependencies in your
 `Cargo.toml` alongside the `bevy_repl` dependency.
@@ -172,13 +171,13 @@ You can enable or disable features by configuring these dependencies in your
 [dependencies]
 bevy_repl = "0.1"
 clap = { version = "4.5", features = ["derive", "suggestions", "color"] }
-rustyline = { version = "16.0", features = ["with-file-history", "with-dirs"] }
+crossterm = { version = "0.29", features = ["events"] }
 ```
 
 **Available clap features**: `derive`, `suggestions`, `color`, `help`, `usage`, `env`, `wrap_help`
-**Available rustyline features**: `with-file-history`, `with-dirs`, `with-fuzzy`, `with-custom-bindings`
+**Available crossterm features**: `events`, `event-stream`, `bracketed-paste`, `use-dev-tty`
 
-See the [clap](https://docs.rs/clap) and [rustyline](https://docs.rs/rustyline)
+See the [clap](https://docs.rs/clap) and [crossterm](https://docs.rs/crossterm)
 documentation for complete feature lists and descriptions.
 
 ## License

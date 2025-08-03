@@ -23,7 +23,7 @@ pub struct PrintReplLine(pub String);
 
 /// System that handles REPL output
 /// This ensures output is printed in a thread-safe way
-fn repl_output_system(mut print_events: EventReader<PrintReplLine>, repl: Res<Repl>) {
+fn repl_output_system(mut print_events: EventReader<PrintReplLine>, mut repl: ResMut<Repl>) {
     for event in print_events.read() {
         repl.send_output(event.0.clone());
     }

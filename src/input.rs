@@ -15,10 +15,10 @@ impl Plugin for ReplInputPlugin {
     }
 }
 
-/// System that reads input from the rustyline thread and processes commands
+/// System that reads input from the terminal and processes commands
 /// This runs every frame but only processes input when available
-fn repl_input_system(repl: ResMut<Repl>, mut command_queue: ResMut<ReplCommandQueue>) {
-    // Try to receive input from the rustyline thread
+fn repl_input_system(mut repl: ResMut<Repl>, mut command_queue: ResMut<ReplCommandQueue>) {
+    // Try to receive input from the terminal
     while let Some(input) = repl.try_recv_input() {
         // Add the command to the queue
         command_queue.commands.push_back(input);

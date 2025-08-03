@@ -6,6 +6,7 @@ pub mod registry;
 pub mod input;
 pub mod execution;
 pub mod output;
+pub mod terminal;
 
 // Re-export the derive macro when the derive feature is enabled  
 #[cfg(feature = "derive")]
@@ -31,11 +32,11 @@ use crate::{
 };
     
 use std::{
-    sync::{mpsc::{self, Receiver, Sender}, Arc, Mutex, atomic::{AtomicBool, Ordering}},
-    thread::{self, JoinHandle},
     collections::BTreeMap,
 };
+use crate::terminal::CrosstermTerminal;
 use bevy::prelude::*;
+use crossterm::event::KeyEvent;
 
 
 /// The main REPL plugin
@@ -197,98 +198,63 @@ pub enum ReplSet {
     Output,
 }
 
-pub struct ReplThreadManager {
-    input_handle: Option<JoinHandle<()>>,
-    should_quit: Arc<AtomicBool>,
-    input_receiver: Arc<Mutex<Receiver<String>>>,
-    output_sender: Sender<String>,
+pub struct ReplTerminal {
+    terminal: Option<CrosstermTerminal>,
     config: ReplConfig,
 }
 
-impl Default for ReplThreadManager {
+impl Default for ReplTerminal {
     fn default() -> Self {
         Self::new(ReplConfig::default())
     }
 }
 
-impl ReplThreadManager {
+impl ReplTerminal {
     fn new(config: ReplConfig) -> Self {
-        let (_input_tx, input_rx) = mpsc::channel();
-        let (output_tx, _output_rx) = mpsc::channel();
-        
         Self {
-            input_handle: None,
-            should_quit: Arc::new(AtomicBool::new(false)),
-            input_receiver: Arc::new(Mutex::new(input_rx)),
-            output_sender: output_tx,
-            config: config,
+            terminal: None,
+            config,
         }
     }
     
     fn spawn(&mut self) {
-        if self.input_handle.is_some() {
+        if self.terminal.is_some() {
             return;
         }
         
-        let (input_tx, input_rx) = mpsc::channel();
-        let (output_tx, output_rx) = mpsc::channel();
-        let quit_flag = self.should_quit.clone();
+        let mut terminal = CrosstermTerminal::new(
+            self.config.prompt.clone(),
+            self.config.history_file.clone(),
+        );
         
-        // Update the receiver to use the new channel
-        self.input_receiver = Arc::new(Mutex::new(input_rx));
-        self.output_sender = output_tx;
-        let history_file = self.config.history_file.clone();
-        let prompt = self.config.prompt.clone();
+        if let Err(e) = terminal.init() {
+            eprintln!("Failed to initialize terminal: {}", e);
+            return;
+        }
         
-        let handle = thread::spawn(move || {
-            let mut rl = rustyline::DefaultEditor::new().unwrap();
-            
-            // Load custom history file if specified
-            if let Some(ref history_path) = history_file {
-                if let Err(e) = rl.load_history(history_path) {
-                    // Don't fail if history file doesn't exist yet
-                    if !e.to_string().contains("No such file") {
-                        eprintln!("Warning: Could not load history from {}: {}", history_path, e);
-                    }
-                }
-            }
-            
-            while !quit_flag.load(Ordering::Relaxed) {
-                match rl.readline(&prompt) {
-                    Ok(line) => {
-                        if !line.trim().is_empty() {
-                            rl.add_history_entry(&line).ok();
-                            if input_tx.send(line).is_err() {
-                                break;
-                            }
-                        }
-                    }
-                    Err(_) => break,
-                }
-            }
-            
-            // Save history on thread exit
-            if let Some(ref history_path) = history_file {
-                if let Err(e) = rl.save_history(history_path) {
-                    eprintln!("Warning: Could not save history to {}: {}", history_path, e);
-                }
-            }
-        });
-        
-        // Spawn output thread
-        thread::spawn(move || {
-            while let Ok(output) = output_rx.recv() {
-                println!("{}", output);
-            }
-        });
-        
-        self.input_handle = Some(handle);
+        self.terminal = Some(terminal);
     }
     
     fn shutdown(&mut self) {
-        self.should_quit.store(true, Ordering::Relaxed);
-        if let Some(handle) = self.input_handle.take() {
-            let _ = handle.join();
+        if let Some(mut terminal) = self.terminal.take() {
+            terminal.cleanup().ok();
+        }
+    }
+    
+    fn try_recv_input(&mut self) -> Option<String> {
+        if let Some(terminal) = &mut self.terminal {
+            if let Ok(Some(event)) = terminal.poll_event() {
+                if let crossterm::event::Event::Key(KeyEvent { code, modifiers, .. }) = event {
+                    return terminal.handle_key(code, modifiers);
+                }
+            }
+        }
+        None
+    }
+    
+    fn send_output(&mut self, output: String) {
+        if let Some(terminal) = &mut self.terminal {
+            terminal.print_output(&output);
         }
     }
 }
@@ -296,7 +262,7 @@ impl ReplThreadManager {
 #[derive(Resource)]
 pub struct Repl {
     enabled: bool,
-    thread_manager: ReplThreadManager,
+    terminal: ReplTerminal,
 }
 
 impl Repl {
@@ -310,20 +276,20 @@ impl Repl {
     pub fn with_config(config: ReplConfig) -> Self {
         Self {
             enabled: config.enabled_on_startup,
-            thread_manager: ReplThreadManager::new(config.clone()),
+            terminal: ReplTerminal::new(config.clone()),
         }
     }
     
-    /// Try to receive input from the rustyline thread
+    /// Try to receive input from the terminal
     /// Returns None if no input is available (non-blocking)
-    pub fn try_recv_input(&self) -> Option<String> {
-        self.thread_manager.input_receiver.lock().unwrap().try_recv().ok()
+    pub fn try_recv_input(&mut self) -> Option<String> {
+        self.terminal.try_recv_input()
     }
     
-    /// Send output to be printed by the output thread
+    /// Send output to be printed by the terminal
     /// This prevents blocking the main Bevy thread during I/O
-    pub fn send_output(&self, output: String) {
-        let _ = self.thread_manager.output_sender.send(output);
+    pub fn send_output(&mut self, output: String) {
+        self.terminal.send_output(output);
     }
 
     /// Check if the REPL is currently enabled
@@ -334,17 +300,17 @@ impl Repl {
     /// Enable the REPL
     pub fn enable(&mut self) {
         self.enabled = true;
-        // Spawn the rustyline thread if it's not already running
-        if self.thread_manager.input_handle.is_none() {
-            self.thread_manager.spawn();
+        // Initialize the terminal if it's not already running
+        if self.terminal.terminal.is_none() {
+            self.terminal.spawn();
         }
     }
 
     /// Disable the REPL
     pub fn disable(&mut self) {
         self.enabled = false;
-        // Set the quit flag to signal the rustyline thread to exit
-        self.thread_manager.shutdown();
+        // Clean up the terminal
+        self.terminal.shutdown();
     }
 
     /// Toggle the REPL between enabled and disabled states
@@ -359,12 +325,12 @@ impl Repl {
 }
 
 /// Implement Drop to ensure graceful shutdown
-/// This ensures the rustyline thread exits cleanly and saves history
+/// This ensures the terminal is cleaned up properly and saves history
 impl Drop for Repl {
     fn drop(&mut self) {
-        // Wait for the input thread to finish
+        // Clean up the terminal
         // This ensures history is saved before the program exits
-        self.thread_manager.shutdown();
+        self.terminal.shutdown();
     }
 }
 
@@ -383,7 +349,7 @@ pub struct ReplConfig {
     /// Whether the REPL should be enabled when the app starts
     pub enabled_on_startup: bool,
 
-    /// Custom history file path. If None, uses rustyline's default (~/.rustyline_history)
+    /// Custom history file path. If None, no history file is used
     /// This allows users to have separate history files for different Bevy apps
     pub history_file: Option<String>,
 }
@@ -420,7 +386,6 @@ impl ReplConfig {
         self
     }
 
-    #[cfg(feature = "custom-history-file")]
     /// Set a custom history file path
     /// This allows different Bevy apps to have separate command histories
     /// Example: .with_history_file(".my_game_history")

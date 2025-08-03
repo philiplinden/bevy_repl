@@ -14,7 +14,7 @@ categories = ["game-development", "development-tools"]
 [dependencies]
 bevy = { version = "0.16.1", default-features = false, features = ["bevy_log"]}
 clap = { version = "4.5" }
-rustyline = { version = "16.0"  }
+crossterm = { version = "0.29", features = ["events"] }
 
 # Derive support via separate crate
 bevy_repl_derive = { version = "0.1.0", path = "./bevy_repl_derive", optional = true }
@@ -34,7 +34,6 @@ default = [
     "dev",
 ]
 dev = ["bevy/dynamic_linking"]
-custom-history-file = ["rustyline/with-file-history"]
 # Derive feature enables the separate derive crate
 derive = ["bevy_repl_derive"]
 
