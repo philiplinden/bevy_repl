@@ -280,3 +280,83 @@ Disables the REPL but keeps the application running. The REPL can be re-enabled 
 - [ ] Add a `clear-history` command to clear the command history
 - [ ] Add tab completion for command names and arguments
 - [ ] Add command aliases and shortcuts
+
+### Why re-implement clap derive instead of using clap's derive macros?
+
+**Problem:** We need to provide a clean, Bevy-specific API for command definition while leveraging clap's robust argument parsing capabilities.
+
+**Solution:** Re-implement clap derive functionality in our own `bevy_repl_derive` macro rather than using clap's derive macros directly.
+
+**Benefits of Re-implementation:**
+
+- **Bevy Integration**: Our macro generates Bevy-specific code (access to `Commands`, ECS patterns)
+- **Simplified API**: Users only need `#[derive(ReplCommand)]` instead of implementing traits manually
+- **Custom Execution Flow**: We control how arguments flow into the `run()` method with direct field access
+- **No Additional Dependencies**: Doesn't require clap's `derive` feature, keeping dependencies minimal
+
+**Example of our approach:**
+
+```rust
+#[derive(ReplCommand)]
+#[command(name = "spawn", about = "Spawn an entity")]
+pub struct SpawnCommand {
+    #[arg(help = "The name of the entity")]
+    name: String,
+    
+    #[arg(short, long, default_value = "100")]
+    health: i32,
+}
+
+impl SpawnCommand {
+    fn run(&self, commands: &mut Commands) -> ReplResult<String> {
+        // Direct field access with automatic parsing!
+        commands.spawn(Health { value: self.health });
+        Ok(format!("Spawned {} with {} health", self.name, self.health))
+    }
+}
+```
+
+**Alternative approach using clap derive:**
+
+```rust
+#[derive(Parser)]
+#[command(name = "spawn", about = "Spawn an entity")]
+pub struct SpawnCommand {
+    #[arg(help = "The name of the entity")]
+    name: String,
+    
+    #[arg(short, long, default_value = "100")]
+    health: i32,
+}
+
+impl ReplCommand for SpawnCommand {
+    fn command(&self) -> clap::Command {
+        SpawnCommand::command()
+    }
+    
+    fn execute(&self, commands: &mut Commands, matches: &clap::ArgMatches) -> ReplResult<String> {
+        let args = SpawnCommand::from_arg_matches(matches)?;
+        // More boilerplate to access fields
+        commands.spawn(Health { value: args.health });
+        Ok(format!("Spawned {} with {} health", args.name, args.health))
+    }
+}
+```
+
+**Trade-offs:**
+
+**Re-implementation Pros:**
+
+- Cleaner user experience with less boilerplate
+- Full control over generated code
+- Bevy-specific optimizations
+- No dependency on clap's derive feature
+
+**Re-implementation Cons:**
+
+- Duplicating clap's attribute parsing logic
+- Need to maintain compatibility with clap's API
+- More complex macro implementation
+- Risk of falling behind clap's features
+
+**Decision:** The re-implementation approach was chosen to prioritize user experience and Bevy integration over leveraging clap's derive macros directly. This aligns with the project's goal of providing a seamless, Bevy-native REPL experience.

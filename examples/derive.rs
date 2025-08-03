@@ -1,7 +1,8 @@
 use bevy::prelude::*;
 use bevy_repl::prelude::*;
 
-// This example shows how to use the derive feature
+// This example shows the basic derive feature usage
+// For more advanced clap-style syntax, see clap_style_derive.rs
 // To enable this, add the "derive" feature to your Cargo.toml:
 // bevy_repl = { version = "0.1.0", features = ["derive"] }
 
