@@ -93,16 +93,67 @@ goal.
 
 ### Command parsing
 
-Use `clap` to parse commands from the REPL's input box.
+Use `clap` to parse commands from the REPL's input area. Commands are registered
+as triggers that fire one-shot systems, and pass along the arguments and options
+as context.
 
-Register a system to fire in response to a command via triggers.
+```rust
+use bevy::prelude::*;
+use bevy_repl::prelude::*;
 
-`app.observe(observer_fn)`
+fn main() {
+    let mut app = App::new();
 
-and 
+    // Run in headless mode at 60 fps
+    app.add_plugins((
+        MinimalPlugins,
+        bevy::app::ScheduleRunnerPlugin::run_loop(
+            std::time::Duration::from_secs_f64(1.0 / 60.0),
+        )
+    ));
 
-`fn observer_fn(_trigger: Trigger<ClapCommand>) {}`
+    // Add command to Repl
+    app.add_plugins(ReplPlugin)
+        .repl::<QuitCommand>(on_quit);
 
+    app.run();
+}   
+
+/// This function runs only once for each time the command event is triggered
+fn on_quit(trigger: Trigger<QuitCommand>, events: EventWriter<AppExit>) {
+    if trigger.verbose {
+        info!("Quitting...");
+    };
+    events.write(AppExit::Success);
+}
+
+/// A clap parser that interprets text inputs as commands with arguments
+#[derive(Parser, ReplCommand)]
+#[command(name = "quit")]
+struct QuitCommand {
+    #[arg(short, long)]
+    verbose: bool,
+}
+```
+
+### Scheduling
+
+The REPL input system set runs `First` every frame. When commands are parsed,
+they trigger events that are captured in later stages of the schedule.
+
+Command execution scheduling is handled by placing the command observers in the
+schedule as needed (in `Update`, `FixedUpdate`, etc.).
+
+There is no output or display stage. Since the REPL TUI captures all Bevy logs,
+use the regular `info!` or `debug!` macros and the `RUST_LOG` environment
+variable to configure messages printed to the console.
+
+## Future Features
+
+We plan to add the following features in future releases:
+
+- **Error handling examples** - Show how observers handle invalid commands and parsing failures
+- **Multiple observers** - Demonstrate how different systems can observe the same command
 
 ## License
 

@@ -1,5 +1,3 @@
 mod quit;
-mod close;
 
-pub use close::CloseReplCommand;
-pub use quit::QuitCommand;
+pub use quit::{QuitCommand, on_quit};

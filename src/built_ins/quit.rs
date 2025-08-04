@@ -1,19 +1,19 @@
 use bevy::prelude::*;
-use crate::{ReplCommand, ReplResult};
-use clap::Command;
+use clap::Parser;
+use crate::ReplCommand;
 
 /// Quit/Exit command - graceful shutdown
-#[derive(Default, Clone)]
-pub struct QuitCommand;
+#[derive(Parser, ReplCommand)]
+#[command(name = "quit", about = "Gracefully terminate the application", aliases = ["exit", "q"])]
+pub struct QuitCommand {
+    #[arg(short, long)]
+    verbose: bool,
+}
 
-impl ReplCommand for QuitCommand {
-    fn command(&self) -> Command {
-        Command::new("quit")
-            .about("Gracefully terminate the application")
-            .aliases(["exit", "q"])
+/// Observer function for the quit command
+pub fn on_quit(trigger: Trigger<QuitCommand>, mut exit: EventWriter<AppExit>) {
+    if trigger.verbose {
+        info!("Quitting...");
     }
-    fn execute(&self, commands: &mut Commands, _matches: &clap::ArgMatches) -> ReplResult<String> {
-        commands.send_event(AppExit::Success);
-        Ok("Shutting down application...".to_string())
-    }
+    exit.send(AppExit::Success);
 }
