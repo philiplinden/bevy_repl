@@ -119,20 +119,20 @@ fn main() {
     app.run();
 }   
 
-/// This function runs only once for each time the command event is triggered
-fn on_quit(trigger: Trigger<QuitCommand>, events: EventWriter<AppExit>) {
-    if trigger.verbose {
-        info!("Quitting...");
-    };
-    events.write(AppExit::Success);
-}
-
 /// A clap parser that interprets text inputs as commands with arguments
 #[derive(Parser, ReplCommand)]
 #[command(name = "quit")]
 struct QuitCommand {
     #[arg(short, long)]
     verbose: bool,
+}
+
+/// This function runs only once for each time the command event is triggered
+fn on_quit(trigger: Trigger<QuitCommand>, events: EventWriter<AppExit>) {
+    if trigger.verbose {
+        info!("Quitting...");
+    };
+    events.write(AppExit::Success);
 }
 ```
 

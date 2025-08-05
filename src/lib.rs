@@ -1,7 +1,8 @@
 #![doc = include_str!("../README.md")]
 
 pub mod built_ins;
-pub mod terminal;
+pub mod terminal;   
+pub mod commands;
 
 pub mod prelude {
     pub use crate::{Repl, ReplConfig, ReplPlugin, ReplResult, ReplSet, ReplCommand, ReplCommandExt};
@@ -92,20 +93,16 @@ pub enum ReplSet {
 
 pub struct ReplTerminal {
     terminal: Option<BevyCrosstermTerminal>,
-    config: ReplConfig,
 }
 
 impl Default for ReplTerminal {
-    fn default() -> Self {
-        Self::new(ReplConfig::default())
-    }
+    fn default() -> Self {}
 }
 
 impl ReplTerminal {
-    fn new(config: ReplConfig) -> Self {
+    fn new() -> Self {
         Self {
             terminal: None,
-            config,
         }
     }
 
@@ -115,8 +112,8 @@ impl ReplTerminal {
         }
 
         let mut terminal = BevyCrosstermTerminal::new(
-            self.config.prompt.clone(),
-            self.config.history_file.clone(),
+            "> ".to_string(),
+            None,
         );
 
         if let Err(e) = terminal.init() {
@@ -145,137 +142,5 @@ impl ReplTerminal {
         if let Some(terminal) = &mut self.terminal {
             terminal.print_output(&output);
         }
-    }
-}
-
-#[derive(Resource)]
-pub struct Repl {
-    enabled: bool,
-    terminal: ReplTerminal,
-}
-
-impl Repl {
-    /// Create a new REPL with default configuration
-    pub fn new() -> Self {
-        Self::with_config(ReplConfig::default())
-    }
-
-    /// Create a new REPL with custom configuration
-    /// This allows users to customize the prompt, history file, and other settings
-    pub fn with_config(config: ReplConfig) -> Self {
-        Self {
-            enabled: config.enabled_on_startup,
-            terminal: ReplTerminal::new(config.clone()),
-        }
-    }
-
-    /// Try to receive input from the terminal
-    /// Returns None if no input is available (non-blocking)
-    pub fn try_recv_input(&mut self) -> Option<String> {
-        self.terminal.try_recv_input()
-    }
-
-    /// Send output to be printed by the terminal
-    /// This prevents blocking the main Bevy thread during I/O
-    pub fn send_output(&mut self, output: String) {
-        self.terminal.send_output(output);
-    }
-
-    /// Check if the REPL is currently enabled
-    pub fn is_enabled(&self) -> bool {
-        self.enabled
-    }
-
-    /// Enable the REPL
-    pub fn enable(&mut self) {
-        self.enabled = true;
-        // Initialize the terminal if it's not already running
-        if self.terminal.terminal.is_none() {
-            self.terminal.spawn();
-        }
-    }
-
-    /// Disable the REPL
-    pub fn disable(&mut self) {
-        self.enabled = false;
-        // Clean up the terminal
-        self.terminal.shutdown();
-    }
-
-    /// Toggle the REPL between enabled and disabled states
-    pub fn toggle(&mut self) {
-        self.enabled = !self.enabled;
-        if self.enabled {
-            self.enable();
-        } else {
-            self.disable();
-        }
-    }
-}
-
-/// Implement Drop to ensure graceful shutdown
-/// This ensures the terminal is cleaned up properly and saves history
-impl Drop for Repl {
-    fn drop(&mut self) {
-        // Clean up the terminal
-        // This ensures history is saved before the program exits
-        self.terminal.shutdown();
-    }
-}
-
-/// Configuration for the REPL plugin
-#[derive(Resource, Clone)]
-pub struct ReplConfig {
-    /// The prompt string to display
-    pub prompt: String,
-
-    /// The key to toggle the REPL. If None, the REPL is always enabled.
-    pub toggle_key: Option<KeyCode>,
-
-    /// Whether the REPL should be enabled when the app starts
-    pub enabled_on_startup: bool,
-
-    /// Custom history file path. If None, no history file is used
-    /// This allows users to have separate history files for different Bevy apps
-    pub history_file: Option<String>,
-}
-
-impl Default for ReplConfig {
-    fn default() -> Self {
-        Self {
-            prompt: "> ".to_string(),
-            toggle_key: None,
-            enabled_on_startup: true,
-            history_file: None,
-        }
-    }
-}
-
-impl ReplConfig {
-    /// Create a new REPL configuration with default settings
-    pub fn new() -> Self {
-        Self::default()
-    }
-
-    /// Set a custom prompt string
-    pub fn with_prompt(mut self, prompt: impl Into<String>) -> Self {
-        self.prompt = prompt.into();
-        self
-    }
-
-    /// Set a key to toggle the REPL on/off
-    /// When set, pressing this key will toggle the REPL between enabled and disabled states
-    /// Example: .with_toggle_key(KeyCode::F1)
-    pub fn with_toggle_key(mut self, key: KeyCode) -> Self {
-        self.toggle_key = Some(key);
-        self
-    }
-
-    /// Set a custom history file path
-    /// This allows different Bevy apps to have separate command histories
-    /// Example: .with_history_file(".my_game_history")
-    pub fn with_history_file(mut self, history_file: impl Into<String>) -> Self {
-        self.history_file = Some(history_file.into());
-        self
     }
 }

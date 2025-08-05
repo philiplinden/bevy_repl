@@ -1,3 +1,20 @@
+//! This module creates a TUI with `bevy_crossterm` that mimics a terminal.
+//! 
+//! A single line at the bottom of the TUI is the input area, where text can be
+//! edited in place. This is the prompt area of the REPL. Above the input area
+//! is a scrollable area where stdout and stderr are captured and displayed.
+//!
+//! ```text
+//! ┌───your terminal─────────────────────────────────────────────────────────┐
+//! │ INFO: 2025-07-28T12:00:00.000Z: bevy_repl: Starting REPL                │
+//! │ INFO: 2025-07-28T12:00:00.000Z: bevy_repl: Type 'help' for commands     │
+//! │                                                                         │
+//! │ [Game logs and command output appear here...]                           │
+//! │                                                                         │
+//! │ > spawn-player Bob                                                      │
+//! └─────────────────────────────────────────────────────────────────────────┘
+//! ```
+
 use bevy::prelude::*;
 use bevy_crossterm::prelude::*;
 use std::{
