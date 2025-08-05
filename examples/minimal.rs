@@ -1,30 +1,45 @@
 use bevy::prelude::*;
 use bevy_repl::prelude::*;
-use clap::Parser;
+use bevy_ratatui::RatatuiPlugins;
 
 fn main() {
-    let mut app = App::new();
+    let frame_time = Duration::from_secs_f32(1. / 60.);
 
-    // Run in headless mode at 60 fps
+    let mut app =App::new()
+        .add_plugins((
+            MinimalPlugins.set(ScheduleRunnerPlugin::run_loop(frame_time)),
+        ));
+
     app.add_plugins((
-        MinimalPlugins,
-        bevy::app::ScheduleRunnerPlugin::run_loop(
-            std::time::Duration::from_secs_f64(1.0 / 60.0),
-        )
-    ));
-
-    // Add REPL with custom commands
-    app.add_plugins(ReplPlugin)
-        .repl::<HelloCommand>(on_hello);
+        RatatuiPlugins::default(),
+        ReplPlugin,
+        ReplDefaultCommandsPlugin,
+    ))
+    .repl::<SayCommand>(on_say);
 
     app.run();
 }
 
-#[derive(Parser)]
-#[command(name = "hello", about = "Say hello")]
-struct HelloCommand;
-
-/// Observer function for hello
-fn on_hello(trigger: Trigger<HelloCommand>) {
-    info!("Hello, world!");
+struct SayCommand {
+    message: String,
 }
+
+impl ReplCommand for SayCommand {
+    fn command() -> clap::Command {
+        clap::Command::new("say")
+            .about("Say something")
+            .arg(
+                clap::Arg::new("message")
+                    .short('m')
+                    .long("message")
+                    .help("Message to say")
+                    .required(true)
+                    .takes_value(true)
+            )
+    }
+}
+
+fn on_say(trigger: Trigger<SayCommand>) {
+    println!("{}", trigger.message);
+}
+

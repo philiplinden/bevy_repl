@@ -1,17 +1,28 @@
 use bevy::prelude::*;
-use clap::Parser;
+use clap::{Command, Arg, ArgAction};
 use crate::ReplCommand;
 
-/// Quit/Exit command - graceful shutdown
-#[derive(Parser, ReplCommand)]
-#[command(name = "quit", about = "Gracefully terminate the application", aliases = ["exit", "q"])]
-pub struct QuitCommand {
-    #[arg(short, long)]
-    verbose: bool,
+pub fn plugin(app: &mut App) {
+    app.repl::<QuitCommand>(on_quit);
 }
 
-/// Observer function for the quit command
-pub fn on_quit(trigger: Trigger<QuitCommand>, mut exit: EventWriter<AppExit>) {
+struct QuitCommand;
+
+impl ReplCommand for QuitCommand {
+    fn command() -> clap::Command {
+        clap::Command::new("quit")
+            .about("Exits the app gracefully")
+            .arg(
+                clap::Arg::new("verbose")
+                    .short('v')
+                    .long("verbose")
+                    .help("Enables verbose output")
+                    .action(clap::ArgAction::SetTrue),
+            )
+    }
+}
+
+fn on_quit(trigger: Trigger<QuitCommand>, mut exit: EventWriter<AppExit>) {
     if trigger.verbose {
         info!("Quitting...");
     }

@@ -1,7 +1,7 @@
 # bevy_repl
 
 An interactive REPL for headless Bevy apps powered by `clap` for command parsing
-and `bevy_crossterm` for terminal input and output. The plugin creates a virtual
+and `bevy_ratatui` for terminal input and output. The plugin creates a virtual
 terminal interface within the game window that emulates an interactive shell. It
 provides:
 
@@ -74,7 +74,7 @@ fn main() {
 `bevy_repl` takes the idea of a Half-Life 2 debug console and brings it to
 headless mode, so an app can retain command style interaction without depending
 on windowing, rendering, or UI features. We accomplsh this with a trick: use
-`bevy_crossterm` to create a full text user interface (TUI) that looks just like
+`bevy_ratatui` to create a full text user interface (TUI) that looks just like
 the app running normally in headless mode, but with an area at the bottom that
 supports keyboard input. Technically the app is running with a TUI, not truly
 headless, but TUIs don't need windowing or a renderer so we still accomplish our
@@ -91,69 +91,90 @@ goal.
 └──────────────────────────────────────────────────────────────────────────────┘
 ```
 
+When the REPL is enabled, keycode forwarding to Bevy is disabled and all key
+strokes are consumed by the REPL. When the REPL is disabled, keycode input
+events are forwarded to Bevy via `bevy_ratatui`. This is to avoid passing events
+to Bevy when you are typing a command, but still give the flexibility to have
+keyboard inputs for your game.
+
 ### Command parsing
 
 Use `clap` to parse commands from the REPL's input area. Commands are registered
 as triggers that fire one-shot systems, and pass along the arguments and options
 as context.
 
+Use clap's [builder pattern] to describe the command and its arguments or
+options. Then add the command and its observer to the app with
+`.add_repl_command`.
+
+[builder pattern]: https://docs.rs/clap/latest/clap/_tutorial/index.html#tutorial-for-the-builder-api
+
 ```rust
 use bevy::prelude::*;
 use bevy_repl::prelude::*;
 
 fn main() {
-    let mut app = App::new();
+    let frame_time = Duration::from_secs_f32(1. / 60.);
 
-    // Run in headless mode at 60 fps
+    let mut app =App::new()
+        .add_plugins((
+            MinimalPlugins.set(ScheduleRunnerPlugin::run_loop(frame_time)),
+        ));
+
     app.add_plugins((
-        MinimalPlugins,
-        bevy::app::ScheduleRunnerPlugin::run_loop(
-            std::time::Duration::from_secs_f64(1.0 / 60.0),
-        )
-    ));
-
-    // Add command to Repl
-    app.add_plugins(ReplPlugin)
-        .repl::<QuitCommand>(on_quit);
+        RatatuiPlugins::default(),
+        ReplPlugin,
+        ReplDefaultCommandsPlugin,
+    ))
+    .repl::<SayCommand>(on_say);
 
     app.run();
-}   
-
-/// A clap parser that interprets text inputs as commands with arguments
-#[derive(Parser, ReplCommand)]
-#[command(name = "quit")]
-struct QuitCommand {
-    #[arg(short, long)]
-    verbose: bool,
 }
 
-/// This function runs only once for each time the command event is triggered
-fn on_quit(trigger: Trigger<QuitCommand>, events: EventWriter<AppExit>) {
-    if trigger.verbose {
-        info!("Quitting...");
-    };
-    events.write(AppExit::Success);
+struct SayCommand {
+    message: String,
+}
+
+impl ReplCommand for SayCommand {
+    fn command() -> clap::Command {
+        clap::Command::new("say")
+            .about("Say something")
+            .arg(
+                clap::Arg::new("message")
+                    .short('m')
+                    .long("message")
+                    .help("Message to say")
+                    .required(true)
+                    .takes_value(true)
+            )
+    }
+}
+
+fn on_say(trigger: Trigger<SayCommand>) {
+    println!("{}", trigger.message);
 }
 ```
 
 ### Scheduling
 
-The REPL input system set runs `First` every frame. When commands are parsed,
-they trigger events that are captured in later stages of the schedule.
+The REPL reads input events and emits trigger events alongside the `bevy_ratatui`
+[input handling system set](https://github.com/cxreiff/bevy_ratatui/blob/main/src/crossterm_context/event.rs).
+The REPL reads crossterm events after `InputSet::EmitCrossterm` and emits
+triggers duing `InputSet::EmitBevy`. The REPL has no system sets of its own.
 
-Command execution scheduling is handled by placing the command observers in the
-schedule as needed (in `Update`, `FixedUpdate`, etc.).
+There is no output or display stage. The REPL is designed to capture all Bevy
+logs and display them in the terminal. For output, use the regular `info!` or
+`debug!` macros and the `RUST_LOG` environment variable to configure messages
+printed to the console or implement your own TUI panels with `bevy_ratatui`.
 
-There is no output or display stage. Since the REPL TUI captures all Bevy logs,
-use the regular `info!` or `debug!` macros and the `RUST_LOG` environment
-variable to configure messages printed to the console.
+## Aspirations
 
-## Future Features
-
-We plan to add the following features in future releases:
-
+- **Derive pattern** - Seamlessly make clap CLIs with the derive pattern for the REPL
+- **Command history** - Use keybindings to navigate past commands
 - **Error handling examples** - Show how observers handle invalid commands and parsing failures
-- **Multiple observers** - Demonstrate how different systems can observe the same command
+- **Multiple observers** - Demonstrate how different systems can observe the
+  same command
+- **Support TUI games** - Act as the `bevy_console` equivalent for TUI games
 
 ## License
 

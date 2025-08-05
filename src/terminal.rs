@@ -1,4 +1,4 @@
-//! This module creates a TUI with `bevy_crossterm` that mimics a terminal.
+//! This module creates a TUI with `bevy_ratatui` that mimics a terminal.
 //! 
 //! A single line at the bottom of the TUI is the input area, where text can be
 //! edited in place. This is the prompt area of the REPL. Above the input area
@@ -16,194 +16,178 @@
 //! ```
 
 use bevy::prelude::*;
-use bevy_crossterm::prelude::*;
-use std::{
-    collections::VecDeque,
-    sync::{Arc, Mutex},
-};
+use std::collections::VecDeque;
 
-/// Terminal state management for the REPL using bevy_crossterm
+/// Terminal state management for the REPL using bevy_ratatui
 #[derive(Resource)]
-pub struct BevyCrosstermTerminal {
-    input_queue: Arc<Mutex<VecDeque<String>>>,
-    output_queue: Arc<Mutex<VecDeque<String>>>,
-    prompt: String,
-    history_file: Option<String>,
-    history: VecDeque<String>,
+pub struct BevyRatatuiTerminal {
+    /// Scrollable log output
+    log_lines: VecDeque<String>,
+    /// Current input line
     current_line: String,
+    /// Cursor position in input line
     cursor_position: usize,
+    /// Terminal prompt
+    prompt: String,
+    /// Maximum number of log lines to keep
+    max_log_lines: usize,
+    /// Whether the terminal is active
     is_active: bool,
 }
 
-impl BevyCrosstermTerminal {
-    pub fn new(prompt: String, history_file: Option<String>) -> Self {
+impl Default for BevyRatatuiTerminal {
+    fn default() -> Self {
         Self {
-            input_queue: Arc::new(Mutex::new(VecDeque::new())),
-            output_queue: Arc::new(Mutex::new(VecDeque::new())),
-            prompt,
-            history_file,
-            history: VecDeque::new(),
+            log_lines: VecDeque::new(),
             current_line: String::new(),
             cursor_position: 0,
-            is_active: false,
+            prompt: "> ".to_string(),
+            max_log_lines: 1000,
+            is_active: true,
+        }
+    }
+}
+
+impl BevyRatatuiTerminal {
+    /// Create a new terminal with custom prompt
+    pub fn new(prompt: String) -> Self {
+        Self {
+            prompt,
+            ..Default::default()
         }
     }
 
-    /// Initialize the terminal
-    pub fn init(&mut self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        // Load history if specified
-        if let Some(ref history_path) = self.history_file {
-            if let Ok(contents) = std::fs::read_to_string(history_path) {
-                for line in contents.lines() {
-                    if !line.trim().is_empty() {
-                        self.history.push_back(line.to_string());
-                    }
-                }
-            }
-        }
+    /// Add a line to the log output
+    pub fn add_log_line(&mut self, line: String) {
+        self.log_lines.push_back(line);
         
-        self.is_active = true;
-        Ok(())
-    }
-
-    /// Clean up terminal state
-    pub fn cleanup(&mut self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        // Save history if specified
-        if let Some(ref history_path) = self.history_file {
-            let history_content: String = self.history.iter()
-                .take(1000) // Limit history size
-                .map(|line| format!("{}\n", line))
-                .collect();
-            std::fs::write(history_path, history_content).ok();
-        }
-        
-        self.is_active = false;
-        Ok(())
-    }
-
-    /// Handle input events from bevy_crossterm
-    pub fn handle_input(&mut self, input: &str) {
-        if !self.is_active {
-            return;
-        }
-
-        // Process input character by character
-        for c in input.chars() {
-            match c {
-                '\n' | '\r' => {
-                    // Enter key - submit current line
-                    let line = self.current_line.clone();
-                    if !line.trim().is_empty() {
-                        self.add_to_history(line.clone());
-                        let mut queue = self.input_queue.lock().unwrap();
-                        queue.push_back(line);
-                    }
-                    self.current_line.clear();
-                    self.cursor_position = 0;
-                }
-                '\x03' => {
-                    // Ctrl+C - send quit command
-                    let mut queue = self.input_queue.lock().unwrap();
-                    queue.push_back("quit".to_string());
-                }
-                '\x04' => {
-                    // Ctrl+D - send quit command
-                    let mut queue = self.input_queue.lock().unwrap();
-                    queue.push_back("quit".to_string());
-                }
-                '\x08' | '\x7f' => {
-                    // Backspace
-                    if self.cursor_position > 0 {
-                        self.current_line.remove(self.cursor_position - 1);
-                        self.cursor_position -= 1;
-                    }
-                }
-                '\x1b' => {
-                    // Escape sequence - ignore for now
-                    continue;
-                }
-                _ if c.is_ascii_control() => {
-                    // Other control characters - ignore
-                    continue;
-                }
-                _ => {
-                    // Regular character
-                    if self.cursor_position < self.current_line.len() {
-                        self.current_line.insert(self.cursor_position, c);
-                    } else {
-                        self.current_line.push(c);
-                    }
-                    self.cursor_position += 1;
-                }
-            }
+        // Trim old lines if we exceed the maximum
+        while self.log_lines.len() > self.max_log_lines {
+            self.log_lines.pop_front();
         }
     }
 
-    /// Poll for input (non-blocking)
-    pub fn poll_input(&mut self) -> Option<String> {
-        let mut queue = self.input_queue.lock().unwrap();
-        queue.pop_front()
+    /// Get the current input line
+    pub fn get_current_line(&self) -> &str {
+        &self.current_line
     }
 
-    /// Get the current line buffer
-    pub fn get_current_line(&self) -> String {
-        self.current_line.clone()
+    /// Set the current input line
+    pub fn set_current_line(&mut self, line: String) {
+        self.current_line = line;
+        self.cursor_position = self.current_line.len();
     }
 
-    /// Clear the current line
+    /// Clear the current input line
     pub fn clear_line(&mut self) {
         self.current_line.clear();
         self.cursor_position = 0;
     }
 
-    /// Add a command to history
-    pub fn add_to_history(&mut self, command: String) {
-        if !command.trim().is_empty() && 
-           self.history.back().map(|last| last != &command).unwrap_or(true) {
-            self.history.push_back(command);
+    /// Handle character input
+    pub fn handle_char(&mut self, c: char) {
+        if !self.is_active {
+            return;
+        }
+
+        match c {
+            '\n' | '\r' => {
+                // Enter key - submit current line
+                let line = self.current_line.clone();
+                if !line.trim().is_empty() {
+                    self.add_log_line(format!("{}{}", self.prompt, line));
+                    // TODO: Send command for processing
+                }
+                self.clear_line();
+            }
+            '\x08' | '\x7f' => {
+                // Backspace
+                if self.cursor_position > 0 {
+                    self.current_line.remove(self.cursor_position - 1);
+                    self.cursor_position -= 1;
+                }
+            }
+            '\x1b' => {
+                // Escape sequence - ignore for now
+                return;
+            }
+            _ if c.is_ascii_control() => {
+                // Other control characters - ignore
+                return;
+            }
+            _ => {
+                // Regular character
+                self.current_line.insert(self.cursor_position, c);
+                self.cursor_position += 1;
+            }
         }
     }
 
-    /// Print output
-    pub fn print_output(&mut self, output: &str) {
-        let mut queue = self.output_queue.lock().unwrap();
-        queue.push_back(output.to_string());
-    }
+    // /// Handle special keys
+    // pub fn handle_key(&mut self, key: ratatui::event::KeyEvent) {
+    //     if !self.is_active {
+    //         return;
+    //     }
 
-    /// Process output queue
-    pub fn process_output(&mut self) {
-        let mut queue = self.output_queue.lock().unwrap();
-        while let Some(output) = queue.pop_front() {
-            // Output will be handled by bevy_crossterm rendering system
-            println!("{}", output);
-        }
-    }
+    //     match key.code {
+    //         ratatui::event::KeyCode::Left => {
+    //             if self.cursor_position > 0 {
+    //                 self.cursor_position -= 1;
+    //             }
+    //         }
+    //         ratatui::event::KeyCode::Right => {
+    //             if self.cursor_position < self.current_line.len() {
+    //                 self.cursor_position += 1;
+    //             }
+    //         }
+    //         ratatui::event::KeyCode::Home => {
+    //             self.cursor_position = 0;
+    //         }
+    //         ratatui::event::KeyCode::End => {
+    //             self.cursor_position = self.current_line.len();
+    //         }
+    //         ratatui::event::KeyCode::Up => {
+    //             // TODO: Navigate command history
+    //         }
+    //         ratatui::event::KeyCode::Down => {
+    //             // TODO: Navigate command history
+    //         }
+    //         _ => {}
+    //     }
+    // }
 
-    /// Get the prompt text
-    pub fn get_prompt(&self) -> String {
-        format!("{}{}", self.prompt, self.current_line)
-    }
-
-    /// Get cursor position relative to prompt
+    /// Get the cursor position in the input line
     pub fn get_cursor_position(&self) -> usize {
-        self.prompt.len() + self.cursor_position
+        self.cursor_position
     }
 
-    /// Handle Ctrl+C interruption
-    pub fn handle_interrupt(&mut self) {
-        let mut queue = self.input_queue.lock().unwrap();
-        queue.push_back("quit".to_string());
+    /// Set the terminal prompt
+    pub fn set_prompt(&mut self, prompt: String) {
+        self.prompt = prompt;
     }
 
-    /// Force quit the application
-    pub fn force_quit(&mut self) {
-        let mut queue = self.input_queue.lock().unwrap();
-        queue.push_back("quit".to_string());
+    /// Get the terminal prompt
+    pub fn get_prompt(&self) -> &str {
+        &self.prompt
+    }
+
+    /// Toggle terminal active state
+    pub fn toggle_active(&mut self) {
+        self.is_active = !self.is_active;
+    }
+
+    /// Check if terminal is active
+    pub fn is_active(&self) -> bool {
+        self.is_active
     }
 }
 
-impl Drop for BevyCrosstermTerminal {
-    fn drop(&mut self) {
-        self.cleanup().ok();
+/// Plugin to set up the terminal TUI
+pub struct TerminalPlugin;
+
+impl Plugin for TerminalPlugin {
+    fn build(&self, app: &mut App) {
+        app.init_resource::<BevyRatatuiTerminal>();
     }
-} 
+}
+
