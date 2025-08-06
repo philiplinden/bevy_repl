@@ -1,185 +1,211 @@
 # bevy_repl
 
-Add an interactive REPL to a headless Bevy app using `clap` for command parsing
-and `rustyline` for terminal input.
+An interactive REPL for headless Bevy apps powered by `clap` for command parsing
+and `bevy_ratatui` for terminal input and output. The plugin adds a togglable
+text input area below the terminal output for interaction even in headless mode.
 
-This crate exists because I wanted to use
-[makspll/bevy-console](https://github.com/makspll/bevy-console) but in headless
-mode, and takes heavy inspiration from that crate.
+- Unobtrusive, toggleable TUI console below normal terminal output
+- Command parsing and CLI features from `clap`  
+- Observer-based command execution system
+- Full Bevy ECS access for both read and write operations
 
-**Warning**: This is my first public Bevy plugin, and I vibe-coded a large part
-of it. You have been warned.
+The REPL is designed as an alternative to [makspll/bevy-console] for Bevy apps
+that want a terminal-like console to modify the game at runtime without
+implementing a full TUI or rendering features.
 
-**Current Limitation**: Commands that need to read from the Bevy `World`
-(inspecting entities, components, resources) are not yet supported due to Bevy
-ECS system parameter conflicts. Only commands that use `Commands` for spawning
-entities, sending events, and basic operations currently work. See
-[doc/DESIGN.md](doc/DESIGN.md) for technical details.
+[makspll/bevy-console]: https://github.com/makspll/bevy-console
 
-## Built-in Commands
-
-| Command | Description |
-| --- | --- |
-| `close` | Close the REPL but do not exit the application |
-| `quit` | Gracefully terminate the application |
-
-## Usage
-
-Custom commands can be added to the REPL by implementing the
-`ReplCommand` trait, which allows you to register a `clap` command with the
-REPL. Once the command is registered, it can be executed from the REPL.
-
-The REPL can be toggled with a key binding. By default, the REPL is always
-enabled. When the REPL is disabled, the prompt will not be shown.
-
-```rust
-use bevy::prelude::*;
-use bevy_repl::{ReplPlugin, ReplConfig, ReplCommandRegistration, ReplCommand, ReplResult};
-
-fn main() {
-    // Option 1: Use default configuration
-    App::new()
-        .add_plugins(DefaultPlugins)
-        .add_plugins(ReplPlugin::default())
-        .add_repl_command::<CustomGameCommand>()
-        .run();
-}
-
-// Option 2: Use custom configuration (requires `custom-history-file` feature)
-fn main_with_config() {
-    let config = ReplConfig::new()
-        .with_prompt("game> ")
-        .with_history_file(".my_game_history") // Custom history file
-        .with_toggle_key(KeyCode::F1); // Toggle the REPL with F1
-
-    App::new()
-        .add_plugins(DefaultPlugins)
-        .add_plugins(ReplPlugin::with_config(config))
-        .add_repl_command::<CustomGameCommand>()
-        .run();
-}
-
-#[derive(Default)]
-struct CustomGameCommand;
-
-impl ReplCommand for CustomGameCommand {
-    fn name(&self) -> &'static str { "spawn_player" }
-    
-    fn command(&self) -> clap::Command {
-        clap::Command::new("spawn_player")
-            .about("Spawns a player entity")
-            .arg(clap::Arg::new("name").required(true))
-    }
-    
-    fn execute(&self, commands: &mut Commands, matches: &clap::ArgMatches) -> ReplResult<String> {
-        let name = matches.get_one::<String>("name").unwrap();
-        commands.spawn(PlayerBundle::new(name.clone()));
-        Ok(format!("Spawned player: {}", name))
-    }
-}
-```
-
-The REPL will then be available in the terminal as a prompt
-shown below the game's log messages when you run your game from the terminal.
-
-```shell
-INFO: 2025-07-28T12:00:00.000Z: bevy_repl: Starting REPL
-game>
-```
-
-Enter commands in the REPL to interact with the game. The REPL will display the
-output of the command in the terminal. For example, the `tree` command will list
-all entities with components as a tree.
-
-```shell
-game> tree
-```
-
-```shell
-INFO: 2025-07-28T12:00:00.000Z: bevy_repl: Starting REPL
-game> tree
-Entity 0:
-  - bevy_core::name::Name
-  - bevy_transform::components::transform::Transform
-game>
-```
-
-## Configuration
-
-The `ReplConfig` allows you to customize the REPL behavior. See
-[doc/DESIGN.md](doc/DESIGN.md) for more details.
-
-```rust
-let config = ReplConfig::new()
-    .with_prompt("game> ")
-    .with_history_file(".my_app_history"); // Separate history for your app
-```
-
-By default, `rustyline` saves command history to `~/.rustyline_history`. You can
-customize this by passing a custom history file to `ReplConfig`. This allows
-different Bevy applications to have separate command histories.
-
-```rust
-let config = ReplConfig::new()
-    .with_history_file(".my_game_history"); // App-specific history file
-```
+> This is my first public Bevy plugin, and I vibe-coded a large part
+> of it. **You have been warned.**
 
 ## Features
 
-This plugin uses `clap` for command parsing and `rustyline` for terminal input,
-history, and familiar terminal key bindings. Write custom commands with `clap`
-and register them with the REPL to interact with ECS systems, components, and
-resources from the terminal. Search your command history, tab complete commands,
-and navigate your command history with the usual terminal key bindings.
+Enable built-in commands with feature flags. Each command is enabled separately
+by a feature flag. Use the `default-commands` feature to enable all built-in
+commands.
 
-The REPL runs with the game loop but operates in your terminal, so you can use
-it on any platform that `rustyline` supports. It runs on a separate thread so as
-to not block the game loop.
-
-The following terminal actions are supported by `bevy_repl` through `rustyline`:
-
-| Action | Description |
-| --- | --- |
-| `Ctrl-A, Home` | Move cursor to the beginning of line |
-| `Ctrl-B, Left` | Move cursor one character left |
-| `Ctrl-E, End` | Move cursor to end of line |
-| `Ctrl-F, Right` | Move cursor one character right (or complete hint if cursor is at the end of line) |
-| `Ctrl-H, Backspace` | Delete character before cursor |
-| `Shift-Tab` | Previous completion |
-| `Ctrl-I, Tab` | Next completion |
-| `Ctrl-K` | Delete from cursor to end of line |
-| `Ctrl-L` | Clear screen |
-| `Ctrl-N, Down` | Next match from history |
-| `Ctrl-P, Up` | Previous match from history |
-| `Ctrl-R` | Reverse Search history (Ctrl-S forward, Ctrl-G cancel) |
-| `Ctrl-V (unix)` | Insert any special character without performing its associated action (#65) |
-| `Ctrl-V (windows)` | Paste from clipboard |
-| `Ctrl-Y` | Paste from Yank buffer |
-
-### Optional Features
-
-| Feature | Description | Default |
+| Feature Flag | Command | Description |
 | --- | --- | --- |
-| `dev` | Enable dynamic linking for faster compilation | `true` |
-| `custom-history-file` | Change the default history file for persistent command history saved across sessions (requires `rustyline/with-file-history` feature) | `false` |
+| `quit` | `quit`, `q`, CTRL+C | Gracefully terminate the application |
+| `help` | `help`, ENTER | Show clap help text |
 
-This crate uses `clap` for command parsing and `rustyline` for terminal input
-and history. Both of these dependencies are included with default features.
-You can enable or disable features by configuring these dependencies in your
-`Cargo.toml` alongside the `bevy_repl` dependency.
+Clap features are technically supported, but have not been tested. Override the
+`clap` features in your `Cargo.toml` to enable or disable additional features.
+
+## Design
+
+### Headless mode
+
+["Headless" mode] is when a Bevy app runs in the terminal without a renderer. To
+run Bevy in headless mode, disable all windowing features for Bevy in
+`Cargo.toml`. Then configure the schedule runner to loop forever instead of
+exiting the app after one frame. Running the app from the terminal only displays
+log messages from the engine to the terminal and cannot accept input.
+
+Normally the open window keeps the app running, and the exit event happens when
+closing the window. In headless mode there isn't a window to close, so the app
+runs until we kill the process or another system triggers the `AppExit` event
+with a keycode event reader (like press Q to quit).
+
+["Headless" mode]:
+    https://github.com/bevyengine/bevy/blob/main/examples/app/headless.rs
 
 ```toml
 [dependencies]
-bevy_repl = "0.1"
-clap = { version = "4.5", features = ["derive", "suggestions", "color"] }
-rustyline = { version = "16.0", features = ["with-file-history", "with-dirs"] }
+bevy = { version = "*", default-features = false }
+# replace "*" with the most recent version of bevy
 ```
 
-**Available clap features**: `derive`, `suggestions`, `color`, `help`, `usage`, `env`, `wrap_help`
-**Available rustyline features**: `with-file-history`, `with-dirs`, `with-fuzzy`, `with-custom-bindings`
+```rust
+fn main() {
+    let mut app = App::new();
 
-See the [clap](https://docs.rs/clap) and [rustyline](https://docs.rs/rustyline)
-documentation for complete feature lists and descriptions.
+    // Run in headless mode at 60 fps
+    app.add_plugins((
+        MinimalPlugins,
+        bevy::app::ScheduleRunnerPlugin::run_loop(
+            std::time::Duration::from_secs_f64(1.0 / 60.0),
+        )
+    ));
+
+    // Exit with Ctrl+C
+    app.run();
+}
+```
+
+### REPL Console
+
+`bevy_repl` takes the idea of a Half-Life 2 debug console and brings it to
+headless mode, so an app can retain command style interaction without depending
+on windowing, rendering, or UI features.
+
+Instead of rendering a fullscreen text user interface (TUI), which would kinda
+defeat the purpose of headless mode, we render a small "partial-TUI" at the
+bottom of the terminal that supports keyboard input. The normal headless output
+is shifted up to make room for the input console, and everything else is
+printed to the terminal normally. Technically the app is running with a TUI,
+not truly headless, but we are deliberately attempting to preserve the illusion
+of headless mode.
+
+```toml
+[dependencies]
+bevy_repl = { version = "0.1.0", features = ["default-commands"] }
+```
+
+**REPL disabled (regular headless mode):**
+
+```text
+┌───your terminal──────────────────────────────────────────────────────────────┐
+│ INFO: 2025-07-28T12:00:00.000Z: bevy_repl: Starting REPL                     │
+│ INFO: 2025-07-28T12:00:00.000Z: bevy_repl: Type 'help' for commands          │
+│                                                                              │
+│ [Game logs and command output appear here...]                                │
+└──────────────────────────────────────────────────────────────────────────────┘
+```
+
+**REPL enabled:**
+
+```text
+┌───your terminal──────────────────────────────────────────────────────────────┐
+│ INFO: 2025-07-28T12:00:00.000Z: bevy_repl: Starting REPL                     │
+│ INFO: 2025-07-28T12:00:00.000Z: bevy_repl: Type 'help' for commands          │
+│                                                                              │
+│ [Game logs and command output appear here...]                                │
+│                                                                              │
+┌───REPL───────────────────────────────────────────────────────────────────────┐
+│ > spawn-player Bob                                                           │
+└──────────────────────────────────────────────────────────────────────────────┘
+```
+
+When the REPL is disabled, keycode input events are forwarded to Bevy via
+`bevy_ratatui` as normal. The REPL is toggled with a keycode event (like ```).
+
+When the REPL is enabled, keycode forwarding to Bevy is disabled and all key
+strokes are consumed by the REPL. This is to avoid passing events to Bevy when
+you are typing a command. Disable the REPL to return to normal headless mode.
+
+### Command parsing
+
+Input is parsed via `clap` commands and corresponding observer systems that
+execute when triggered by the command.
+
+Use clap's [builder pattern] to describe the command and its arguments or
+options. Then add the command and its observer to the app with
+`.add_repl_command<Command>(observer)`. The observer is a one-shot system that
+receives a trigger event with the command's arguments and options.
+
+**Note:** I haven't tested clap's derive pattern yet.
+
+[builder pattern]: https://docs.rs/clap/latest/clap/_tutorial/index.html#tutorial-for-the-builder-api
+
+```rust
+use bevy::prelude::*;
+use bevy_repl::prelude::*;
+
+fn main() {
+    let frame_time = Duration::from_secs_f32(1. / 60.);
+
+    let mut app = App::new()
+        .add_plugins((
+            DefaultPlugins.set(ScheduleRunnerPlugin::run_loop(frame_time)),
+        ));
+
+    app.add_plugins((
+        ReplPlugin,
+        ReplDefaultCommandsPlugin,
+    ))
+    .repl::<SayCommand>(on_say);
+
+    app.run();
+}
+
+struct SayCommand {
+    message: String,
+}
+
+impl ReplCommand for SayCommand {
+    fn command() -> clap::Command {
+        clap::Command::new("say")
+            .about("Say something")
+            .arg(
+                clap::Arg::new("message")
+                    .short('m')
+                    .long("message")
+                    .help("Message to say")
+                    .required(true)
+                    .takes_value(true)
+            )
+    }
+}
+
+fn on_say(trigger: Trigger<SayCommand>) {
+    println!("{}", trigger.message);
+}
+```
+
+### Scheduling
+
+The REPL reads input events and emits trigger events alongside the `bevy_ratatui`
+[input handling system set](https://github.com/cxreiff/bevy_ratatui/blob/main/src/crossterm_context/event.rs).
+The REPL reads crossterm events after `InputSet::EmitCrossterm` and emits
+triggers duing `InputSet::EmitBevy`. The REPL has no system sets of its own.
+
+There is no output or display stage. The REPL is designed to capture all Bevy
+logs and display them in the terminal. For output, use the regular `info!` or
+`debug!` macros and the `RUST_LOG` environment variable to configure messages
+printed to the console or implement your own TUI panels with `bevy_ratatui`.
+
+## Aspirations
+
+- **Derive pattern** - Seamlessly integrate with clap's derive pattern
+- **Command history** - Use keybindings to navigate past commands
+- **Support for games with TUIs** - The REPL is designed to work as a sort of
+  sidecar to the normal terminal output, so _in theory_ it should be compatible
+  with games that use a TUI. Who knows if it actually works.
+- **Support for games with rendering and windowing** - The REPL is designed to
+  work from the terminal, but the terminal normally prints logs when there is a
+  window too. It would be cool to have a REPL that works from the terminal while
+  also using the window for rendering.
 
 ## License
 

@@ -1,43 +1,71 @@
-use bevy::prelude::*;
+use std::time::Duration;
+
+use bevy::{app::ScheduleRunnerPlugin, prelude::*};
 use bevy_repl::prelude::*;
 
+// Define a simple command struct
+#[derive(Debug, Clone, Event)]
+struct SayCommand {
+    message: String,
+    repeat: usize,
+}
+
+// Implement ReplCommand trait with builder pattern
+impl ReplCommand for SayCommand {
+    fn command() -> clap::Command {
+        clap::Command::new("say")
+            .about("Say something")
+            .arg(
+                clap::Arg::new("message")
+                    .help("Message to say")
+                    .required(true),
+            )
+            .arg(
+                clap::Arg::new("repeat")
+                    .short('r')
+                    .long("repeat")
+                    .help("Number of times to repeat")
+                    .default_value("1"),
+            )
+    }
+
+    fn parse_from_args(args: &[&str]) -> Result<Self, clap::Error> {
+        let matches = Self::command().get_matches_from(args);
+
+        let message = matches
+            .get_one::<String>("message")
+            .ok_or_else(|| clap::Error::new(clap::error::ErrorKind::MissingRequiredArgument))?
+            .clone();
+
+        let repeat = matches
+            .get_one::<String>("repeat")
+            .and_then(|s| s.parse::<usize>().ok())
+            .unwrap_or(1);
+
+        Ok(SayCommand { message, repeat })
+    }
+}
+
+// Function that handles the say command using Bevy's Trigger
+fn on_say(trigger: Trigger<SayCommand>) {
+    let command = trigger.event();
+    println!("Saying: {}", command.message);
+
+    for i in 0..command.repeat {
+        println!("  {}: {}", i + 1, command.message);
+    }
+}
+
 fn main() {
-    let mut app = App::new();
-
-    app.add_plugins(ReplPlugin::default())
-        .add_repl_command::<SpawnEnemyCommand>();
-
-    // Run in headless mode at 60 fps
-    app.add_plugins(bevy::app::ScheduleRunnerPlugin::run_loop(
-        std::time::Duration::from_secs_f64(1.0 / 60.0),
-    ));
-
-    app.run();
-}
-
-#[derive(Default, Clone)]
-struct SpawnEnemyCommand;
-
-impl ReplCommand for SpawnEnemyCommand {
-    fn command(&self) -> clap::Command {
-        clap::Command::new("spawn-enemy")
-            .about("Spawns an enemy entity")
-            .arg(clap::Arg::new("health").required(false))
-    }
-
-    fn execute(&self, commands: &mut Commands, matches: &clap::ArgMatches) -> ReplResult<String> {
-        let health = matches.get_one::<i32>("health").unwrap_or(&100);
-        commands.spawn((
-            Name::new("Enemy"),
-            Transform::from_xyz(5.0, 0.0, 0.0),
-            Health { value: *health },
-        ));
-        Ok(format!("Spawned enemy with health {}", health))
-    }
-}
-
-// Simple component for demonstration
-#[derive(Component)]
-struct Health {
-    value: i32,
+    App::new()
+        .add_plugins((
+            MinimalPlugins.set(ScheduleRunnerPlugin::run_loop(Duration::from_secs_f64(
+                1.0 / 60.0,
+            ))),
+            bevy::input::InputPlugin::default(),
+            bevy::log::LogPlugin::default(),
+            ReplPlugins,
+        ))
+        .add_repl_command::<SayCommand>(on_say)
+        .run();
 }
