@@ -1,32 +1,36 @@
 # bevy_repl
 
 An interactive REPL for headless Bevy apps powered by `clap` for command parsing
-and `bevy_ratatui` for terminal input and output. The plugin creates a virtual
-terminal interface within the game window that emulates an interactive shell. It
-provides:
+and `bevy_ratatui` for terminal input and output. The plugin adds a togglable
+text input area below the terminal output for interaction even in headless mode.
 
-- A terminal emulation layer with input at the bottom and scrollable logs above
-- Command parsing and execution using the Bevy ECS
-- Integration with Bevy's logging system for unified output display
-- Observer-based execution system for full control of when and where actions
-  take place, and full ECS access for both read and write operations
+- Unobtrusive, toggleable TUI console below normal terminal output
+- Command parsing and CLI features from `clap`  
+- Observer-based command execution system
+- Full Bevy ECS access for both read and write operations
 
 The REPL is designed as an alternative to [makspll/bevy-console] for Bevy apps
-that want a terminal-like interface without rendering or UI dependencies.
+that want a terminal-like console to modify the game at runtime without
+implementing a full TUI or rendering features.
 
 [makspll/bevy-console]: https://github.com/makspll/bevy-console
 
-> **Warning**: This is my first public Bevy plugin, and I vibe-coded a large part
-> of it. You have been warned.
+> This is my first public Bevy plugin, and I vibe-coded a large part
+> of it. **You have been warned.**
 
-## Built-in Commands
+## Features
 
-The plugin adds the following commands to the REPL by default.
+Enable built-in commands with feature flags. Each command is enabled separately
+by a feature flag. Use the `default-commands` feature to enable all built-in
+commands.
 
-| Command | Description |
-| --- | --- |
-| `quit`, `q`, CTRL+C | Gracefully terminate the application |
-| `help` | Show clap help text |
+| Feature Flag | Command | Description |
+| --- | --- | --- |
+| `quit` | `quit`, `q`, CTRL+C | Gracefully terminate the application |
+| `help` | `help`, ENTER | Show clap help text |
+
+Clap features are technically supported, but have not been tested. Override the
+`clap` features in your `Cargo.toml` to enable or disable additional features.
 
 ## Design
 
@@ -69,16 +73,37 @@ fn main() {
 }
 ```
 
-### Console interaction
+### REPL Console
 
 `bevy_repl` takes the idea of a Half-Life 2 debug console and brings it to
 headless mode, so an app can retain command style interaction without depending
-on windowing, rendering, or UI features. We accomplsh this with a trick: use
-`bevy_ratatui` to create a full text user interface (TUI) that looks just like
-the app running normally in headless mode, but with an area at the bottom that
-supports keyboard input. Technically the app is running with a TUI, not truly
-headless, but TUIs don't need windowing or a renderer so we still accomplish our
-goal.
+on windowing, rendering, or UI features.
+
+Instead of rendering a fullscreen text user interface (TUI), which would kinda
+defeat the purpose of headless mode, we render a small "partial-TUI" at the
+bottom of the terminal that supports keyboard input. The normal headless output
+is shifted up to make room for the input console, and everything else is
+printed to the terminal normally. Technically the app is running with a TUI,
+not truly headless, but we are deliberately attempting to preserve the illusion
+of headless mode.
+
+```toml
+[dependencies]
+bevy_repl = { version = "0.1.0", features = ["default-commands"] }
+```
+
+**REPL disabled (regular headless mode):**
+
+```text
+┌───your terminal──────────────────────────────────────────────────────────────┐
+│ INFO: 2025-07-28T12:00:00.000Z: bevy_repl: Starting REPL                     │
+│ INFO: 2025-07-28T12:00:00.000Z: bevy_repl: Type 'help' for commands          │
+│                                                                              │
+│ [Game logs and command output appear here...]                                │
+└──────────────────────────────────────────────────────────────────────────────┘
+```
+
+**REPL enabled:**
 
 ```text
 ┌───your terminal──────────────────────────────────────────────────────────────┐
@@ -87,25 +112,29 @@ goal.
 │                                                                              │
 │ [Game logs and command output appear here...]                                │
 │                                                                              │
+┌───REPL───────────────────────────────────────────────────────────────────────┐
 │ > spawn-player Bob                                                           │
 └──────────────────────────────────────────────────────────────────────────────┘
 ```
 
+When the REPL is disabled, keycode input events are forwarded to Bevy via
+`bevy_ratatui` as normal. The REPL is toggled with a keycode event (like ```).
+
 When the REPL is enabled, keycode forwarding to Bevy is disabled and all key
-strokes are consumed by the REPL. When the REPL is disabled, keycode input
-events are forwarded to Bevy via `bevy_ratatui`. This is to avoid passing events
-to Bevy when you are typing a command, but still give the flexibility to have
-keyboard inputs for your game.
+strokes are consumed by the REPL. This is to avoid passing events to Bevy when
+you are typing a command. Disable the REPL to return to normal headless mode.
 
 ### Command parsing
 
-Use `clap` to parse commands from the REPL's input area. Commands are registered
-as triggers that fire one-shot systems, and pass along the arguments and options
-as context.
+Input is parsed via `clap` commands and corresponding observer systems that
+execute when triggered by the command.
 
 Use clap's [builder pattern] to describe the command and its arguments or
 options. Then add the command and its observer to the app with
-`.add_repl_command`.
+`.add_repl_command<Command>(observer)`. The observer is a one-shot system that
+receives a trigger event with the command's arguments and options.
+
+**Note:** I haven't tested clap's derive pattern yet.
 
 [builder pattern]: https://docs.rs/clap/latest/clap/_tutorial/index.html#tutorial-for-the-builder-api
 
@@ -116,13 +145,12 @@ use bevy_repl::prelude::*;
 fn main() {
     let frame_time = Duration::from_secs_f32(1. / 60.);
 
-    let mut app =App::new()
+    let mut app = App::new()
         .add_plugins((
-            MinimalPlugins.set(ScheduleRunnerPlugin::run_loop(frame_time)),
+            DefaultPlugins.set(ScheduleRunnerPlugin::run_loop(frame_time)),
         ));
 
     app.add_plugins((
-        RatatuiPlugins::default(),
         ReplPlugin,
         ReplDefaultCommandsPlugin,
     ))
@@ -169,12 +197,15 @@ printed to the console or implement your own TUI panels with `bevy_ratatui`.
 
 ## Aspirations
 
-- **Derive pattern** - Seamlessly make clap CLIs with the derive pattern for the REPL
+- **Derive pattern** - Seamlessly integrate with clap's derive pattern
 - **Command history** - Use keybindings to navigate past commands
-- **Error handling examples** - Show how observers handle invalid commands and parsing failures
-- **Multiple observers** - Demonstrate how different systems can observe the
-  same command
-- **Support TUI games** - Act as the `bevy_console` equivalent for TUI games
+- **Support for games with TUIs** - The REPL is designed to work as a sort of
+  sidecar to the normal terminal output, so _in theory_ it should be compatible
+  with games that use a TUI. Who knows if it actually works.
+- **Support for games with rendering and windowing** - The REPL is designed to
+  work from the terminal, but the terminal normally prints logs when there is a
+  window too. It would be cool to have a REPL that works from the terminal while
+  also using the window for rendering.
 
 ## License
 
