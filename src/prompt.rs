@@ -10,7 +10,7 @@ use bevy_ratatui::{
 };
 use std::io::{stdout, Write};
 
-use crate::repl::{Repl, repl_is_enabled};
+use crate::repl::{Repl, ReplEvent, repl_is_enabled};
 
 #[derive(Resource, Clone)]
 pub struct PromptPlugin {
@@ -31,27 +31,30 @@ impl Default for PromptPlugin {
 
 impl Plugin for PromptPlugin {
     fn build(&self, app: &mut App) {
-        app.insert_resource(PromptPlugin {
-            prompt: self.prompt.clone(),
-            border: self.border,
+        app.insert_resource(ReplPrompt {
+            symbol: Some(self.prompt.clone()),
+            lines: Vec::new(),
         });
-        app.add_plugins(ReplInputPlugin);
-        app.add_systems(Update, display_prompt.run_if(repl_is_enabled));
-    }
-}
-
-pub struct ReplInputPlugin;
-
-impl Plugin for ReplInputPlugin {
-    fn build(&self, app: &mut App) {
         app.add_event::<ParseReplBufferEvent>();
         app.add_systems(Update, buffer_input.run_if(repl_is_enabled));
+        app.add_systems(Update, display_prompt.run_if(repl_buffer_changed.and(repl_is_enabled)));
     }
 }
+
+#[derive(Resource, Default, Clone)]
+pub struct ReplPrompt {
+    pub symbol: Option<String>,
+    pub lines: Vec<String>,
+}
+
 
 #[derive(Event)]
 pub struct ParseReplBufferEvent {
     pub buffer: String,
+}
+
+fn repl_buffer_changed(repl: Res<Repl>) -> bool {
+    repl.is_changed()
 }
 
 fn buffer_input(
@@ -95,7 +98,7 @@ fn buffer_input(
 }
 
 /// System that displays the current input buffer at the bottom of the terminal
-fn display_prompt(repl: Res<Repl>, prompt_plugin: Res<PromptPlugin>) {
+fn display_prompt(repl: Res<Repl>, prompt: Res<ReplPrompt>) {
     // Get terminal size
     let (width, height) = match terminal::size() {
         Ok(size) => size,
@@ -106,22 +109,31 @@ fn display_prompt(repl: Res<Repl>, prompt_plugin: Res<PromptPlugin>) {
     let prompt_line = height.saturating_sub(1);
     
     // Display the prompt and current buffer
-    let prompt_text = format!("{}{}", prompt_plugin.prompt, repl.buffer);
-    
-    // Truncate if longer than terminal width
-    let display_text = if prompt_text.len() > width as usize {
-        &prompt_text[..width as usize]
+    let prompt_text = if let Some(symbol) = prompt.symbol.clone() {
+        format!("{}{}", symbol, repl.buffer)
     } else {
-        &prompt_text
+        repl.buffer.clone()
     };
     
+    // If the prompt text is longer than the terminal width, split it into multiple lines
+    let mut display_lines = Vec::new();
+    let mut start = 0;
+    let prompt_len = prompt_text.len();
+    let width_usize = width as usize;
+    while start < prompt_len {
+        let end = (start + width_usize).min(prompt_len);
+        display_lines.push(&prompt_text[start..end]);
+        start = end;
+    }
     // Position cursor at the correct location within the buffer
-    let cursor_x = (prompt_plugin.prompt.len() + repl.cursor_pos) as u16;
+    let cursor_x = (prompt_text.len() + repl.cursor_pos) as u16;
     let cursor_x = cursor_x.min(width.saturating_sub(1));
     
     // Execute terminal operations sequentially to avoid borrow checker issues
     let _ = stdout().execute(MoveTo(0, prompt_line));
     let _ = stdout().execute(Clear(ClearType::CurrentLine));
-    let _ = stdout().write_all(display_text.as_bytes());
+    for line in display_lines {
+        let _ = stdout().write_all(line.as_bytes());
+    }
     let _ = stdout().execute(MoveTo(cursor_x, prompt_line));
 }
