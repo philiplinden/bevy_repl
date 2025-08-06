@@ -6,7 +6,10 @@ pub fn plugin(app: &mut App) {
     app.repl::<QuitCommand>(on_quit);
 }
 
-struct QuitCommand;
+#[derive(Event)]
+struct QuitCommand {
+    verbose: bool,
+}
 
 impl ReplCommand for QuitCommand {
     fn command() -> clap::Command {
@@ -20,10 +23,17 @@ impl ReplCommand for QuitCommand {
                     .action(clap::ArgAction::SetTrue),
             )
     }
+    
+    fn parse_from_args(args: &[&str]) -> Result<Self, clap::Error> {
+        let matches = Self::command().get_matches_from(args);
+        let verbose = matches.get_flag("verbose");
+        Ok(QuitCommand { verbose })
+    }
 }
 
 fn on_quit(trigger: Trigger<QuitCommand>, mut exit: EventWriter<AppExit>) {
-    if trigger.verbose {
+    let command = trigger.event();
+    if command.verbose {
         info!("Quitting...");
     }
     exit.send(AppExit::Success);

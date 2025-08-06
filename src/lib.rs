@@ -6,7 +6,7 @@ pub mod commands;
 pub mod built_ins;
 
 pub mod prelude {
-    pub use crate::{ReplPlugin, Repl, ReplResult, commands::ReplCommand};
+    pub use crate::{ReplPlugin, ReplResult, commands::{ReplCommand, ReplExt}};
     #[cfg(any(feature = "default_commands", feature = "quit"))]
     pub use crate::built_ins::ReplDefaultCommandsPlugin;
 }
@@ -21,23 +21,8 @@ pub struct ReplPlugin;
 impl Plugin for ReplPlugin {
     fn build(&self, app: &mut App) {
         // Initialize REPL resources
-        app.init_resource::<Repl>();
+        // app.init_resource::<Repl>();
     }
 }
 
 pub type ReplResult<T> = Result<T, anyhow::Error>;
-
-#[derive(Resource)]
-pub struct Repl;
-
-impl Default for Repl {
-    fn default() -> Self {
-        Self
-    }
-}
-
-impl Repl {
-    pub fn new() -> Self {
-        Self
-    }
-}
