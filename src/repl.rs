@@ -26,7 +26,7 @@ impl Plugin for ReplPlugin {
             toggle_key: self.toggle_key,
             ..default()
         });
-        app.add_systems(Update, toggle_repl);
+        app.add_systems(PostUpdate, toggle_repl);
     }
 }
 
@@ -96,10 +96,6 @@ impl Repl {
     }
     pub fn insert(&mut self, c: char) {
         self.buffer.insert(self.cursor_pos, c);
-        self.cursor_pos += 1;
-    }
-    pub fn push(&mut self, c: char) {
-        self.buffer.push_str(&c.to_string());
         self.cursor_pos += 1;
     }
 }

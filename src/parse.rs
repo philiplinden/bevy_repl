@@ -1,14 +1,15 @@
 use bevy::prelude::*;
+use bevy_ratatui::event::InputSet;
 use anyhow::Result;
 
-use crate::{prompt::ParseReplBufferEvent, repl::Repl};
+use crate::{prompt::ReplSubmitEvent, repl::Repl};
 
 
 pub struct ParserPlugin;
 
 impl Plugin for ParserPlugin {
     fn build(&self, app: &mut App) {
-        app.add_observer(parse_input_buffer_for_commands);
+        app.add_systems(Update, parse_input_buffer_for_commands.in_set(InputSet::EmitBevy));
     }
 }
 
@@ -112,22 +113,24 @@ pub trait ReplCommand: Send + Sync + Clone + Event + 'static {
 
 /// System that parses terminal input and triggers command observers
 pub fn parse_input_buffer_for_commands(
-    input: Trigger<ParseReplBufferEvent>,
-    repl: Res<Repl>,
+    mut submitted_text:  EventReader<ReplSubmitEvent>,
     mut bevy_commands: Commands,
+    repl: Res<Repl>,
 ) {
-    // Skip empty input
-    if input.buffer.is_empty() {
-        return;
-    }
-    
-    // Try each registered command parser
-    for parser in repl.commands.values() {
-        if parser.parse_and_trigger(&input.buffer, &mut bevy_commands) {
-            return; // Command was successfully parsed and triggered
+    for event in submitted_text.read() {
+        let input = event.0.clone();
+        // Skip empty input
+        if input.is_empty() {
+            continue;
         }
+        // Try each registered command parser
+        for parser in repl.commands.values() {
+            if parser.parse_and_trigger(&input, &mut bevy_commands) {
+                continue; // Command was successfully parsed and triggered
+            }
+        }
+
+        // No command matched
+        error!("Unknown command: {}", input);
     }
-    
-    // No command matched
-    error!("Unknown command: {}", input.buffer);
 }

@@ -6,7 +6,7 @@ use bevy_ratatui::{
         cursor::MoveTo,
         terminal::{self, Clear, ClearType},
     },
-    event::KeyEvent,
+    event::{InputSet, KeyEvent},
 };
 use std::io::{Write, stdout};
 
@@ -36,18 +36,26 @@ impl Plugin for PromptPlugin {
             buffer: String::new(),
         });
         app.add_event::<ReplBufferEvent>();
-        app.add_event::<ParseReplBufferEvent>();
+        app.add_event::<ReplSubmitEvent>();
         app.add_systems(
             Update,
             (capture_repl_input, update_repl_buffer)
                 .chain()
+                .before(InputSet::EmitBevy)
+                .run_if(repl_is_enabled),
+        );
+        app.add_systems(
+            Update,
+            block_event_forwarding
+                .in_set(InputSet::EmitBevy)
                 .run_if(repl_is_enabled),
         );
         app.add_systems(
             Update,
             display_prompt
                 .run_if(repl_is_enabled)
-                .run_if(resource_changed::<Repl>),
+                .run_if(resource_changed::<Repl>)
+                .in_set(InputSet::Post),
         );
     }
 }
@@ -59,13 +67,11 @@ pub struct ReplPrompt {
 }
 
 #[derive(Event)]
-pub struct ParseReplBufferEvent {
-    pub buffer: String,
-}
+pub struct ReplSubmitEvent(pub String);
 
 #[derive(Event)]
 pub enum ReplBufferEvent {
-    Push(char),
+    Insert(char),
     Backspace,
     Delete,
     MoveLeft,
@@ -79,15 +85,23 @@ pub enum ReplBufferEvent {
 fn capture_repl_input(
     mut crossterm_key_events: EventReader<KeyEvent>,
     mut buffer_events: EventWriter<ReplBufferEvent>,
+    repl: Res<Repl>,
 ) {
     for event in crossterm_key_events.read() {
         if event.kind == CrosstermKeyEventKind::Press {
+            // Skip processing if this is the toggle key
+            if let Some(toggle_key) = repl.toggle_key {
+                if event.code == toggle_key {
+                    continue; // Consume the toggle key without processing it
+                }
+            }
+
             match event.code {
                 CrosstermKeyCode::Enter => {
                     buffer_events.write(ReplBufferEvent::Submit);
                 }
                 CrosstermKeyCode::Char(c) => {
-                    buffer_events.write(ReplBufferEvent::Push(c));
+                    buffer_events.write(ReplBufferEvent::Insert(c));
                 }
                 CrosstermKeyCode::Backspace => {
                     buffer_events.write(ReplBufferEvent::Backspace);
@@ -107,6 +121,9 @@ fn capture_repl_input(
                 CrosstermKeyCode::Delete => {
                     buffer_events.write(ReplBufferEvent::Delete);
                 }
+                CrosstermKeyCode::Esc => {
+                    buffer_events.write(ReplBufferEvent::Clear);
+                }
                 _ => { /* ignore other non-character keys */ }
             }
         }
@@ -116,12 +133,12 @@ fn capture_repl_input(
 fn update_repl_buffer(
     mut repl: ResMut<Repl>,
     mut buffer_events: EventReader<ReplBufferEvent>,
-    mut parse_events: EventWriter<ParseReplBufferEvent>,
+    mut parse_events: EventWriter<ReplSubmitEvent>,
 ) {
     for event in buffer_events.read() {
         match event {
-            ReplBufferEvent::Push(c) => {
-                repl.push(*c);
+            ReplBufferEvent::Insert(c) => {
+                repl.insert(*c);
             }
             ReplBufferEvent::Backspace => {
                 repl.backspace();
@@ -145,9 +162,7 @@ fn update_repl_buffer(
                 repl.clear_buffer();
             }
             ReplBufferEvent::Submit => {
-                parse_events.write(ParseReplBufferEvent {
-                    buffer: repl.drain_buffer(),
-                });
+                parse_events.write(ReplSubmitEvent(repl.drain_buffer()));
             }
         }
     }
@@ -170,7 +185,8 @@ fn display_prompt(repl: Res<Repl>, prompt: Res<ReplPrompt>) {
     };
 
     // Position cursor at the correct location within the buffer
-    let cursor_x = (prompt_text.len() + repl.cursor_pos) as u16;
+    let prompt_symbol_len = prompt.symbol.as_ref().map(|s| s.len()).unwrap_or(0);
+    let cursor_x = (prompt_symbol_len + repl.cursor_pos) as u16;
     let cursor_x = cursor_x.min(width.saturating_sub(1));
 
     // Execute terminal operations sequentially to avoid borrow checker issues
@@ -178,4 +194,22 @@ fn display_prompt(repl: Res<Repl>, prompt: Res<ReplPrompt>) {
     let _ = stdout().execute(Clear(ClearType::CurrentLine));
     let _ = stdout().write_all(prompt_text.as_bytes());
     let _ = stdout().execute(MoveTo(cursor_x, height.saturating_sub(1)));
+}
+
+/// System that blocks event forwarding to Bevy when REPL is enabled
+/// This prevents key events from reaching game systems during REPL input.
+/// The toggle key is always allowed to pass through for REPL toggling.
+fn block_event_forwarding(mut key_events: EventReader<KeyEvent>, repl: Res<Repl>) {
+    // Read all events once and filter out the toggle key
+    let events: Vec<_> = key_events.read().collect();
+
+    for event in events {
+        // Allow toggle key to pass through
+        if let Some(toggle_key) = repl.toggle_key {
+            if event.code == toggle_key {
+                continue; // Skip blocking this event
+            }
+        }
+        // All other events are consumed (blocked) when REPL is enabled
+    }
 }
