@@ -189,7 +189,7 @@ The REPL reads input events and emits trigger events alongside the `bevy_ratatui
 [input handling system set](https://github.com/cxreiff/bevy_ratatui/blob/main/src/crossterm_context/event.rs).
 The REPL text buffer is updated after `InputSet::EmitCrossterm` and emits command
 triggers duing `InputSet::EmitBevy`. The prompt is updated during
-`InputSet::Post` to reflect the current state of the input buffer. 
+`InputSet::Post` to reflect the current state of the input buffer.
 
 For command output, use the regular `info!` or `debug!` macros and the
 `RUST_LOG` environment variable to configure messages printed to the console or
@@ -199,6 +199,8 @@ implement your own TUI panels with `bevy_ratatui`.
 
 - **Derive pattern** - Seamlessly integrate with clap's derive pattern
 - **Command history** - Use keybindings to navigate past commands
+- **Help text and command completion** - Use `clap`'s help text and completion
+  features to provide a better REPL experience and allow for command discovery.
 - **Support for games with TUIs** - The REPL is designed to work as a sort of
   sidecar to the normal terminal output, so _in theory_ it should be compatible
   with games that use a TUI. Who knows if it actually works.

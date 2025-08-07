@@ -3,6 +3,7 @@ use bevy_ratatui::{
     crossterm::event::{KeyCode as CrosstermKeyCode, KeyEventKind as CrosstermKeyEventKind},
     event::KeyEvent,
 };
+use std::collections::HashMap;
 
 pub struct ReplPlugin {
     enable_on_startup: bool,
@@ -35,6 +36,10 @@ pub struct Repl {
     pub toggle_key: Option<CrosstermKeyCode>,
     pub buffer: String,
     pub cursor_pos: usize,
+    pub history: Vec<String>,
+    pub history_index: usize,
+    pub history_enabled: bool,
+    pub commands: HashMap<String, Box<dyn crate::parse::CommandParser>>,
 }
 
 impl Default for Repl {
@@ -44,6 +49,10 @@ impl Default for Repl {
             toggle_key: Some(CrosstermKeyCode::Char('`')),
             buffer: String::new(),
             cursor_pos: 0,
+            history: Vec::new(),
+            history_index: 0,
+            history_enabled: true,
+            commands: HashMap::new(),
         }
     }
 }

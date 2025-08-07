@@ -15,7 +15,7 @@ use ratatui::{
 
 use bevy::app::{Plugin, PluginGroup, PluginGroupBuilder, Startup};
 
-use crate::{prompt::PromptPlugin, repl::ReplPlugin};
+use crate::{parse::ParserPlugin, prompt::PromptPlugin, repl::ReplPlugin};
 
 
 pub struct ReplPlugins;
@@ -30,6 +30,7 @@ impl PluginGroup for ReplPlugins {
             .add(ReplPlugin::default())
             .add(ReplContextPlugin)
             .add(PromptPlugin::default())
+            .add(ParserPlugin)
     }
 }
 

@@ -23,18 +23,12 @@ impl ReplCommand for QuitCommand {
                     .action(clap::ArgAction::SetTrue),
             )
     }
-    
-    fn parse_from_args(args: &[&str]) -> Result<Self, clap::Error> {
-        let matches = Self::command().get_matches_from(args);
-        let verbose = matches.get_flag("verbose");
-        Ok(QuitCommand { verbose })
-    }
-}
 
-fn on_quit(trigger: Trigger<QuitCommand>, mut exit: EventWriter<AppExit>) {
-    let command = trigger.event();
-    if command.verbose {
-        info!("Quitting...");
+    fn execute(trigger: Trigger<Self>) {
+        let command = trigger.event();
+        if command.verbose {
+            info!("Quitting...");
+        }
+        exit.send(AppExit::Success);
     }
-    exit.send(AppExit::Success);
 }

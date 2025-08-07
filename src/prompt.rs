@@ -1,14 +1,14 @@
 use bevy::prelude::*;
 use bevy_ratatui::{
     crossterm::event::{KeyCode as CrosstermKeyCode, KeyEventKind as CrosstermKeyEventKind},
-    event::KeyEvent,
     crossterm::{
+        ExecutableCommand,
         cursor::MoveTo,
         terminal::{self, Clear, ClearType},
-        ExecutableCommand,
     },
+    event::KeyEvent,
 };
-use std::io::{stdout, Write};
+use std::io::{Write, stdout};
 
 use crate::repl::{Repl, repl_is_enabled};
 
@@ -33,20 +33,30 @@ impl Plugin for PromptPlugin {
     fn build(&self, app: &mut App) {
         app.insert_resource(ReplPrompt {
             symbol: Some(self.prompt.clone()),
-            lines: Vec::new(),
+            buffer: String::new(),
         });
         app.add_event::<ReplBufferEvent>();
-        app.add_systems(Update, (capture_repl_input, update_repl_buffer).chain().run_if(repl_is_enabled));
-        app.add_observer(display_prompt);
+        app.add_event::<ParseReplBufferEvent>();
+        app.add_systems(
+            Update,
+            (capture_repl_input, update_repl_buffer)
+                .chain()
+                .run_if(repl_is_enabled),
+        );
+        app.add_systems(
+            Update,
+            display_prompt
+                .run_if(repl_is_enabled)
+                .run_if(resource_changed::<Repl>),
+        );
     }
 }
 
 #[derive(Resource, Default, Clone)]
 pub struct ReplPrompt {
     pub symbol: Option<String>,
-    pub lines: Vec<String>,
+    pub buffer: String,
 }
-
 
 #[derive(Event)]
 pub struct ParseReplBufferEvent {
@@ -103,7 +113,11 @@ fn capture_repl_input(
     }
 }
 
-fn update_repl_buffer(mut repl: ResMut<Repl>, mut buffer_events: EventReader<ReplBufferEvent>, mut parse_events: EventWriter<ParseReplBufferEvent>) {
+fn update_repl_buffer(
+    mut repl: ResMut<Repl>,
+    mut buffer_events: EventReader<ReplBufferEvent>,
+    mut parse_events: EventWriter<ParseReplBufferEvent>,
+) {
     for event in buffer_events.read() {
         match event {
             ReplBufferEvent::Push(c) => {
@@ -140,42 +154,28 @@ fn update_repl_buffer(mut repl: ResMut<Repl>, mut buffer_events: EventReader<Rep
 }
 
 /// System that displays the current input buffer at the bottom of the terminal
-fn display_prompt(_trigger: Trigger<ReplBufferEvent>, repl: Res<Repl>, prompt: Res<ReplPrompt>) {
+/// Runs whenever the Repl resource changes
+fn display_prompt(repl: Res<Repl>, prompt: Res<ReplPrompt>) {
     // Get terminal size
     let (width, height) = match terminal::size() {
         Ok(size) => size,
         Err(_) => return, // If we can't get terminal size, skip rendering
     };
-    
-    // Calculate the prompt line (bottom of terminal)
-    let prompt_line = height.saturating_sub(1);
-    
+
     // Display the prompt and current buffer
     let prompt_text = if let Some(symbol) = prompt.symbol.clone() {
         format!("{}{}", symbol, repl.buffer)
     } else {
         repl.buffer.clone()
     };
-    
-    // If the prompt text is longer than the terminal width, split it into multiple lines
-    let mut display_lines = Vec::new();
-    let mut start = 0;
-    let prompt_len = prompt_text.len();
-    let width_usize = width as usize;
-    while start < prompt_len {
-        let end = (start + width_usize).min(prompt_len);
-        display_lines.push(&prompt_text[start..end]);
-        start = end;
-    }
+
     // Position cursor at the correct location within the buffer
     let cursor_x = (prompt_text.len() + repl.cursor_pos) as u16;
     let cursor_x = cursor_x.min(width.saturating_sub(1));
-    
+
     // Execute terminal operations sequentially to avoid borrow checker issues
-    let _ = stdout().execute(MoveTo(0, prompt_line));
+    let _ = stdout().execute(MoveTo(0, height.saturating_sub(1)));
     let _ = stdout().execute(Clear(ClearType::CurrentLine));
-    for line in display_lines {
-        let _ = stdout().write_all(line.as_bytes());
-    }
-    let _ = stdout().execute(MoveTo(cursor_x, prompt_line));
+    let _ = stdout().write_all(prompt_text.as_bytes());
+    let _ = stdout().execute(MoveTo(cursor_x, height.saturating_sub(1)));
 }
