@@ -13,7 +13,7 @@ categories = ["game-development", "development-tools"]
 
 [dependencies]
 bevy = { version = "0.16.1", default-features = false, features = ["bevy_log"]}
-clap = { version = "4.5.42" }
+clap = { version = "4.5.43" }
 
 # Derive support via separate crate
 # bevy_repl_derive = { version = "0.1.0", path = "./bevy_repl_derive", optional = true }
@@ -43,6 +43,10 @@ help = []
 [[example]]
 name = "minimal"
 path = "examples/minimal.rs"
+
+[[example]]
+name = "flag_args"
+path = "examples/flag_args.rs"
 
 # Idiomatic Bevy code often triggers these lints, and the CI workflow treats them as errors.
 # In some cases they may still signal poor code quality however, so consider commenting out these lines.

@@ -32,6 +32,19 @@ commands.
 Clap features are technically supported, but have not been tested. Override the
 `clap` features in your `Cargo.toml` to enable or disable additional features.
 
+## Default Keybinds
+
+| Key | Action |
+| --- | --- |
+| ``` | Toggle REPL visibility |
+| `Enter` | Submit command |
+| `Esc` | Clear input buffer |
+| `Left/Right` | Move cursor |
+| `Home/End` | Jump to start/end of line |
+| `Backspace` | Delete character before cursor |
+| `Delete` | Delete character at cursor |
+| `CTRL+C` | Exit application |
+
 ## Design
 
 ### Headless mode
@@ -118,11 +131,13 @@ bevy_repl = { version = "0.1.0", features = ["default-commands"] }
 ```
 
 When the REPL is disabled, keycode input events are forwarded to Bevy via
-`bevy_ratatui` as normal. The REPL is toggled with a keycode event (like ```).
+`bevy_ratatui` as normal. The REPL is toggled with a Bevy KeyCode event (``` by
+default).
 
-When the REPL is enabled, keycode forwarding to Bevy is disabled and all key
-strokes are consumed by the REPL. This is to avoid passing events to Bevy when
-you are typing a command. Disable the REPL to return to normal headless mode.
+When the REPL is enabled, keycode forwarding to Bevy is disabled (except for the
+REPL toggle key) and all key strokes are consumed by the REPL. This is to avoid
+passing events to Bevy when you are typing a command. Disable the REPL to return
+to normal headless mode.
 
 ### Command parsing
 
@@ -187,18 +202,26 @@ fn on_say(trigger: Trigger<SayCommand>) {
 
 The REPL reads input events and emits trigger events alongside the `bevy_ratatui`
 [input handling system set](https://github.com/cxreiff/bevy_ratatui/blob/main/src/crossterm_context/event.rs).
-The REPL reads crossterm events after `InputSet::EmitCrossterm` and emits
-triggers duing `InputSet::EmitBevy`. The REPL has no system sets of its own.
+The REPL text buffer is updated and emits command triggers during
+`InputSet::EmitBevy`. The prompt is updated during `InputSet::Post` to reflect
+the current state of the input buffer.
 
-There is no output or display stage. The REPL is designed to capture all Bevy
-logs and display them in the terminal. For output, use the regular `info!` or
-`debug!` macros and the `RUST_LOG` environment variable to configure messages
-printed to the console or implement your own TUI panels with `bevy_ratatui`.
+All REPL input systems run in the `Update` schedule, but as they are
+event-based, they may not run every frame. Commands are executed in the
+`PostUpdate` schedule as observers.
+
+For headless command output, use the regular `info!` or `debug!` macros and the
+`RUST_LOG` environment variable to configure messages printed to the console or
+implement your own TUI panels with `bevy_ratatui`.
 
 ## Aspirations
 
 - **Derive pattern** - Seamlessly integrate with clap's derive pattern
 - **Command history** - Use keybindings to navigate past commands
+- **Customizable keybinds** - Allow the user to configure the REPL keybinds for
+  all REPL controls.
+- **Help text and command completion** - Use `clap`'s help text and completion
+  features to provide a better REPL experience and allow for command discovery.
 - **Support for games with TUIs** - The REPL is designed to work as a sort of
   sidecar to the normal terminal output, so _in theory_ it should be compatible
   with games that use a TUI. Who knows if it actually works.

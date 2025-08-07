@@ -29,25 +29,19 @@ impl ReplCommand for SayCommand {
             )
     }
 
-    fn parse_from_args(args: &[&str]) -> Result<Self, clap::Error> {
-        let matches = Self::command().get_matches_from(args);
-
-        let message = matches
-            .get_one::<String>("message")
-            .ok_or_else(|| clap::Error::new(clap::error::ErrorKind::MissingRequiredArgument))?
-            .clone();
-
-        let repeat = matches
-            .get_one::<String>("repeat")
+    fn from_matches(matches: clap::ArgMatches) -> Self {
+        let message = matches.get_one::<String>("message").unwrap().clone();
+        let repeat = matches.get_one::<String>("repeat")
             .and_then(|s| s.parse::<usize>().ok())
             .unwrap_or(1);
-
-        Ok(SayCommand { message, repeat })
+        
+        SayCommand { message, repeat }
     }
 }
 
-// Function that handles the say command using Bevy's Trigger
+// System that handles the command with access to Bevy ECS
 fn on_say(trigger: Trigger<SayCommand>) {
+
     let command = trigger.event();
     println!("Saying: {}", command.message);
 
