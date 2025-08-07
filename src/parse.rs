@@ -5,6 +5,8 @@ use anyhow::Result;
 use crate::{prompt::ReplSubmitEvent, repl::Repl};
 
 
+
+
 pub struct ParserPlugin;
 
 impl Plugin for ParserPlugin {
@@ -77,7 +79,11 @@ impl<C: ReplCommand> CommandParser for TypedCommandParser<C> {
                 commands.trigger(command);
                 true
             }
-            Err(_) => false,
+            Err(clap_error) => {
+                // Print the Clap error message with preserved formatting
+                eprintln!("{}", clap_error);
+                true // Return true to indicate we handled this command (even though it failed)
+            }
         }
     }
 }
@@ -106,8 +112,7 @@ pub trait ReplCommand: Send + Sync + Clone + Event + 'static {
     where
         Self: Sized,
     {
-        let matches = Self::command().get_matches_from(args);
-        Ok(matches)
+        Self::command().try_get_matches_from(args)
     }
 }
 
@@ -124,13 +129,17 @@ pub fn parse_input_buffer_for_commands(
             continue;
         }
         // Try each registered command parser
+        let mut command_handled = false;
         for parser in repl.commands.values() {
             if parser.parse_and_trigger(&input, &mut bevy_commands) {
-                continue; // Command was successfully parsed and triggered
+                command_handled = true;
+                break; // Command was handled (either successfully or with error)
             }
         }
 
         // No command matched
-        error!("Unknown command: {}", input);
+        if !command_handled {
+            error!("Unknown command '{}'", input);
+        }
     }
 }

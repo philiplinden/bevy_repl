@@ -162,7 +162,10 @@ fn update_repl_buffer(
                 repl.clear_buffer();
             }
             ReplBufferEvent::Submit => {
-                parse_events.write(ReplSubmitEvent(repl.drain_buffer()));
+                let input = repl.drain_buffer();
+                // Print a newline to move terminal to next line
+                let _ = stdout().write_all(b"\n");
+                parse_events.write(ReplSubmitEvent(input));
             }
         }
     }
