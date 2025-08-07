@@ -169,7 +169,8 @@ fn main() {
         ReplPlugin,
         ReplDefaultCommandsPlugin,
     ))
-    .repl::<SayCommand>(on_say);
+    .add_repl_command::<SayCommand>()
+    .add_observer(on_say);
 
     app.run();
 }

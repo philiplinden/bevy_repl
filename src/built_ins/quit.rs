@@ -1,12 +1,12 @@
 use bevy::prelude::*;
-use clap::{Command, Arg, ArgAction};
-use crate::ReplCommand;
+use crate::prelude::*;
 
 pub fn plugin(app: &mut App) {
-    app.repl::<QuitCommand>(on_quit);
+    app.add_repl_command::<QuitCommand>();
+    app.add_observer(on_quit);
 }
 
-#[derive(Event)]
+#[derive(Event, Clone)]
 struct QuitCommand {
     verbose: bool,
 }
@@ -24,11 +24,16 @@ impl ReplCommand for QuitCommand {
             )
     }
 
-    fn execute(trigger: Trigger<Self>) {
-        let command = trigger.event();
-        if command.verbose {
-            info!("Quitting...");
-        }
-        exit.send(AppExit::Success);
+    fn from_matches(matches: clap::ArgMatches) -> Self {
+        let verbose = matches.get_flag("verbose");
+        QuitCommand { verbose }
     }
+}
+
+fn on_quit(trigger: Trigger<QuitCommand>, mut exit: EventWriter<AppExit>) {
+    let cmd = trigger.event();
+    if cmd.verbose {
+        info!("Quitting (verbose)...");
+    }
+    exit.write(AppExit::Success);
 }

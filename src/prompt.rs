@@ -10,7 +10,9 @@ use bevy_ratatui::{
 };
 use std::io::{Write, stdout};
 
-use crate::repl::{Repl, repl_is_enabled};
+use crate::{
+    repl::{Repl, repl_is_enabled},
+};
 
 #[derive(Resource, Clone)]
 pub struct PromptPlugin {
@@ -52,10 +54,12 @@ impl Plugin for PromptPlugin {
         );
         app.add_systems(
             Update,
-            display_prompt
-                .run_if(repl_is_enabled)
-                .run_if(resource_changed::<Repl>)
-                .in_set(InputSet::Post),
+            (
+                manage_scroll_region,
+                display_prompt,
+            )
+                .in_set(InputSet::Post)
+                .run_if(repl_is_enabled),
         );
     }
 }
@@ -164,7 +168,7 @@ fn update_repl_buffer(
             ReplBufferEvent::Submit => {
                 let input = repl.drain_buffer();
                 // Print a newline to move terminal to next line
-                let _ = stdout().write_all(b"\n");
+                let _ = stdout().write_all(b"\r\n");
                 parse_events.write(ReplSubmitEvent(input));
             }
         }
@@ -175,7 +179,7 @@ fn update_repl_buffer(
 /// Runs whenever the Repl resource changes
 fn display_prompt(repl: Res<Repl>, prompt: Res<ReplPrompt>) {
     // Get terminal size
-    let (width, height) = match terminal::size() {
+    let (_, height) = match terminal::size() {
         Ok(size) => size,
         Err(_) => return, // If we can't get terminal size, skip rendering
     };
@@ -188,15 +192,14 @@ fn display_prompt(repl: Res<Repl>, prompt: Res<ReplPrompt>) {
     };
 
     // Position cursor at the correct location within the buffer
-    let prompt_symbol_len = prompt.symbol.as_ref().map(|s| s.len()).unwrap_or(0);
-    let cursor_x = (prompt_symbol_len + repl.cursor_pos) as u16;
-    let cursor_x = cursor_x.min(width.saturating_sub(1));
 
     // Execute terminal operations sequentially to avoid borrow checker issues
     let _ = stdout().execute(MoveTo(0, height.saturating_sub(1)));
     let _ = stdout().execute(Clear(ClearType::CurrentLine));
     let _ = stdout().write_all(prompt_text.as_bytes());
-    let _ = stdout().execute(MoveTo(cursor_x, height.saturating_sub(1)));
+    // Flush to ensure prompt is displayed
+    let _ = stdout().flush();
+
 }
 
 /// System that blocks event forwarding to Bevy when REPL is enabled
@@ -214,5 +217,23 @@ fn block_event_forwarding(mut key_events: EventReader<KeyEvent>, repl: Res<Repl>
             }
         }
         // All other events are consumed (blocked) when REPL is enabled
+    }
+}
+
+/// System that manages the terminal scroll region to pin the prompt at the bottom
+fn manage_scroll_region(repl: Res<Repl>, mut cache: Local<Option<(bool, u16)>>) {
+    if let Ok((_, height)) = terminal::size() {
+        let desired = (repl.enabled, height);
+        if cache.as_ref() != Some(&desired) {
+            let mut out = stdout();
+            if repl.enabled {
+                let bottom = height.saturating_sub(1);
+                let _ = write!(out, "\x1B[1;{}r", bottom);
+            } else {
+                let _ = write!(out, "\x1B[r");
+            }
+            let _ = out.flush();
+            *cache = Some(desired);
+        }
     }
 }

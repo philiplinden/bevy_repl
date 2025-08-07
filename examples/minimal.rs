@@ -41,12 +41,14 @@ impl ReplCommand for SayCommand {
 
 // System that handles the command with access to Bevy ECS
 fn on_say(trigger: Trigger<SayCommand>) {
-
     let command = trigger.event();
-    println!("Saying: {}", command.message);
 
+    // Print the main message
+    info!("Saying: {}", command.message);
+    
+    // Print repeated messages
     for i in 0..command.repeat {
-        println!("  {}: {}", i + 1, command.message);
+        info!("{}: {}", i + 1, command.message);
     }
 }
 
@@ -60,6 +62,7 @@ fn main() {
             bevy::log::LogPlugin::default(),
             ReplPlugins,
         ))
-        .add_repl_command::<SayCommand>(on_say)
+        .add_repl_command::<SayCommand>()
+        .add_observer(on_say)
         .run();
 }

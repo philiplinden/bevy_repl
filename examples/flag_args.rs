@@ -57,6 +57,7 @@ fn main() {
             bevy::log::LogPlugin::default(),
             ReplPlugins,
         ))
-        .add_repl_command::<GreetCommand>(on_greet)
+        .add_repl_command::<GreetCommand>()
+        .add_observer(on_greet)
         .run();
 }

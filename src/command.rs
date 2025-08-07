@@ -1,43 +1,34 @@
+use anyhow::Result;
 use bevy::prelude::*;
 use bevy_ratatui::event::InputSet;
-use anyhow::Result;
 
 use crate::{prompt::ReplSubmitEvent, repl::Repl};
-
-
-
 
 pub struct ParserPlugin;
 
 impl Plugin for ParserPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Update, parse_input_buffer_for_commands.in_set(InputSet::EmitBevy));
+        app.add_systems(
+            Update,
+            parse_input_buffer_for_commands.in_set(InputSet::EmitBevy),
+        );
     }
 }
 
 /// Extension trait for App to add REPL commands
 pub trait ReplAppExt {
     /// Add a REPL command with its observer function
-    fn add_repl_command<C: ReplCommand>(
-        &mut self,
-        observer: impl Fn(Trigger<C>) + Send + Sync + 'static,
-    ) -> &mut Self;
+    fn add_repl_command<C: ReplCommand>(&mut self) -> &mut Self;
 }
 
 impl ReplAppExt for App {
-    fn add_repl_command<C: ReplCommand>(
-        &mut self,
-        observer: impl Fn(Trigger<C>) + Send + Sync + 'static,
-    ) -> &mut Self {
+    fn add_repl_command<C: ReplCommand>(&mut self) -> &mut Self {
         // Add the command event type
         self.add_event::<C>();
-        
-        // Add observer for the command
-        self.add_observer(observer);
-        
+
         // Register command in the REPL
         self.add_systems(Startup, register_command_in_repl::<C>);
-        
+
         self
     }
 }
@@ -65,12 +56,12 @@ impl<C: ReplCommand> CommandParser for TypedCommandParser<C> {
         if parts.is_empty() {
             return false;
         }
-        
+
         let command_name = parts[0];
         if command_name != C::command().get_name() {
             return false;
         }
-        
+
         // Parse arguments using clap
         match C::parse_from_args(&parts) {
             Ok(matches) => {
@@ -89,9 +80,7 @@ impl<C: ReplCommand> CommandParser for TypedCommandParser<C> {
 }
 
 // System to register commands in the REPL
-pub fn register_command_in_repl<C: ReplCommand>(
-    mut repl: ResMut<Repl>,
-) {
+pub fn register_command_in_repl<C: ReplCommand>(mut repl: ResMut<Repl>) {
     let command_name = C::command().get_name().to_string();
     let parser = Box::new(TypedCommandParser::<C>::new()) as Box<dyn CommandParser>;
     repl.commands.insert(command_name, parser);
@@ -118,7 +107,7 @@ pub trait ReplCommand: Send + Sync + Clone + Event + 'static {
 
 /// System that parses terminal input and triggers command observers
 pub fn parse_input_buffer_for_commands(
-    mut submitted_text:  EventReader<ReplSubmitEvent>,
+    mut submitted_text: EventReader<ReplSubmitEvent>,
     mut bevy_commands: Commands,
     repl: Res<Repl>,
 ) {
