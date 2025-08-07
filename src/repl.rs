@@ -25,7 +25,6 @@ impl Plugin for ReplPlugin {
             toggle_key: self.toggle_key,
             ..default()
         });
-        app.add_event::<ReplEvent>();
         app.add_systems(Update, toggle_repl);
     }
 }
@@ -100,13 +99,7 @@ pub fn repl_is_enabled(repl: Res<Repl>) -> bool {
     repl.enabled
 }
 
-#[derive(Event)]
-pub enum ReplEvent {
-    Enabled,
-    Disabled,
-}
-
-pub fn toggle_repl(mut repl: ResMut<Repl>, mut key_events: EventReader<KeyEvent>, mut repl_events: EventWriter<ReplEvent>) {
+pub fn toggle_repl(mut repl: ResMut<Repl>, mut key_events: EventReader<KeyEvent>) {
     if let Some(key) = repl.toggle_key {
         for event in key_events.read() {
             if event.code == key && event.kind == CrosstermKeyEventKind::Press {
@@ -116,10 +109,8 @@ pub fn toggle_repl(mut repl: ResMut<Repl>, mut key_events: EventReader<KeyEvent>
                 );
                 if repl.enabled {
                     repl.enabled = false;
-                    repl_events.write(ReplEvent::Disabled);
                 } else {
                     repl.enabled = true;
-                    repl_events.write(ReplEvent::Enabled);
                 }
             }
         }

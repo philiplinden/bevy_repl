@@ -10,7 +10,7 @@ use bevy_ratatui::{
 };
 use std::io::{stdout, Write};
 
-use crate::repl::{Repl, ReplEvent, repl_is_enabled};
+use crate::repl::{Repl, repl_is_enabled};
 
 #[derive(Resource, Clone)]
 pub struct PromptPlugin {
@@ -35,9 +35,9 @@ impl Plugin for PromptPlugin {
             symbol: Some(self.prompt.clone()),
             lines: Vec::new(),
         });
-        app.add_event::<ParseReplBufferEvent>();
-        app.add_systems(Update, buffer_input.run_if(repl_is_enabled));
-        app.add_systems(Update, display_prompt.run_if(repl_buffer_changed.and(repl_is_enabled)));
+        app.add_event::<ReplBufferEvent>();
+        app.add_systems(Update, (capture_repl_input, update_repl_buffer).chain().run_if(repl_is_enabled));
+        app.add_observer(display_prompt);
     }
 }
 
@@ -53,43 +53,49 @@ pub struct ParseReplBufferEvent {
     pub buffer: String,
 }
 
-fn repl_buffer_changed(repl: Res<Repl>) -> bool {
-    repl.is_changed()
+#[derive(Event)]
+pub enum ReplBufferEvent {
+    Push(char),
+    Backspace,
+    Delete,
+    MoveLeft,
+    MoveRight,
+    JumpToStart,
+    JumpToEnd,
+    Clear,
+    Submit,
 }
 
-fn buffer_input(
-    mut repl: ResMut<Repl>,
+fn capture_repl_input(
     mut crossterm_key_events: EventReader<KeyEvent>,
-    mut parse_input_buffer_events: EventWriter<ParseReplBufferEvent>,
+    mut buffer_events: EventWriter<ReplBufferEvent>,
 ) {
     for event in crossterm_key_events.read() {
         if event.kind == CrosstermKeyEventKind::Press {
             match event.code {
                 CrosstermKeyCode::Enter => {
-                    parse_input_buffer_events.write(ParseReplBufferEvent {
-                        buffer: repl.drain_buffer(),
-                    });
+                    buffer_events.write(ReplBufferEvent::Submit);
                 }
                 CrosstermKeyCode::Char(c) => {
-                    repl.push(c);
+                    buffer_events.write(ReplBufferEvent::Push(c));
                 }
                 CrosstermKeyCode::Backspace => {
-                    repl.backspace();
+                    buffer_events.write(ReplBufferEvent::Backspace);
                 }
                 CrosstermKeyCode::Left => {
-                    repl.left();
+                    buffer_events.write(ReplBufferEvent::MoveLeft);
                 }
                 CrosstermKeyCode::Right => {
-                    repl.right();
+                    buffer_events.write(ReplBufferEvent::MoveRight);
                 }
                 CrosstermKeyCode::Home => {
-                    repl.home();
+                    buffer_events.write(ReplBufferEvent::JumpToStart);
                 }
                 CrosstermKeyCode::End => {
-                    repl.end();
+                    buffer_events.write(ReplBufferEvent::JumpToEnd);
                 }
                 CrosstermKeyCode::Delete => {
-                    repl.delete();
+                    buffer_events.write(ReplBufferEvent::Delete);
                 }
                 _ => { /* ignore other non-character keys */ }
             }
@@ -97,8 +103,44 @@ fn buffer_input(
     }
 }
 
+fn update_repl_buffer(mut repl: ResMut<Repl>, mut buffer_events: EventReader<ReplBufferEvent>, mut parse_events: EventWriter<ParseReplBufferEvent>) {
+    for event in buffer_events.read() {
+        match event {
+            ReplBufferEvent::Push(c) => {
+                repl.push(*c);
+            }
+            ReplBufferEvent::Backspace => {
+                repl.backspace();
+            }
+            ReplBufferEvent::Delete => {
+                repl.delete();
+            }
+            ReplBufferEvent::MoveLeft => {
+                repl.left();
+            }
+            ReplBufferEvent::MoveRight => {
+                repl.right();
+            }
+            ReplBufferEvent::JumpToStart => {
+                repl.home();
+            }
+            ReplBufferEvent::JumpToEnd => {
+                repl.end();
+            }
+            ReplBufferEvent::Clear => {
+                repl.clear_buffer();
+            }
+            ReplBufferEvent::Submit => {
+                parse_events.write(ParseReplBufferEvent {
+                    buffer: repl.drain_buffer(),
+                });
+            }
+        }
+    }
+}
+
 /// System that displays the current input buffer at the bottom of the terminal
-fn display_prompt(repl: Res<Repl>, prompt: Res<ReplPrompt>) {
+fn display_prompt(_trigger: Trigger<ReplBufferEvent>, repl: Res<Repl>, prompt: Res<ReplPrompt>) {
     // Get terminal size
     let (width, height) = match terminal::size() {
         Ok(size) => size,

@@ -187,13 +187,13 @@ fn on_say(trigger: Trigger<SayCommand>) {
 
 The REPL reads input events and emits trigger events alongside the `bevy_ratatui`
 [input handling system set](https://github.com/cxreiff/bevy_ratatui/blob/main/src/crossterm_context/event.rs).
-The REPL reads crossterm events after `InputSet::EmitCrossterm` and emits
-triggers duing `InputSet::EmitBevy`. The REPL has no system sets of its own.
+The REPL text buffer is updated after `InputSet::EmitCrossterm` and emits command
+triggers duing `InputSet::EmitBevy`. The prompt is updated during
+`InputSet::Post` to reflect the current state of the input buffer. 
 
-There is no output or display stage. The REPL is designed to capture all Bevy
-logs and display them in the terminal. For output, use the regular `info!` or
-`debug!` macros and the `RUST_LOG` environment variable to configure messages
-printed to the console or implement your own TUI panels with `bevy_ratatui`.
+For command output, use the regular `info!` or `debug!` macros and the
+`RUST_LOG` environment variable to configure messages printed to the console or
+implement your own TUI panels with `bevy_ratatui`.
 
 ## Aspirations
 
