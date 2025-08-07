@@ -190,16 +190,6 @@ fn display_prompt(repl: Res<Repl>, prompt: Res<ReplPrompt>) {
     } else {
         repl.buffer.clone()
     };
-
-    // Position cursor at the correct location within the buffer
-
-    // Execute terminal operations sequentially to avoid borrow checker issues
-    let _ = stdout().execute(MoveTo(0, height.saturating_sub(1)));
-    let _ = stdout().execute(Clear(ClearType::CurrentLine));
-    let _ = stdout().write_all(prompt_text.as_bytes());
-    // Flush to ensure prompt is displayed
-    let _ = stdout().flush();
-
 }
 
 /// System that blocks event forwarding to Bevy when REPL is enabled
