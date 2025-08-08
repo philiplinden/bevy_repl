@@ -15,18 +15,25 @@ struct SayCommand {
     message: String,
     #[arg(short = 'r', long = "repeat", help = "Number of times to repeat", default_value = "1")]
     repeat: usize,
+    #[arg(short = 's', long = "shout", help = "Shout the message", action = clap::ArgAction::SetTrue, num_args = 0)]
+    shout: bool,
 }
 
 // System that handles the command with access to Bevy ECS
 fn on_say(trigger: Trigger<SayCommand>) {
     let command = trigger.event();
 
+    let message = if command.shout {
+        command.message.to_uppercase()
+    } else {
+        command.message.clone()
+    };
     // Print the main message
-    println!("Saying: {}", command.message);
+    println!("Saying: {}", message);
     
     // Print repeated messages
     for i in 0..command.repeat {
-        println!("{}: {}", i + 1, command.message);
+        println!("{}: {}", i + 1, message);
     }
 }
 

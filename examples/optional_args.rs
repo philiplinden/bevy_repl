@@ -8,6 +8,7 @@ use bevy_repl::prelude::*;
 struct SayCommand {
     message: String,
     repeat: usize,
+    shout: bool,
 }
 
 // Implement ReplCommand trait with builder pattern
@@ -27,6 +28,14 @@ impl ReplCommand for SayCommand {
                     .help("Number of times to repeat")
                     .default_value("1"),
             )
+            .arg(
+                clap::Arg::new("shout")
+                    .short('s')
+                    .long("shout")
+                    .help("Shout the message")
+                    .action(clap::ArgAction::SetTrue)
+                    .num_args(0),
+            )
     }
 
     fn to_event(matches: &clap::ArgMatches) -> ReplResult<Self> {
@@ -34,8 +43,9 @@ impl ReplCommand for SayCommand {
         let repeat = matches.get_one::<String>("repeat")
             .and_then(|s| s.parse::<usize>().ok())
             .unwrap_or(1);
+        let shout = matches.get_flag("shout");
         
-        Ok(SayCommand { message, repeat })
+        Ok(SayCommand { message, repeat, shout })
     }
 }
 
@@ -43,12 +53,17 @@ impl ReplCommand for SayCommand {
 fn on_say(trigger: Trigger<SayCommand>) {
     let command = trigger.event();
 
+    let message = if command.shout {
+        command.message.to_uppercase()
+    } else {
+        command.message.clone()
+    };
     // Print the main message
-    info!("Saying: {}", command.message);
+    info!("Saying: {}", message);
     
     // Print repeated messages
     for i in 0..command.repeat {
-        info!("{}: {}", i + 1, command.message);
+        info!("{}: {}", i + 1, message);
     }
 }
 
