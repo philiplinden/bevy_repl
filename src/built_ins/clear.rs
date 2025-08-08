@@ -9,14 +9,22 @@ pub fn plugin(app: &mut App) {
 #[derive(Event, Clone)]
 struct ClearCommand;
 
+impl clap::FromArgMatches for ClearCommand {
+    fn from_arg_matches(_matches: &clap::ArgMatches) -> Result<Self, clap::error::Error> {
+        Ok(ClearCommand)
+    }
+    
+    fn update_from_arg_matches(&mut self, _matches: &clap::ArgMatches) -> Result<(), clap::error::Error> {
+        Ok(())
+    }
+}
+
 impl ReplCommand for ClearCommand {
-    fn command() -> clap::Command {
+    fn clap_command() -> clap::Command {
         clap::Command::new("clear").about("Clears previous outputs from the REPL")
     }
 
-    fn from_matches(_matches: clap::ArgMatches) -> Self {
-        ClearCommand
-    }
+
 }
 
 fn on_clear(_trigger: Trigger<ClearCommand>, mut terminal: ResMut<ReplContext>) {

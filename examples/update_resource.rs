@@ -53,45 +53,33 @@ impl TimerResource {
 }
 
 // Command structs
-#[derive(Debug, Clone, Event)]
+#[derive(Debug, Clone, Event, bevy_repl_derive::ReplCommand)]
 struct StartTimerCommand;
 
 impl ReplCommand for StartTimerCommand {
-    fn command() -> clap::Command {
+    fn clap_command() -> clap::Command {
         clap::Command::new("start")
             .about("Starts the timer")
     }
-
-    fn from_matches(_matches: clap::ArgMatches) -> Self {
-        Self
-    }
 }
 
-#[derive(Debug, Clone, Event)]
+#[derive(Debug, Clone, Event, bevy_repl_derive::ReplCommand)]
 struct StopTimerCommand;
 
 impl ReplCommand for StopTimerCommand {
-    fn command() -> clap::Command {
+    fn clap_command() -> clap::Command {
         clap::Command::new("stop")
             .about("Stops the timer")
     }
-
-    fn from_matches(_matches: clap::ArgMatches) -> Self {
-        Self
-    }
 }
 
-#[derive(Debug, Clone, Event)]
+#[derive(Debug, Clone, Event, bevy_repl_derive::ReplCommand)]
 struct ResetTimerCommand;
 
 impl ReplCommand for ResetTimerCommand {
-    fn command() -> clap::Command {
+    fn clap_command() -> clap::Command {
         clap::Command::new("reset")
             .about("Resets the timer to 0")
-    }
-
-    fn from_matches(_matches: clap::ArgMatches) -> Self {
-        Self
     }
 }
 
@@ -142,8 +130,6 @@ fn main() {
             MinimalPlugins.set(ScheduleRunnerPlugin::run_loop(Duration::from_secs_f64(
                 1.0 / 60.0,
             ))),
-            bevy::input::InputPlugin::default(),
-            bevy::log::LogPlugin::default(),
             ReplPlugins,
         ))
         .init_resource::<TimerResource>()

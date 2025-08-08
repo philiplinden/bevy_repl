@@ -1,8 +1,11 @@
 use bevy::prelude::*;
-use bevy_ratatui::context::TerminalContext;
 use bevy_ratatui::{
-    crossterm::event::{KeyCode as CrosstermKeyCode, KeyEventKind as CrosstermKeyEventKind},
-    event::KeyEvent,
+    context::TerminalContext,
+    event::{InputSet, KeyEvent},
+    crossterm::event::{
+        KeyCode as CrosstermKeyCode,
+        KeyEventKind as CrosstermKeyEventKind,
+    },
 };
 use std::io::{Stdout, stdout};
 
@@ -31,6 +34,12 @@ impl Plugin for ReplPlugin {
             ..default()
         });
         app.add_event::<ReplToggleEvent>();
+        app.add_systems(
+            Update,
+            block_event_forwarding
+                .in_set(InputSet::EmitBevy)
+                .run_if(repl_is_enabled),
+        );
         app.add_systems(PostUpdate, toggle_repl);
         app.add_observer(manage_context);
         app.add_observer(cleanup_on_exit);
@@ -117,6 +126,9 @@ pub fn repl_is_enabled(repl: Res<Repl>) -> bool {
     repl.enabled
 }
 
+/// System that toggles the REPL on and off when the toggle key is pressed.
+///
+/// Use crossterm key events so the repl can be toggled without Bevy's input system.
 pub fn toggle_repl(
     mut repl: ResMut<Repl>,
     mut key_events: EventReader<KeyEvent>,
@@ -148,14 +160,32 @@ pub fn toggle_repl(
 #[derive(Resource, Deref, DerefMut, Debug)]
 pub struct ReplContext(Terminal<CrosstermBackend<Stdout>>);
 
+impl ReplContext {
+    /// Create a new ReplContext with a terminal and enable raw mode.
+    /// 
+    /// This is a workaround to initialize a `bevy_ratatui` terminal context
+    /// without spawning an alternate screen.
+    /// 
+    /// We have a separate method so that we can allow the user to initialize
+    /// the context with their own terminal. The trait from `bevy_ratatui` does
+    /// not allow the user to provide their own terminal and always creates a
+    /// new one.
+    /// 
+    /// This method is a simple change that sets up possible future
+    /// functionality like using the REPL in a UI.
+    pub fn with_terminal(terminal: Terminal<CrosstermBackend<Stdout>>) -> Result<Self> {
+        bevy_ratatui::crossterm::terminal::enable_raw_mode()?;
+        Ok(Self(terminal))
+    }
+}
+
 impl TerminalContext<CrosstermBackend<Stdout>> for ReplContext {
     fn init() -> Result<Self> {
         let stdout = stdout();
         // Enable raw mode but stay in main screen
-        bevy_ratatui::crossterm::terminal::enable_raw_mode().unwrap();
         let backend = CrosstermBackend::new(stdout);
-        let terminal = Terminal::new(backend).unwrap();
-        Ok(Self(terminal))
+        let terminal = Terminal::new(backend)?;
+        Self::with_terminal(terminal)
     }
 
     fn restore() -> Result<()> {
@@ -197,4 +227,22 @@ fn cleanup_on_exit(_exit: Trigger<AppExit>, mut commands: Commands) {
         return;
     };
     commands.remove_resource::<ReplContext>();
+}
+
+/// System that blocks event forwarding to Bevy when REPL is enabled
+/// This prevents key events from reaching game systems during REPL input.
+/// The toggle key is always allowed to pass through for REPL toggling.
+fn block_event_forwarding(mut key_events: EventReader<KeyEvent>, repl: Res<Repl>) {
+    // Read all events once and filter out the toggle key
+    let events: Vec<_> = key_events.read().collect();
+
+    for event in events {
+        // Allow toggle key to pass through
+        if let Some(toggle_key) = repl.toggle_key {
+            if event.code == toggle_key {
+                continue; // Skip blocking this event
+            }
+        }
+        // All other events are consumed (blocked) when REPL is enabled
+    }
 }

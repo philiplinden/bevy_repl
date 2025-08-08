@@ -12,7 +12,7 @@ struct GreetCommand {
 
 // Implement ReplCommand trait
 impl ReplCommand for GreetCommand {
-    fn command() -> clap::Command {
+    fn clap_command() -> clap::Command {
         clap::Command::new("greet")
             .about("Greet someone")
             .arg(

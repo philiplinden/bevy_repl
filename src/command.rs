@@ -1,6 +1,7 @@
 use anyhow::Result;
 use bevy::prelude::*;
 use bevy_ratatui::event::InputSet;
+use clap::FromArgMatches;
 
 use crate::{prompt::ReplSubmitEvent, repl::Repl};
 
@@ -50,7 +51,7 @@ impl<C: ReplCommand> TypedCommandParser<C> {
 }
 
 impl<C: ReplCommand> CommandParser for TypedCommandParser<C> {
-    fn parse_and_trigger(&self, input: &str, commands: &mut Commands) -> bool {
+    fn parse_and_trigger(&self, input: &str, bevy_commands: &mut Commands) -> bool {
         // Split input into command name and arguments
         let parts: Vec<&str> = input.split_whitespace().collect();
         if parts.is_empty() {
@@ -58,7 +59,7 @@ impl<C: ReplCommand> CommandParser for TypedCommandParser<C> {
         }
 
         let command_name = parts[0];
-        if command_name != C::command().get_name() {
+        if command_name != C::clap_command().get_name() {
             return false;
         }
 
@@ -66,8 +67,13 @@ impl<C: ReplCommand> CommandParser for TypedCommandParser<C> {
         match C::parse_from_args(&parts) {
             Ok(matches) => {
                 // Create the command instance from matches
-                let command = C::from_matches(matches);
-                commands.trigger(command);
+                match C::event_from_matches(&matches) {
+                    Ok(event) => bevy_commands.trigger(event),
+                    Err(clap_error) => {
+                        // Print the Clap error message with preserved formatting
+                        eprintln!("{}", clap_error);
+                    }
+                }
                 true
             }
             Err(clap_error) => {
@@ -81,29 +87,33 @@ impl<C: ReplCommand> CommandParser for TypedCommandParser<C> {
 
 // System to register commands in the REPL
 pub fn register_command_in_repl<C: ReplCommand>(mut repl: ResMut<Repl>) {
-    let command_name = C::command().get_name().to_string();
+    let command_name = C::clap_command().get_name().to_string();
     let parser = Box::new(TypedCommandParser::<C>::new()) as Box<dyn CommandParser>;
     repl.commands.insert(command_name, parser);
 }
 
-pub type ReplResult<T> = Result<T, anyhow::Error>;
+pub type ReplResult<T> = Result<T, clap::error::Error>;
 
 /// Trait for commands that can be registered with the REPL
-pub trait ReplCommand: Send + Sync + Clone + Event + 'static {
+pub trait ReplCommand: Send + Sync + Clone + Event + FromArgMatches + 'static {
     /// Returns the clap::Command definition for this command
-    fn command() -> clap::Command;
+    fn clap_command() -> clap::Command;
 
-    /// Create the command from parsed clap matches
-    fn from_matches(matches: clap::ArgMatches) -> Self;
+    /// Create the command event from parsed clap matches
+    fn to_event(matches: &clap::ArgMatches) -> ReplResult<Self> {
+        Self::from_arg_matches(matches)
+    }
 
     /// Parse the command from command line arguments
     fn parse_from_args(args: &[&str]) -> Result<clap::ArgMatches, clap::Error>
     where
         Self: Sized,
     {
-        Self::command().try_get_matches_from(args)
+        Self::clap_command().try_get_matches_from(args)
     }
 }
+
+
 
 /// System that parses terminal input and triggers command observers
 pub fn parse_input_buffer_for_commands(

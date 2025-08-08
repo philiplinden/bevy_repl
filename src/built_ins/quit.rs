@@ -11,8 +11,21 @@ struct QuitCommand {
     verbose: bool,
 }
 
+impl clap::FromArgMatches for QuitCommand {
+    fn from_arg_matches(matches: &clap::ArgMatches) -> Result<Self, clap::error::Error> {
+        Ok(QuitCommand {
+            verbose: matches.get_flag("verbose"),
+        })
+    }
+    
+    fn update_from_arg_matches(&mut self, matches: &clap::ArgMatches) -> Result<(), clap::error::Error> {
+        self.verbose = matches.get_flag("verbose");
+        Ok(())
+    }
+}
+
 impl ReplCommand for QuitCommand {
-    fn command() -> clap::Command {
+    fn clap_command() -> clap::Command {
         clap::Command::new("quit")
             .about("Exits the app gracefully")
             .arg(
@@ -22,11 +35,6 @@ impl ReplCommand for QuitCommand {
                     .help("Enables verbose output")
                     .action(clap::ArgAction::SetTrue),
             )
-    }
-
-    fn from_matches(matches: clap::ArgMatches) -> Self {
-        let verbose = matches.get_flag("verbose");
-        QuitCommand { verbose }
     }
 }
 
