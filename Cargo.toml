@@ -1,5 +1,5 @@
-# [workspace]
-# members = [".", "bevy_repl_derive"]
+[workspace]
+members = [".", "bevy_repl_derive"]
 
 [package]
 name = "bevy_repl"
@@ -13,10 +13,10 @@ categories = ["game-development", "development-tools"]
 
 [dependencies]
 bevy = { version = "0.16.1", default-features = false, features = ["bevy_log"]}
+bevy_ratatui = { version = "0.9.2", features = ["crossterm"] }
+ratatui = "0.29.0"
 clap = { version = "4.5.43" }
-
-# Derive support via separate crate
-# bevy_repl_derive = { version = "0.1.0", path = "./bevy_repl_derive", optional = true }
+bevy_repl_derive = { version = "0.1.0", path = "./bevy_repl_derive", optional = true }
 
 # Error handling and logging
 anyhow = "1.0"
@@ -24,21 +24,18 @@ tracing = { version = "0.1", features = [
     "max_level_debug",
     "release_max_level_warn",
 ] }
-bevy_ratatui = { version = "0.9.2", features = ["crossterm"] }
-ratatui = "0.29.0"
 
 [features]
 default = [
     "dev",
+    "default_commands",
 ]
 dev = ["bevy/dynamic_linking"]
 default_commands = ["quit", "clear", "help"]
 quit = []
 clear = []
 help = []
-
-# Derive feature enables the separate derive crate
-# derive = ["bevy_repl_derive"]
+derive = ["bevy_repl_derive", "clap/derive"]
 
 [[example]]
 name = "minimal"
@@ -47,6 +44,24 @@ path = "examples/minimal.rs"
 [[example]]
 name = "flag_args"
 path = "examples/flag_args.rs"
+
+[[example]]
+name = "optional_args"
+path = "examples/optional_args.rs"
+
+[[example]]
+name = "update_resource"
+path = "examples/update_resource.rs"
+
+[[example]]
+name = "derive"
+path = "examples/derive.rs"
+required-features = ["derive"]
+
+[[example]]
+name = "window"
+path = "examples/window.rs"
+required-features = ["bevy/bevy_window"]
 
 # Idiomatic Bevy code often triggers these lints, and the CI workflow treats them as errors.
 # In some cases they may still signal poor code quality however, so consider commenting out these lines.

@@ -1,20 +1,20 @@
 use bevy::prelude::*;
+use crate::prelude::*;
 
 pub fn plugin(app: &mut App) {
-    app.repl::<HelpCommand>(on_help);
+    app.add_repl_command::<HelpCommand>();
+    app.add_observer(on_help);
 }
 
-#[derive(Event)]
+#[derive(Event, Clone, Default)]
 struct HelpCommand;
 
-impl ReplCommand for HelpCommand {
-    fn command() -> clap::Command {
-        clap::Command::new("help")
-            .about("Shows help for the REPL")
+impl crate::command::ReplCommand for HelpCommand {
+    fn clap_command() -> clap::Command {
+        clap::Command::new("help").about("Shows help for the REPL")
     }
+}
 
-    fn execute(trigger: Trigger<Self>) {
-        let _command = trigger.event();
-        // TODO: Implement help command
-    }
+fn on_help(_t: Trigger<HelpCommand>) {
+    error!("Help command not yet implemented.");
 }

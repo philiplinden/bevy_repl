@@ -10,7 +10,9 @@ use bevy_ratatui::{
 };
 use std::io::{Write, stdout};
 
-use crate::repl::{Repl, repl_is_enabled};
+use crate::{
+    repl::{Repl, repl_is_enabled},
+};
 
 #[derive(Resource, Clone)]
 pub struct PromptPlugin {
@@ -46,16 +48,11 @@ impl Plugin for PromptPlugin {
         );
         app.add_systems(
             Update,
-            block_event_forwarding
-                .in_set(InputSet::EmitBevy)
+            (
+                display_prompt,
+            )
+                .in_set(InputSet::Post)
                 .run_if(repl_is_enabled),
-        );
-        app.add_systems(
-            Update,
-            display_prompt
-                .run_if(repl_is_enabled)
-                .run_if(resource_changed::<Repl>)
-                .in_set(InputSet::Post),
         );
     }
 }
@@ -164,7 +161,7 @@ fn update_repl_buffer(
             ReplBufferEvent::Submit => {
                 let input = repl.drain_buffer();
                 // Print a newline to move terminal to next line
-                let _ = stdout().write_all(b"\n");
+                let _ = stdout().write_all(b"\r\n");
                 parse_events.write(ReplSubmitEvent(input));
             }
         }
@@ -175,7 +172,7 @@ fn update_repl_buffer(
 /// Runs whenever the Repl resource changes
 fn display_prompt(repl: Res<Repl>, prompt: Res<ReplPrompt>) {
     // Get terminal size
-    let (width, height) = match terminal::size() {
+    let (_, height) = match terminal::size() {
         Ok(size) => size,
         Err(_) => return, // If we can't get terminal size, skip rendering
     };
@@ -186,33 +183,4 @@ fn display_prompt(repl: Res<Repl>, prompt: Res<ReplPrompt>) {
     } else {
         repl.buffer.clone()
     };
-
-    // Position cursor at the correct location within the buffer
-    let prompt_symbol_len = prompt.symbol.as_ref().map(|s| s.len()).unwrap_or(0);
-    let cursor_x = (prompt_symbol_len + repl.cursor_pos) as u16;
-    let cursor_x = cursor_x.min(width.saturating_sub(1));
-
-    // Execute terminal operations sequentially to avoid borrow checker issues
-    let _ = stdout().execute(MoveTo(0, height.saturating_sub(1)));
-    let _ = stdout().execute(Clear(ClearType::CurrentLine));
-    let _ = stdout().write_all(prompt_text.as_bytes());
-    let _ = stdout().execute(MoveTo(cursor_x, height.saturating_sub(1)));
-}
-
-/// System that blocks event forwarding to Bevy when REPL is enabled
-/// This prevents key events from reaching game systems during REPL input.
-/// The toggle key is always allowed to pass through for REPL toggling.
-fn block_event_forwarding(mut key_events: EventReader<KeyEvent>, repl: Res<Repl>) {
-    // Read all events once and filter out the toggle key
-    let events: Vec<_> = key_events.read().collect();
-
-    for event in events {
-        // Allow toggle key to pass through
-        if let Some(toggle_key) = repl.toggle_key {
-            if event.code == toggle_key {
-                continue; // Skip blocking this event
-            }
-        }
-        // All other events are consumed (blocked) when REPL is enabled
-    }
 }

@@ -1,34 +1,21 @@
 use bevy::prelude::*;
-use clap::{Command, Arg, ArgAction};
-use crate::ReplCommand;
+use crate::prelude::*;
 
 pub fn plugin(app: &mut App) {
-    app.repl::<QuitCommand>(on_quit);
+    app.add_repl_command::<QuitCommand>();
+    app.add_observer(on_quit);
 }
 
-#[derive(Event)]
-struct QuitCommand {
-    verbose: bool,
-}
+#[derive(Event, Clone, Default)]
+struct QuitCommand;
 
-impl ReplCommand for QuitCommand {
-    fn command() -> clap::Command {
+impl crate::command::ReplCommand for QuitCommand {
+    fn clap_command() -> clap::Command {
         clap::Command::new("quit")
             .about("Exits the app gracefully")
-            .arg(
-                clap::Arg::new("verbose")
-                    .short('v')
-                    .long("verbose")
-                    .help("Enables verbose output")
-                    .action(clap::ArgAction::SetTrue),
-            )
     }
+}
 
-    fn execute(trigger: Trigger<Self>) {
-        let command = trigger.event();
-        if command.verbose {
-            info!("Quitting...");
-        }
-        exit.send(AppExit::Success);
-    }
+fn on_quit(_trigger: Trigger<QuitCommand>, mut exit: EventWriter<AppExit>) {
+    exit.write(AppExit::Success);
 }

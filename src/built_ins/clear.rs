@@ -1,20 +1,23 @@
 use bevy::prelude::*;
+use crate::prelude::*;
 
 pub fn plugin(app: &mut App) {
-    app.repl::<ClearCommand>(on_clear);
+    app.add_repl_command::<ClearCommand>();
+    app.add_observer(on_clear);
 }
 
-#[derive(Event)]
+#[derive(Event, Clone, Default)]
 struct ClearCommand;
 
-impl ReplCommand for ClearCommand {
-    fn command() -> clap::Command {
-        clap::Command::new("clear")
-            .about("Clears previous outputs from the REPL")
+impl crate::command::ReplCommand for ClearCommand {
+    fn clap_command() -> clap::Command {
+        clap::Command::new("clear").about("Clears previous outputs from the REPL")
     }
+}
 
-    fn execute(trigger: Trigger<Self>) {
-        let _command = trigger.event();
-        // TODO: Implement clear command
+fn on_clear(_trigger: Trigger<ClearCommand>, mut terminal: ResMut<ReplContext>) {
+    match terminal.clear() {
+        Ok(_) => return,
+        Err(e) => error!("Failed to clear terminal: {}", e),
     }
 }
