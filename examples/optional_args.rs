@@ -58,8 +58,8 @@ fn main() {
             MinimalPlugins
                 .set(ScheduleRunnerPlugin::run_loop(Duration::from_secs_f64(
                     1.0 / 60.0,
-                )))
-                .set(bevy::log::LogPlugin::default()),
+                ))),
+            bevy::log::LogPlugin::default(),
             ReplPlugins,
         ))
         .add_repl_command::<SayCommand>()
