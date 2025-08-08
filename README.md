@@ -20,6 +20,11 @@ implementing a full TUI or rendering features.
 
 ## Features
 
+Use the `derive` feature to support clap's derive pattern for REPL commands.
+`#[derive(ReplCommand)]` will automatically implement the `ReplCommand` trait
+and create an event with the command's arguments and options. Configure the
+response by adding an observer for the REPL command like normal.
+
 Enable built-in commands with feature flags. Each command is enabled separately
 by a feature flag. Use the `default-commands` feature to enable all built-in
 commands.
@@ -34,11 +39,141 @@ commands.
 Clap features are technically supported, but have not been tested. Override the
 `clap` features in your `Cargo.toml` to enable or disable additional features.
 
-## Default Keybinds
+## Usage
+
+The REPL is designed to be used in headless mode, but it can be used in windowed
+mode too through the terminal while the app is running.
+
+Toggle the REPL with the ``` key. The REPL is enabled by default. When enabled,
+all keycode input events are consumed by the REPL and blocked from being forwarded
+to Bevy so as to avoid passing events to Bevy when you are typing a command.
+When disabled, keycode input events are forwarded to Bevy via `bevy_ratatui` as
+normal and no REPL systems run (except for the REPL toggle key observer).
+
+Trigger commands by typing them in the REPL input buffer and pressing `Enter`.
+The REPL will parse the command and trigger an event with the command's arguments
+and options.
+
+### Builder pattern (default)
+
+1. Make a Bevy event struct that represents the command and its arguments and
+   options. This is the event that will be triggered when the command is executed.
+2. Implement the `ReplCommand` trait for the event struct.
+   1. `fn clap_command() -> clap::Command` - Use the `clap` builder pattern to
+      describe the command and its arguments or options.
+   2. `fn to_event(matches: &clap::ArgMatches) -> ReplResult<Self>` - Implement
+      the `to_event` method to convert the command's arguments and options into
+      the event struct. This is where you validate the command's arguments
+      and options and map them to the event fields or return an error if they are
+      invalid. If the command has no arguments or options, return `Ok(Self)`.
+      **Tip:** If the command has no arguments or options, implement the `Default`
+      trait. You don't implement `to_event` in this case, since the default
+      implementation will return `Ok(Self)`.
+3. Add the command to the app with `.add_repl_command<YourReplCommand>()`.
+4. Add an observer for the command with `.add_observer(your_observer)`. The
+   observer is a one-shot system that receives a trigger event with the command's
+   arguments and options.
+
+```rust
+use bevy::prelude::*;
+use bevy_repl::prelude::*;
+
+#[derive(Debug, Clone, Event, Default)]
+struct SimpleCommandWithoutArgs;
+
+impl ReplCommand for SimpleCommandWithoutArgs {
+    fn clap_command() -> clap::Command {
+        clap::Command::new("simple")
+            .about("A simple command")
+    }
+}
+
+fn on_simple(_trigger: Trigger<SimpleCommandWithoutArgs>) {
+    println!("You triggered a simple command without args");
+}
+
+struct CommandWithArgs {
+    arg1: String,
+    arg2: String,
+}
+
+impl ReplCommand for CommandWithArgs {
+
+    fn clap_command() -> clap::Command {
+        clap::Command::new("command")
+            .about("A command with args")
+            .arg(clap::Arg::new("arg1").required(true))
+            .arg(clap::Arg::new("arg2").required(true))
+    }
+
+    fn to_event(matches: &clap::ArgMatches) -> ReplResult<Self> {
+        Ok(CommandWithArgs {
+            arg1: matches.get_one::<String>("arg1").unwrap().clone(),
+            arg2: matches.get_one::<String>("arg2").unwrap().clone(),
+        })
+    }
+}
+
+fn on_command_with_args(trigger: Trigger<CommandWithArgs>) {
+    println!("You triggered a command with args: {} {}", trigger.arg1, trigger.arg2);
+}
+
+fn main() {
+    App::new()
+        .add_plugins((
+            // Run headless in the terminal
+            MinimalPlugins.set(
+                bevy::app::ScheduleRunnerPlugin::run_loop(
+                    Duration::from_secs_f32(1. / 60.)
+                )
+            )),
+            ReplPlugin,
+        ))
+        .add_repl_command::<SimpleCommandWithoutArgs>()
+        .add_observer(on_simple)
+        .add_repl_command::<CommandWithArgs>()
+        .add_observer(on_command_with_args);
+}
+```
+
+### Derive pattern (requires `derive` feature)
+
+Enable the `derive` feature in your `Cargo.toml` to use the derive pattern.
+
+```toml
+[dependencies]
+bevy_repl = { version = "0.1.0", features = ["derive"] }
+```
+
+Then derive the `ReplCommand` trait on your command struct along with clap's
+`Parser` trait. Add the command to the app with `.add_repl_command<YourReplCommand>()`
+and add an observer for the command with `.add_observer(your_observer)` as usual.
+
+```rust
+use bevy::prelude::*;
+use bevy_repl::prelude::*;
+use clap::Parser;
+
+#[derive(ReplCommand, Parser, Default, Event)]
+struct SimpleCommandWithoutArgs;
+
+#[derive(ReplCommand, Parser, Event, Default)]
+#[clap(about = "A command with args")]
+struct CommandWithArgs {
+    #[clap(short, long)]
+    arg1: String,
+    #[clap(short, long)]
+    arg2: String,
+}
+```
+
+### Default Keybinds
+
+When the REPL is enabled, the following keybinds are available:
 
 | Key | Action |
 | --- | --- |
-| ``` | Toggle REPL visibility |
+| ``` | Toggle the REPL |
 | `Enter` | Submit command |
 | `Esc` | Clear input buffer |
 | `Left/Right` | Move cursor |
@@ -147,11 +282,14 @@ Input is parsed via `clap` commands and corresponding observer systems that
 execute when triggered by the command.
 
 Use clap's [builder pattern] to describe the command and its arguments or
-options. Then add the command and its observer to the app with
-`.add_repl_command<Command>(observer)`. The observer is a one-shot system that
-receives a trigger event with the command's arguments and options.
+options. Then add the command to the app with
+`.add_repl_command<YourReplCommand>()`. The REPL fires an event (e.g.
+`YourReplCommand`) when the command is parsed from the prompt.
 
-**Note:** I haven't tested clap's derive pattern yet.
+Make an observer for the command with `.add_observer(your_observer)`. The
+observer is a one-shot system that receives a trigger event with the command's
+arguments and options. As a system, it is executed in the `PostUpdate` schedule
+and has full access to the Bevy ECS.
 
 [builder pattern]: https://docs.rs/clap/latest/clap/_tutorial/index.html#tutorial-for-the-builder-api
 
@@ -194,6 +332,12 @@ impl ReplCommand for SayCommand {
                     .takes_value(true)
             )
     }
+
+    fn to_event(matches: &clap::ArgMatches) -> ReplResult<Self> {
+        Ok(SayCommand {
+            message: matches.get_all::<String>("message").unwrap().join(" "),
+        })
+    }
 }
 
 fn on_say(trigger: Trigger<SayCommand>) {
@@ -219,19 +363,27 @@ implement your own TUI panels with `bevy_ratatui`.
 
 ## Aspirations
 
-- [x] **Derive pattern** - Seamlessly integrate with clap's derive pattern
+### Terminal features
+- [x] **Toggleable** - The REPL is disabled by default and can be toggled. When
+  disabled, the app runs normally in the terminal, no REPL systems run, and the
+  prompt is hidden.
+- [x] **Derive pattern** - Describe commands with clap's derive pattern.
+- [ ] **Pretty prompt** - Show the prompt in the terminal below the normal
+  stdout, including the current buffer content.
 - [x] **Support for games with rendering and windowing** - The REPL is designed to
   work from the terminal, but the terminal normally prints logs when there is a
   window too. The REPL still works from the terminal while using the window for
   rendering if the console is enabled.
+- [ ] **Support for games with TUIs** - The REPL is designed to work as a sort of
+  sidecar to the normal terminal output, so _in theory_ it should be compatible
+  with games that use an alternate TUI screen. I don't know if it actually works.
+
+### Prompt features
 - [ ] **Command history** - Use keybindings to navigate past commands
 - [ ] **Customizable keybinds** - Allow the user to configure the REPL keybinds for
   all REPL controls, not just the toggle key.
 - [ ] **Help text and command completion** - Use `clap`'s help text and completion
   features to provide a better REPL experience and allow for command discovery.
-- [ ] **Support for games with TUIs** - The REPL is designed to work as a sort of
-  sidecar to the normal terminal output, so _in theory_ it should be compatible
-  with games that use an alternate TUI screen. Who knows if it actually works.
 
 ## License
 
