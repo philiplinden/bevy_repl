@@ -126,9 +126,11 @@ fn update_timer(mut timer: ResMut<TimerResource>, time: Res<Time>) {
 fn main() {
     App::new()
         .add_plugins((
-            MinimalPlugins.set(ScheduleRunnerPlugin::run_loop(Duration::from_secs_f64(
-                1.0 / 60.0,
-            ))),
+            MinimalPlugins
+                .set(ScheduleRunnerPlugin::run_loop(Duration::from_secs_f64(
+                    1.0 / 60.0,
+                )))
+                .set(bevy::log::LogPlugin::default()),
             ReplPlugins,
         ))
         .init_resource::<TimerResource>()

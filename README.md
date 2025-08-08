@@ -26,8 +26,10 @@ commands.
 
 | Feature Flag | Command | Description |
 | --- | --- | --- |
+| `default_commands` | `quit`, `help`, `clear` | Enable all built-in commands |
 | `quit` | `quit`, `q`, CTRL+C | Gracefully terminate the application |
-| `help` | `help`, ENTER | Show clap help text |
+| `help` | `help` | Show clap help text |
+| `clear` | `clear` | Clear the REPL input buffer |
 
 Clap features are technically supported, but have not been tested. Override the
 `clap` features in your `Cargo.toml` to enable or disable additional features.
@@ -162,7 +164,7 @@ fn main() {
 
     let mut app = App::new()
         .add_plugins((
-            DefaultPlugins.set(ScheduleRunnerPlugin::run_loop(frame_time)),
+            MinimalPlugins.set(ScheduleRunnerPlugin::run_loop(frame_time)),
         ));
 
     app.add_plugins((
@@ -217,19 +219,19 @@ implement your own TUI panels with `bevy_ratatui`.
 
 ## Aspirations
 
-- [ ] **Derive pattern** - Seamlessly integrate with clap's derive pattern
+- [x] **Derive pattern** - Seamlessly integrate with clap's derive pattern
+- [x] **Support for games with rendering and windowing** - The REPL is designed to
+  work from the terminal, but the terminal normally prints logs when there is a
+  window too. The REPL still works from the terminal while using the window for
+  rendering if the console is enabled.
 - [ ] **Command history** - Use keybindings to navigate past commands
 - [ ] **Customizable keybinds** - Allow the user to configure the REPL keybinds for
-  all REPL controls.
+  all REPL controls, not just the toggle key.
 - [ ] **Help text and command completion** - Use `clap`'s help text and completion
   features to provide a better REPL experience and allow for command discovery.
 - [ ] **Support for games with TUIs** - The REPL is designed to work as a sort of
   sidecar to the normal terminal output, so _in theory_ it should be compatible
   with games that use an alternate TUI screen. Who knows if it actually works.
-- [ ] **Support for games with rendering and windowing** - The REPL is designed to
-  work from the terminal, but the terminal normally prints logs when there is a
-  window too. It would be cool to have a REPL that works from the terminal while
-  also using the window for rendering.
 
 ## License
 

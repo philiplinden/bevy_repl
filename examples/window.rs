@@ -1,6 +1,5 @@
-use bevy::{app::ScheduleRunnerPlugin, prelude::*};
+use bevy::prelude::*;
 use bevy_repl::prelude::*;
-use std::time::Duration;
 
 #[derive(Debug, Clone, Event, Default)]
 struct PingCommand;
@@ -12,17 +11,20 @@ impl ReplCommand for PingCommand {
 }
 
 fn on_ping(_trigger: Trigger<PingCommand>) {
-    println!("Pong");
+    info!("Pong");
 }
 
 fn main() {
     App::new()
         .add_plugins((
             DefaultPlugins
-                // Run headless in the terminal
-                .set(ScheduleRunnerPlugin::run_loop(Duration::from_secs_f64(
-                    1.0 / 60.0,
-                ))),
+                .set(WindowPlugin {
+                    primary_window: Some(Window {
+                        title: "Bevy REPL".to_string(),
+                        ..default()
+                    }),
+                    ..default()
+                }),
             ReplPlugins,
         ))
         .add_repl_command::<PingCommand>()

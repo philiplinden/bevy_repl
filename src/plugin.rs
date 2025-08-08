@@ -5,7 +5,6 @@ impl PluginGroup for ReplPlugins {
     fn build(self) -> PluginGroupBuilder {
         PluginGroupBuilder::start::<Self>()
             // Use explicit module paths for clarity
-            .add(bevy::log::LogPlugin::default())
             .add(bevy_ratatui::cleanup::CleanupPlugin)
             .add(bevy_ratatui::error::ErrorPlugin)
             .add(bevy_ratatui::event::EventPlugin::default())

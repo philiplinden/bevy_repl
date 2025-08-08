@@ -22,20 +22,21 @@ fn on_say(trigger: Trigger<SayCommand>) {
     let command = trigger.event();
 
     // Print the main message
-    info!("Saying: {}", command.message);
+    println!("Saying: {}", command.message);
     
     // Print repeated messages
     for i in 0..command.repeat {
-        info!("{}: {}", i + 1, command.message);
+        println!("{}: {}", i + 1, command.message);
     }
 }
 
 fn main() {
     App::new()
         .add_plugins((
-            MinimalPlugins.set(ScheduleRunnerPlugin::run_loop(Duration::from_secs_f64(
-                1.0 / 60.0,
-            ))),
+            MinimalPlugins
+                .set(ScheduleRunnerPlugin::run_loop(Duration::from_secs_f64(
+                    1.0 / 60.0,
+                ))),
             ReplPlugins,
         ))
         .add_repl_command::<SayCommand>()
