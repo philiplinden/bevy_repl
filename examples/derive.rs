@@ -5,7 +5,7 @@ use bevy_repl::prelude::*;
 use clap::Parser;
 
 // Define a simple command struct using clap's derive pattern
-#[derive(Parser, ReplCommand, Debug, Clone, Event)]
+#[derive(Parser, ReplCommand, Debug, Clone, Event, Default)]
 #[command(
     name = "say",
     about = "Say something"

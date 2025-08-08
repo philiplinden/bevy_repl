@@ -1,7 +1,6 @@
 use anyhow::Result;
 use bevy::prelude::*;
 use bevy_ratatui::event::InputSet;
-use clap::FromArgMatches;
 
 use crate::{prompt::ReplSubmitEvent, repl::Repl};
 
@@ -67,7 +66,7 @@ impl<C: ReplCommand> CommandParser for TypedCommandParser<C> {
         match C::parse_from_args(&parts) {
             Ok(matches) => {
                 // Create the command instance from matches
-                match C::event_from_matches(&matches) {
+                match C::to_event(&matches) {
                     Ok(event) => bevy_commands.trigger(event),
                     Err(clap_error) => {
                         // Print the Clap error message with preserved formatting
@@ -95,13 +94,13 @@ pub fn register_command_in_repl<C: ReplCommand>(mut repl: ResMut<Repl>) {
 pub type ReplResult<T> = Result<T, clap::error::Error>;
 
 /// Trait for commands that can be registered with the REPL
-pub trait ReplCommand: Send + Sync + Clone + Event + FromArgMatches + 'static {
+pub trait ReplCommand: Send + Sync + Clone + Event + Default + 'static {
     /// Returns the clap::Command definition for this command
     fn clap_command() -> clap::Command;
 
-    /// Create the command event from parsed clap matches
-    fn to_event(matches: &clap::ArgMatches) -> ReplResult<Self> {
-        Self::from_arg_matches(matches)
+    /// Create the command event from parsed clap argument matches
+    fn to_event(_matches: &clap::ArgMatches) -> ReplResult<Self> {
+        Ok(Self::default())
     }
 
     /// Parse the command from command line arguments

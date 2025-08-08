@@ -13,5 +13,6 @@ impl PluginGroup for ReplPlugins {
             .add(crate::repl::ReplPlugin::default())
             .add(crate::prompt::PromptPlugin::default())
             .add(crate::command::ParserPlugin)
+            .add(crate::built_ins::ReplDefaultCommandsPlugin)
     }
 }

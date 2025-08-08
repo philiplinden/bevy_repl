@@ -6,6 +6,9 @@ description = "Derive macros for bevy_repl"
 license = "MIT"
 repository = "https://github.com/philiplinden/bevy_repl"
 
+[lib]
+proc-macro = true
+
 [dependencies]
 proc-macro2 = "1.0"
 quote = "1.0"

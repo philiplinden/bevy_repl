@@ -1,5 +1,5 @@
-# [workspace]
-# members = [".", "bevy_repl_derive"]
+[workspace]
+members = [".", "bevy_repl_derive"]
 
 [package]
 name = "bevy_repl"

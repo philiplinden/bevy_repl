@@ -6,25 +6,13 @@ pub fn plugin(app: &mut App) {
     app.add_observer(on_clear);
 }
 
-#[derive(Event, Clone)]
+#[derive(Event, Clone, Default)]
 struct ClearCommand;
 
-impl clap::FromArgMatches for ClearCommand {
-    fn from_arg_matches(_matches: &clap::ArgMatches) -> Result<Self, clap::error::Error> {
-        Ok(ClearCommand)
-    }
-    
-    fn update_from_arg_matches(&mut self, _matches: &clap::ArgMatches) -> Result<(), clap::error::Error> {
-        Ok(())
-    }
-}
-
-impl ReplCommand for ClearCommand {
+impl crate::command::ReplCommand for ClearCommand {
     fn clap_command() -> clap::Command {
         clap::Command::new("clear").about("Clears previous outputs from the REPL")
     }
-
-
 }
 
 fn on_clear(_trigger: Trigger<ClearCommand>, mut terminal: ResMut<ReplContext>) {

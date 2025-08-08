@@ -53,7 +53,7 @@ impl TimerResource {
 }
 
 // Command structs
-#[derive(Debug, Clone, Event, bevy_repl_derive::ReplCommand)]
+#[derive(Debug, Clone, Event, Default)]
 struct StartTimerCommand;
 
 impl ReplCommand for StartTimerCommand {
@@ -63,7 +63,7 @@ impl ReplCommand for StartTimerCommand {
     }
 }
 
-#[derive(Debug, Clone, Event, bevy_repl_derive::ReplCommand)]
+#[derive(Debug, Clone, Event, Default)]
 struct StopTimerCommand;
 
 impl ReplCommand for StopTimerCommand {
@@ -73,7 +73,7 @@ impl ReplCommand for StopTimerCommand {
     }
 }
 
-#[derive(Debug, Clone, Event, bevy_repl_derive::ReplCommand)]
+#[derive(Debug, Clone, Event, Default)]
 struct ResetTimerCommand;
 
 impl ReplCommand for ResetTimerCommand {
@@ -82,7 +82,6 @@ impl ReplCommand for ResetTimerCommand {
             .about("Resets the timer to 0")
     }
 }
-
 
 // Command handlers
 fn on_start_timer(_trigger: Trigger<StartTimerCommand>, mut timer: ResMut<TimerResource>) {
