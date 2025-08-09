@@ -80,6 +80,16 @@ path = "examples/key_events_forwarded.rs"
 name = "key_events_suppressed"
 path = "examples/key_events_suppressed.rs"
 
+[[example]]
+name = "spawn_entity"
+path = "examples/spawn_entity.rs"
+required-features = ["derive"]
+
+[[example]]
+name = "query"
+path = "examples/query.rs"
+required-features = ["derive"]
+
 # Idiomatic Bevy code often triggers these lints, and the CI workflow treats them as errors.
 # In some cases they may still signal poor code quality however, so consider commenting out these lines.
 [lints.clippy]

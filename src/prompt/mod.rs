@@ -1,4 +1,3 @@
-pub mod keymap;
 pub mod input;
 pub mod render;
 pub mod key_events;

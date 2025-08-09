@@ -1,0 +1,74 @@
+//! Example showing that observer functions can run ECS Queries.
+//! 
+//! Demonstrates:
+//! - Using a REPL command derived with clap
+//! - Accessing a `Query` inside the observer function
+//! - Listing entities and optionally filtering by `Name`
+
+use std::time::Duration;
+
+use bevy::{app::ScheduleRunnerPlugin, prelude::*};
+use bevy_repl::prelude::*;
+use clap::Parser;
+
+/// List entities, optionally filtering by a substring of their Name component.
+#[derive(Parser, ReplCommand, Debug, Clone, Event, Default)]
+#[command(name = "list", about = "List entities, optionally filter by name substring")] 
+struct ListCommand {
+    /// Optional substring to filter `Name` by
+    #[arg(short = 'n', long = "name-contains")]
+    name_contains: Option<String>,
+}
+
+/// Observer demonstrating a read-only ECS query inside the handler.
+fn on_list(trigger: Trigger<ListCommand>, query: Query<(Entity, Option<&Name>)>) {
+    let cmd = trigger.event();
+    let needle = cmd.name_contains.as_deref();
+
+    println!("Entities:");
+    let mut count = 0usize;
+    for (entity, name_opt) in query.iter() {
+        let name_str = name_opt.map(|n| n.as_str()).unwrap_or("<unnamed>");
+        if let Some(substr) = needle {
+            if !name_str.contains(substr) {
+                continue;
+            }
+        }
+        println!("  {:?}: {}", entity, name_str);
+        count += 1;
+    }
+    println!("Total listed: {}", count);
+}
+
+/// Spawn some example entities so we have something to list.
+fn seed(mut commands: Commands) {
+    commands.spawn(Name::new("Alice"));
+    commands.spawn(Name::new("Bob"));
+    commands.spawn(Name::new("Carol"));
+    commands.spawn_empty(); // unnamed
+}
+
+fn instructions() {
+    println!();
+    println!("Welcome to the Bevy REPL query example!");
+    println!();
+    println!("Try typing a command:");
+    println!("  `list`                         - List all entities");
+    println!("  `list -n Al`                   - List entities whose name contains 'Al'");
+    println!("  `quit`                         - Close the app");
+    println!();
+    println!("Press CTRL+C to exit any time.");
+    println!();
+}
+
+fn main() {
+    App::new()
+        .add_plugins((
+            MinimalPlugins.set(ScheduleRunnerPlugin::run_loop(Duration::from_secs_f64(1.0 / 60.0))),
+            ReplPlugins,
+        ))
+        .add_systems(Startup, (seed, instructions))
+        .add_repl_command::<ListCommand>()
+        .add_observer(on_list)
+        .run();
+}
