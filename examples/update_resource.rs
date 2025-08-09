@@ -143,9 +143,6 @@ fn instructions() {
     println!("  `reset`   - Reset the timer to 0");
     println!("  `quit`    - Close the app");
     println!();
-    println!("The REPL can be toggled with:");
-    println!("  {:?}", Repl::default().toggle_key.unwrap());
-    println!();
     println!("Press CTRL+C to exit any time.");
     println!();
 }

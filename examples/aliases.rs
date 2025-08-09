@@ -61,9 +61,6 @@ fn instructions() {
     println!("  rm <target>");
     println!("  del <target>");
     println!();
-    println!("The REPL can be toggled with:");
-    println!("  {:?}", Repl::default().toggle_key.unwrap());
-    println!();
     println!("Press CTRL+C to exit any time.");
     println!();
 }

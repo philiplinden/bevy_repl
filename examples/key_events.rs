@@ -3,7 +3,6 @@
 //! Demonstrates:
 //! - How Bevy keyboard events behave when the REPL is enabled/disabled
 //! - Blocking Bevy key forwarding while REPL is enabled
-//! - Observing `ReplToggleEvent` to react to enable/disable
 //! - Reading `KeyboardInput` events and `ButtonInput<KeyCode>`
 //! - Triggering Bevy behavior (Space -> ping) when REPL is disabled
 
@@ -32,7 +31,7 @@ fn main() {
                 .set(ScheduleRunnerPlugin::run_loop(Duration::from_secs_f64(
                     1.0 / 60.0,
                 ))),
-            ReplPlugins,
+            ReplPlugins.set(ReplPlugin::disabled()),
             EventDemoPlugin,
         ))
         .run();
@@ -46,8 +45,7 @@ impl Plugin for EventDemoPlugin {
             .add_observer(on_ping)
             .add_systems(Update, (log_bevy_key_events, log_bevy_keyboard_input))
             .add_systems(Startup, instructions)
-            .add_systems(Update, ping_from_bevy_key_events)
-            .add_observer(info_on_toggle);
+            .add_systems(Update, ping_from_bevy_key_events);
     }
 }
 
@@ -81,22 +79,8 @@ fn instructions() {
     println!("  `ping`    - Trigger the ping command (prints Pong)");
     println!("  `quit`    - Close the app");
     println!();
-    println!("The REPL can be toggled with:");
-    println!("  {:?}", Repl::default().toggle_key.unwrap());
-    println!();
     println!("Tip: With the REPL disabled, press Space to trigger ping from Bevy.");
     println!();
     println!("Press CTRL+C to exit any time.");
     println!();
-}
-
-fn info_on_toggle(trigger: Trigger<ReplToggleEvent>) {
-    match trigger.event() {
-        ReplToggleEvent::Enable => println!(
-            "Key events are blocked from Bevy. Type `ping` then hit Enter to trigger the ping command."
-        ),
-        ReplToggleEvent::Disable => println!(
-            "Key events are forwarded to Bevy. Hit space to trigger the ping command."
-        ),
-    }
 }

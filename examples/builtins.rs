@@ -60,9 +60,6 @@ fn instructions() {
     println!("  cargo run --example builtins --no-default-features --features \"help\"");
     println!("  cargo run --example builtins --no-default-features --features \"quit,clear\"");
     println!();
-    println!("The REPL can be toggled with:");
-    println!("  {:?}", Repl::default().toggle_key.unwrap());
-    println!();
     println!("Press CTRL+C to exit any time.");
     println!();
 }

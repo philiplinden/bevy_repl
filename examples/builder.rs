@@ -82,9 +82,6 @@ fn instructions() {
     println!("  `say -r N <message>`       - Repeat N times");
     println!("  `quit`                     - Close the app");
     println!();
-    println!("The REPL can be toggled with:");
-    println!("  {:?}", Repl::default().toggle_key.unwrap());
-    println!();
     println!("Press CTRL+C to exit any time.");
     println!();
 }

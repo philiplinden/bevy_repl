@@ -26,12 +26,7 @@ fn instructions() {
     println!("  `ping`    - Trigger the ping command. (it outputs Pong)");
     println!("  `quit`    - Close the app.");
     println!();
-    println!("The REPL can be toggled with:");
-    println!("  {:?}", Repl::default().toggle_key.unwrap());
-    println!();
-    println!("You can also close the window to exit the app.");
-    println!();
-    println!("Press CTRL+C to exit any time.");
+    println!("Press CTRL+C or close the window to exit.");
     println!();
 }
 
