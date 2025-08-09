@@ -39,6 +39,13 @@ commands.
 Clap features are technically supported, but have not been tested. Override the
 `clap` features in your `Cargo.toml` to enable or disable additional features.
 
+## Known Issues
+
+- Input area does not stay pinned to the bottom of the terminal, and the prompt symbol does not display.
+- REPL toggle key (Backquote/`\``) does not work reliably.
+- Key events may leak through the REPL to Bevy when the REPL is enabled.
+- Built-in `help` and `clear` commands are currently non-functional.
+
 ## Usage
 
 The REPL is designed to be used in headless mode, but it can be used in windowed
