@@ -7,15 +7,30 @@ use std::collections::HashMap;
 
 pub struct ReplPlugin {
     enable_on_startup: bool,
-    toggle_key: Option<KeyCode>,
 }
 
 impl Default for ReplPlugin {
     fn default() -> Self {
         Self {
             enable_on_startup: true,
-            toggle_key: Some(KeyCode::Backquote),
         }
+    }
+}
+
+impl ReplPlugin {
+    /// Create a REPL plugin that starts enabled (default).
+    pub fn enabled() -> Self {
+        Self { enable_on_startup: true }
+    }
+
+    /// Create a REPL plugin that starts disabled (no runtime toggle in v1).
+    pub fn disabled() -> Self {
+        Self { enable_on_startup: false }
+    }
+
+    /// Configure whether the REPL starts enabled.
+    pub fn with_enabled(enabled: bool) -> Self {
+        Self { enable_on_startup: enabled }
     }
 }
 
@@ -23,18 +38,19 @@ impl Plugin for ReplPlugin {
     fn build(&self, app: &mut App) {
         app.insert_resource(Repl {
             enabled: self.enable_on_startup,
-            toggle_key: self.toggle_key,
             ..default()
         });
         app.add_event::<ReplSubmitEvent>();
         app.add_event::<ReplBufferEvent>();
-        app.add_event::<ReplToggleEvent>();
+        // Internal lifecycle event to manage terminal context without runtime toggle
+        app.add_event::<ReplLifecycleEvent>();
         app.add_observer(manage_context);
+        app.add_systems(Startup, emit_enable_if_enabled);
+        app.add_observer(on_app_exit_emit_disable);
         app.add_observer(cleanup_on_exit);
         app.configure_sets(
             Update,
             (
-                ReplSet::Toggle,
                 ReplSet::Capture,
                 ReplSet::Buffer,
                 ReplSet::Render,
@@ -44,15 +60,12 @@ impl Plugin for ReplPlugin {
                 .after(InputSet::EmitCrossterm)
                 .before(InputSet::Post),
         );
-        // Emit toggle events on startup and whenever the state flips
-        app.add_systems(Update, notify_toggle.in_set(ReplSet::Toggle));
     }
 }
 
 #[derive(Resource)]
 pub struct Repl {
     pub enabled: bool,
-    pub toggle_key: Option<KeyCode>,
     pub buffer: String,
     pub cursor_pos: usize,
     pub history: Vec<String>,
@@ -65,7 +78,6 @@ impl Default for Repl {
     fn default() -> Self {
         Self {
             enabled: true,
-            toggle_key: Some(KeyCode::Backquote),
             buffer: String::new(),
             cursor_pos: 0,
             history: Vec::new(),
@@ -77,15 +89,6 @@ impl Default for Repl {
 }
 
 impl Repl {
-    pub fn toggle(&mut self) {
-        if self.enabled {
-            self.enabled = false;
-            info!("REPL disabled");
-        } else {
-            self.enabled = true;
-            info!("REPL enabled");
-        }
-    }
     pub fn drain_buffer(&mut self) -> String {
         let buffer = self.buffer.clone();
         self.clear_buffer();
@@ -128,36 +131,12 @@ impl Repl {
     }
 }
 
-#[derive(Event)]
-pub enum ReplToggleEvent {
-    Enable,
-    Disable,
-}
-
 pub fn repl_is_enabled(repl: Res<Repl>) -> bool {
     repl.enabled
 }
 
-/// Emit a toggle event if the REPL state has changed.
-pub fn notify_toggle(
-    repl: Res<Repl>,
-    mut last_state: Local<bool>,
-    mut toggle_events: EventWriter<ReplToggleEvent>,
-) {
-    if *last_state != repl.enabled {
-        if repl.enabled {
-            toggle_events.write(ReplToggleEvent::Enable);
-        } else {
-            toggle_events.write(ReplToggleEvent::Disable);
-        }
-        *last_state = repl.enabled;
-    }
-}
-
 #[derive(SystemSet, Debug, Hash, PartialEq, Eq, Clone)]
 pub enum ReplSet {
-    /// Detect toggle via Bevy keyboard input
-    Toggle,
     /// Read terminal key events (when enabled)
     Capture,
     /// Update REPL buffer state from captured input
@@ -211,15 +190,30 @@ impl TerminalContext<CrosstermBackend<Stdout>> for ReplContext {
     }
 }
 
-/// A system that sets up the terminal context. This runs when the Repl is
-/// enabled to give it access to the terminal.
+#[derive(Event)]
+enum ReplLifecycleEvent {
+    Enable,
+    Disable,
+}
+
+fn emit_enable_if_enabled(repl: Res<Repl>, mut writer: EventWriter<ReplLifecycleEvent>) {
+    if repl.enabled {
+        writer.write(ReplLifecycleEvent::Enable);
+    }
+}
+
+fn on_app_exit_emit_disable(_exit: Trigger<AppExit>, mut writer: EventWriter<ReplLifecycleEvent>) {
+    writer.write(ReplLifecycleEvent::Disable);
+}
+
+/// Manage the terminal context on lifecycle events (startup/shutdown).
 fn manage_context(
-    trigger: Trigger<ReplToggleEvent>,
+    trigger: Trigger<ReplLifecycleEvent>,
     existing: Option<Res<ReplContext>>,
     mut commands: Commands,
 ) {
     match trigger.event() {
-        ReplToggleEvent::Enable => {
+        ReplLifecycleEvent::Enable => {
             if existing.is_none() {
                 let Ok(terminal) = ReplContext::init() else {
                     error!("Failed to initialize terminal context");
@@ -228,7 +222,7 @@ fn manage_context(
                 commands.insert_resource(terminal);
             }
         }
-        ReplToggleEvent::Disable => {
+        ReplLifecycleEvent::Disable => {
             if existing.is_some() {
                 let Ok(_) = ReplContext::restore() else {
                     error!("Failed to remove terminal context");
@@ -240,12 +234,19 @@ fn manage_context(
     }
 }
 
-fn cleanup_on_exit(_exit: Trigger<AppExit>, mut commands: Commands) {
-    let Ok(_) = ReplContext::restore() else {
-        error!("Failed to remove terminal context");
-        return;
-    };
-    commands.remove_resource::<ReplContext>();
+fn cleanup_on_exit(
+    _exit: Trigger<AppExit>,
+    mut commands: Commands,
+    existing: Option<Res<ReplContext>>,
+) {
+    // Ensure the resource is removed even if the lifecycle observer didn't run
+    if existing.is_some() {
+        let Ok(_) = ReplContext::restore() else {
+            error!("Failed to remove terminal context");
+            return;
+        };
+        commands.remove_resource::<ReplContext>();
+    }
 }
 
 #[derive(Event)]

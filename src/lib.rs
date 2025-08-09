@@ -14,7 +14,7 @@ pub mod prelude {
     pub use crate::plugin::ReplPlugins;
     pub use crate::prompt::{PromptPlugin, ReplPrompt};
     pub use crate::repl::{
-        Repl, ReplBufferEvent, ReplContext, ReplPlugin, ReplSubmitEvent, ReplToggleEvent,
+        Repl, ReplBufferEvent, ReplContext, ReplPlugin, ReplSubmitEvent,
         repl_is_enabled,
     };
     #[cfg(feature = "derive")]

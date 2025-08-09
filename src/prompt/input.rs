@@ -3,7 +3,6 @@ use bevy_ratatui::crossterm::event::{KeyCode as CrosstermKeyCode, KeyEventKind a
 use bevy_ratatui::event::KeyEvent;
 use std::io::{stdout, Write};
 use crate::repl::{Repl, ReplBufferEvent, ReplSubmitEvent, ReplSet, repl_is_enabled};
-use crate::prompt::keymap;
 
 pub struct PromptInputPlugin;
 
@@ -33,12 +32,6 @@ fn capture_repl_input(
 ) {
     for event in crossterm_key_events.read() {
         if event.kind == CrosstermKeyEventKind::Press {
-            // Filter out the toggle key from being inserted into the buffer
-            if let Some(bevy_key) = keymap::crossterm_to_bevy(&event.code) {
-                if Some(bevy_key) == repl.toggle_key {
-                    continue;
-                }
-            }
             match event.code {
                 CrosstermKeyCode::Char(c) => {
                     // Optional: treat control-altered chars differently

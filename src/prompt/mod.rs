@@ -8,7 +8,7 @@ use bevy::prelude::*;
 use crate::repl::{ReplSet, repl_is_enabled};
 use self::input::PromptInputPlugin;
 use self::render::PromptRenderPlugin;
-use self::key_events::{on_toggle_key_bevy, block_keyboard_input_forwarding};
+use self::key_events::block_keyboard_input_forwarding;
 
 #[derive(Resource, Clone)]
 pub struct PromptPlugin {
@@ -38,17 +38,12 @@ impl Plugin for PromptPlugin {
         app.add_systems(
             Update,
             (
-                // Toggle detection first, explicitly before we block forwarding later
-                on_toggle_key_bevy
-                    .in_set(ReplSet::Toggle)
-                    .before(block_keyboard_input_forwarding),
                 // When enabled, capture terminal input
                 // Render prompt/UI
                 // Finally block forwarding while enabled, after render and toggle
                 block_keyboard_input_forwarding
                     .in_set(ReplSet::Post)
                     .after(ReplSet::Render)
-                    .after(ReplSet::Toggle)
                     .run_if(repl_is_enabled),
             ),
         );
