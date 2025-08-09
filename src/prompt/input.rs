@@ -1,82 +1,29 @@
 use bevy::prelude::*;
-use bevy_ratatui::{
-    crossterm::event::{KeyCode as CrosstermKeyCode, KeyEventKind as CrosstermKeyEventKind},
-    crossterm::{
-        ExecutableCommand,
-        cursor::MoveTo,
-        terminal::{self, Clear, ClearType},
-    },
-    event::{InputSet, KeyEvent},
-};
-use std::io::{Write, stdout};
+use bevy_ratatui::crossterm::event::{KeyCode as CrosstermKeyCode, KeyEventKind as CrosstermKeyEventKind};
+use bevy_ratatui::event::KeyEvent;
+use std::io::{stdout, Write};
+use crate::repl::{Repl, ReplBufferEvent, ReplSubmitEvent, ReplSet, repl_is_enabled};
+use crate::prompt::keymap;
 
-use crate::{
-    repl::{Repl, repl_is_enabled},
-};
+pub struct PromptInputPlugin;
 
-#[derive(Resource, Clone)]
-pub struct PromptPlugin {
-    /// The prompt to display in the REPL console to the left of the input area.
-    pub prompt: String,
-    /// Enable a border around the REPL console.
-    pub border: bool,
-}
-
-impl Default for PromptPlugin {
-    fn default() -> Self {
-        Self {
-            prompt: "> ".to_string(),
-            border: true,
-        }
-    }
-}
-
-impl Plugin for PromptPlugin {
+impl Plugin for PromptInputPlugin {
     fn build(&self, app: &mut App) {
-        app.insert_resource(ReplPrompt {
-            symbol: Some(self.prompt.clone()),
-            buffer: String::new(),
-        });
-        app.add_event::<ReplBufferEvent>();
-        app.add_event::<ReplSubmitEvent>();
-        app.add_systems(
-            Update,
-            (capture_repl_input, update_repl_buffer)
-                .chain()
-                .before(InputSet::EmitBevy)
-                .run_if(repl_is_enabled),
-        );
         app.add_systems(
             Update,
             (
-                display_prompt,
-            )
-                .in_set(InputSet::Post)
-                .run_if(repl_is_enabled),
+                // When enabled, capture terminal input
+                capture_repl_input
+                    .in_set(ReplSet::Capture)
+                    .run_if(repl_is_enabled),
+                // Then update the REPL buffer explicitly after capture
+                update_repl_buffer
+                    .in_set(ReplSet::Buffer)
+                    .after(ReplSet::Capture)
+                    .run_if(repl_is_enabled),
+            ),
         );
     }
-}
-
-#[derive(Resource, Default, Clone)]
-pub struct ReplPrompt {
-    pub symbol: Option<String>,
-    pub buffer: String,
-}
-
-#[derive(Event)]
-pub struct ReplSubmitEvent(pub String);
-
-#[derive(Event)]
-pub enum ReplBufferEvent {
-    Insert(char),
-    Backspace,
-    Delete,
-    MoveLeft,
-    MoveRight,
-    JumpToStart,
-    JumpToEnd,
-    Clear,
-    Submit,
 }
 
 fn capture_repl_input(
@@ -86,19 +33,23 @@ fn capture_repl_input(
 ) {
     for event in crossterm_key_events.read() {
         if event.kind == CrosstermKeyEventKind::Press {
-            // Skip processing if this is the toggle key
-            if let Some(toggle_key) = repl.toggle_key {
-                if event.code == toggle_key {
-                    continue; // Consume the toggle key without processing it
+            // Filter out the toggle key from being inserted into the buffer
+            if let Some(bevy_key) = keymap::crossterm_to_bevy(&event.code) {
+                if Some(bevy_key) == repl.toggle_key {
+                    continue;
                 }
             }
-
             match event.code {
+                CrosstermKeyCode::Char(c) => {
+                    // Optional: treat control-altered chars differently
+                    // use bevy_ratatui::crossterm::event::KeyModifiers;
+                    if event.modifiers.is_empty() {
+                        // Only emit Insert event if no modifiers are pressed
+                        buffer_events.write(ReplBufferEvent::Insert(c));
+                    }
+                }
                 CrosstermKeyCode::Enter => {
                     buffer_events.write(ReplBufferEvent::Submit);
-                }
-                CrosstermKeyCode::Char(c) => {
-                    buffer_events.write(ReplBufferEvent::Insert(c));
                 }
                 CrosstermKeyCode::Backspace => {
                     buffer_events.write(ReplBufferEvent::Backspace);
@@ -127,6 +78,10 @@ fn capture_repl_input(
     }
 }
 
+
+/// System that updates the REPL buffer with events from the prompt. This is
+/// separate from the system that directly handles key events to allow for
+/// custom keybinds.
 fn update_repl_buffer(
     mut repl: ResMut<Repl>,
     mut buffer_events: EventReader<ReplBufferEvent>,
@@ -161,26 +116,10 @@ fn update_repl_buffer(
             ReplBufferEvent::Submit => {
                 let input = repl.drain_buffer();
                 // Print a newline to move terminal to next line
-                let _ = stdout().write_all(b"\r\n");
+                let _ = stdout().write_all(b"\r");
                 parse_events.write(ReplSubmitEvent(input));
             }
         }
     }
 }
 
-/// System that displays the current input buffer at the bottom of the terminal
-/// Runs whenever the Repl resource changes
-fn display_prompt(repl: Res<Repl>, prompt: Res<ReplPrompt>) {
-    // Get terminal size
-    let (_, height) = match terminal::size() {
-        Ok(size) => size,
-        Err(_) => return, // If we can't get terminal size, skip rendering
-    };
-
-    // Display the prompt and current buffer
-    let prompt_text = if let Some(symbol) = prompt.symbol.clone() {
-        format!("{}{}", symbol, repl.buffer)
-    } else {
-        repl.buffer.clone()
-    };
-}

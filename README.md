@@ -39,6 +39,13 @@ commands.
 Clap features are technically supported, but have not been tested. Override the
 `clap` features in your `Cargo.toml` to enable or disable additional features.
 
+## Known Issues
+
+- Input area does not stay pinned to the bottom of the terminal, and the prompt symbol does not display.
+- REPL toggle key (Backquote/`\``) does not work reliably.
+- Key events may leak through the REPL to Bevy when the REPL is enabled.
+- Built-in `help` and `clear` commands are currently non-functional.
+
 ## Usage
 
 The REPL is designed to be used in headless mode, but it can be used in windowed
@@ -48,7 +55,10 @@ Toggle the REPL with the ``` key. The REPL is enabled by default. When enabled,
 all keycode input events are consumed by the REPL and blocked from being forwarded
 to Bevy so as to avoid passing events to Bevy when you are typing a command.
 When disabled, keycode input events are forwarded to Bevy via `bevy_ratatui` as
-normal and no REPL systems run (except for the REPL toggle key observer).
+normal and no REPL systems run (except for the REPL toggle key observer). The
+terminal is restored (raw mode off) when the REPL is disabled. The toggle key is
+detected via Bevy keyboard input (`KeyCode::Backquote`) and raw mode is enabled
+again when the REPL is re-enabled.
 
 Trigger commands by typing them in the REPL input buffer and pressing `Enter`.
 The REPL will parse the command and trigger an event with the command's arguments
@@ -268,8 +278,10 @@ bevy_repl = { version = "0.1.0", features = ["default-commands"] }
 ```
 
 When the REPL is disabled, keycode input events are forwarded to Bevy via
-`bevy_ratatui` as normal. The REPL is toggled with a Bevy KeyCode event (``` by
-default).
+`bevy_ratatui` as normal. The terminal is not in raw mode; the toggle key is
+handled via Bevy input (`KeyCode::Backquote`). When the REPL is enabled, the
+terminal enters raw mode (for prompt input) and the toggle key is still detected
+via Bevy input.
 
 When the REPL is enabled, keycode forwarding to Bevy is disabled (except for the
 REPL toggle key) and all key strokes are consumed by the REPL. This is to avoid

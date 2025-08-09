@@ -11,7 +11,7 @@ struct QuitCommand;
 
 impl crate::command::ReplCommand for QuitCommand {
     fn clap_command() -> clap::Command {
-        clap::Command::new("quit")
+        clap::Command::new("quit").alias("q").alias("exit")
             .about("Exits the app gracefully")
     }
 }

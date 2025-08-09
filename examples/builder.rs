@@ -1,3 +1,8 @@
+//! Builder-pattern command example for Bevy REPL.
+//!
+//! Demonstrates:
+//! - Defining a command with clap's builder API
+//! - Parsing args/flags and converting to an ECS event
 use std::time::Duration;
 
 use bevy::{app::ScheduleRunnerPlugin, prelude::*};
@@ -32,8 +37,9 @@ impl ReplCommand for SayCommand {
                 clap::Arg::new("shout")
                     .short('s')
                     .long("shout")
-                    .help("Shout the greeting")
-                    .action(clap::ArgAction::SetTrue),
+                    .help("Shout the message")
+                    .action(clap::ArgAction::SetTrue)
+                    .num_args(0),
             )
     }
 
@@ -58,23 +64,42 @@ fn on_say(trigger: Trigger<SayCommand>) {
         command.message.clone()
     };
     // Print the main message
-    info!("Saying: {}", message);
+    println!("Saying: {}", message);
     
     // Print repeated messages
     for i in 0..command.repeat {
-        info!("{}: {}", i + 1, message);
+        println!("{}: {}", i + 1, message);
     }
+}
+
+fn instructions() {
+    println!();
+    println!("Welcome to the Bevy REPL builder example!");
+    println!();
+    println!("Try typing a command:");
+    println!("  `say <message>`            - Say a message");
+    println!("  `say -s <message>`         - Shout the message");
+    println!("  `say -r N <message>`       - Repeat N times");
+    println!("  `quit`                     - Close the app");
+    println!();
+    println!("The REPL can be toggled with:");
+    println!("  {:?}", Repl::default().toggle_key.unwrap());
+    println!();
+    println!("Press CTRL+C to exit any time.");
+    println!();
 }
 
 fn main() {
     App::new()
         .add_plugins((
-            MinimalPlugins.set(ScheduleRunnerPlugin::run_loop(Duration::from_secs_f64(
-                1.0 / 60.0,
-            ))),
+            MinimalPlugins
+                .set(ScheduleRunnerPlugin::run_loop(Duration::from_secs_f64(
+                    1.0 / 60.0,
+                ))),
             ReplPlugins,
         ))
         .add_repl_command::<SayCommand>()
         .add_observer(on_say)
+        .add_systems(Startup, instructions)
         .run();
 }

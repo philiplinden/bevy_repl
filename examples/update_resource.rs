@@ -1,3 +1,13 @@
+//! Resource interaction example for Bevy REPL.
+//!
+//! Demonstrates:
+//! - Creating and mutating a Bevy `Resource`
+//! - Defining multiple REPL commands (start/stop/reset)
+//! - Emitting ECS events from parsed commands
+//! - Running conditional systems with `run_if`
+//! - FixedUpdate for time-based behavior
+//! - Running headless via `ScheduleRunnerPlugin`
+//! - Toggling the REPL and entering commands in the terminal
 use std::time::Duration;
 
 use bevy::{app::ScheduleRunnerPlugin, prelude::*};
@@ -123,14 +133,32 @@ fn update_timer(mut timer: ResMut<TimerResource>, time: Res<Time>) {
     }
 }
 
+fn instructions() {
+    println!();
+    println!("Welcome to the Bevy REPL resource example!");
+    println!();
+    println!("Try typing a command:");
+    println!("  `start`   - Start the timer");
+    println!("  `stop`    - Stop the timer");
+    println!("  `reset`   - Reset the timer to 0");
+    println!("  `quit`    - Close the app");
+    println!();
+    println!("The REPL can be toggled with:");
+    println!("  {:?}", Repl::default().toggle_key.unwrap());
+    println!();
+    println!("Press CTRL+C to exit any time.");
+    println!();
+}
+
+
 fn main() {
     App::new()
         .add_plugins((
             MinimalPlugins
                 .set(ScheduleRunnerPlugin::run_loop(Duration::from_secs_f64(
                     1.0 / 60.0,
-                )))
-                .set(bevy::log::LogPlugin::default()),
+                ))),
+            bevy::log::LogPlugin::default(),
             ReplPlugins,
         ))
         .init_resource::<TimerResource>()
@@ -142,5 +170,6 @@ fn main() {
         .add_observer(on_reset_timer)
         .add_systems(Update, display_timer_status.run_if(timer_is_running))
         .add_systems(FixedUpdate, update_timer)
+        .add_systems(Startup, instructions)
         .run();
 }
