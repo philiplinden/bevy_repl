@@ -32,8 +32,9 @@ impl ReplCommand for SayCommand {
                 clap::Arg::new("shout")
                     .short('s')
                     .long("shout")
-                    .help("Shout the greeting")
-                    .action(clap::ArgAction::SetTrue),
+                    .help("Shout the message")
+                    .action(clap::ArgAction::SetTrue)
+                    .num_args(0),
             )
     }
 
@@ -58,20 +59,21 @@ fn on_say(trigger: Trigger<SayCommand>) {
         command.message.clone()
     };
     // Print the main message
-    info!("Saying: {}", message);
+    println!("Saying: {}", message);
     
     // Print repeated messages
     for i in 0..command.repeat {
-        info!("{}: {}", i + 1, message);
+        println!("{}: {}", i + 1, message);
     }
 }
 
 fn main() {
     App::new()
         .add_plugins((
-            MinimalPlugins.set(ScheduleRunnerPlugin::run_loop(Duration::from_secs_f64(
-                1.0 / 60.0,
-            ))),
+            MinimalPlugins
+                .set(ScheduleRunnerPlugin::run_loop(Duration::from_secs_f64(
+                    1.0 / 60.0,
+                ))),
             ReplPlugins,
         ))
         .add_repl_command::<SayCommand>()

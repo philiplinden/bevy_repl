@@ -1,12 +1,5 @@
 use bevy::prelude::*;
-use bevy_ratatui::{
-    context::TerminalContext,
-    event::{InputSet, KeyEvent},
-    crossterm::event::{
-        KeyCode as CrosstermKeyCode,
-        KeyEventKind as CrosstermKeyEventKind,
-    },
-};
+use bevy_ratatui::{context::TerminalContext, event::InputSet};
 use std::io::{Stdout, stdout};
 
 use ratatui::{Terminal, backend::CrosstermBackend};
@@ -14,14 +7,14 @@ use std::collections::HashMap;
 
 pub struct ReplPlugin {
     enable_on_startup: bool,
-    toggle_key: Option<CrosstermKeyCode>,
+    toggle_key: Option<KeyCode>,
 }
 
 impl Default for ReplPlugin {
     fn default() -> Self {
         Self {
             enable_on_startup: true,
-            toggle_key: Some(CrosstermKeyCode::Char('`')),
+            toggle_key: Some(KeyCode::Backquote),
         }
     }
 }
@@ -33,23 +26,31 @@ impl Plugin for ReplPlugin {
             toggle_key: self.toggle_key,
             ..default()
         });
+        app.add_event::<ReplSubmitEvent>();
+        app.add_event::<ReplBufferEvent>();
         app.add_event::<ReplToggleEvent>();
-        app.add_systems(
-            Update,
-            block_event_forwarding
-                .in_set(InputSet::EmitBevy)
-                .run_if(repl_is_enabled),
-        );
-        app.add_systems(PostUpdate, toggle_repl);
         app.add_observer(manage_context);
         app.add_observer(cleanup_on_exit);
+        app.configure_sets(
+            Update,
+            (
+                ReplSet::Toggle,
+                ReplSet::Capture,
+                ReplSet::Buffer,
+                ReplSet::Render,
+                ReplSet::Post,
+            )
+                .chain()
+                .after(InputSet::EmitCrossterm)
+                .before(InputSet::Post),
+        );
     }
 }
 
 #[derive(Resource)]
 pub struct Repl {
     pub enabled: bool,
-    pub toggle_key: Option<CrosstermKeyCode>,
+    pub toggle_key: Option<KeyCode>,
     pub buffer: String,
     pub cursor_pos: usize,
     pub history: Vec<String>,
@@ -62,7 +63,7 @@ impl Default for Repl {
     fn default() -> Self {
         Self {
             enabled: true,
-            toggle_key: Some(CrosstermKeyCode::Char('`')),
+            toggle_key: Some(KeyCode::Backquote),
             buffer: String::new(),
             cursor_pos: 0,
             history: Vec::new(),
@@ -74,6 +75,15 @@ impl Default for Repl {
 }
 
 impl Repl {
+    pub fn toggle(&mut self) {
+        if self.enabled {
+            self.enabled = false;
+            info!("REPL disabled");
+        } else {
+            self.enabled = true;
+            info!("REPL enabled");
+        }
+    }
     pub fn drain_buffer(&mut self) -> String {
         let buffer = self.buffer.clone();
         self.clear_buffer();
@@ -126,35 +136,34 @@ pub fn repl_is_enabled(repl: Res<Repl>) -> bool {
     repl.enabled
 }
 
-/// System that toggles the REPL on and off when the toggle key is pressed.
-///
-/// Use crossterm key events so the repl can be toggled without Bevy's input system.
-pub fn toggle_repl(
-    mut repl: ResMut<Repl>,
-    mut key_events: EventReader<KeyEvent>,
+/// Emit a toggle event if the REPL state has changed.
+pub fn notify_toggle(
+    repl: Res<Repl>,
+    mut last_state: Local<bool>,
     mut toggle_events: EventWriter<ReplToggleEvent>,
 ) {
-    if let Some(key) = repl.toggle_key {
-        for event in key_events.read() {
-            if event.code == key && event.kind == CrosstermKeyEventKind::Press {
-                info!(
-                    "{} REPL",
-                    if !repl.enabled {
-                        "Enabling"
-                    } else {
-                        "Disabling"
-                    }
-                );
-                if repl.enabled {
-                    toggle_events.write(ReplToggleEvent::Disable);
-                    repl.enabled = false;
-                } else {
-                    toggle_events.write(ReplToggleEvent::Enable);
-                    repl.enabled = true;
-                }
-            }
+    if *last_state != repl.enabled {
+        if repl.enabled {
+            toggle_events.write(ReplToggleEvent::Enable);
+        } else {
+            toggle_events.write(ReplToggleEvent::Disable);
         }
+        *last_state = repl.enabled;
     }
+}
+
+#[derive(SystemSet, Debug, Hash, PartialEq, Eq, Clone)]
+pub enum ReplSet {
+    /// Detect toggle via Bevy keyboard input
+    Toggle,
+    /// Read terminal key events (when enabled)
+    Capture,
+    /// Update REPL buffer state from captured input
+    Buffer,
+    /// Render the prompt / UI
+    Render,
+    /// Post stage for consuming/forwarding behavior
+    Post,
 }
 
 #[derive(Resource, Deref, DerefMut, Debug)]
@@ -162,15 +171,15 @@ pub struct ReplContext(Terminal<CrosstermBackend<Stdout>>);
 
 impl ReplContext {
     /// Create a new ReplContext with a terminal and enable raw mode.
-    /// 
+    ///
     /// This is a workaround to initialize a `bevy_ratatui` terminal context
     /// without spawning an alternate screen.
-    /// 
+    ///
     /// We have a separate method so that we can allow the user to initialize
     /// the context with their own terminal. The trait from `bevy_ratatui` does
     /// not allow the user to provide their own terminal and always creates a
     /// new one.
-    /// 
+    ///
     /// This method is a simple change that sets up possible future
     /// functionality like using the REPL in a UI.
     pub fn with_terminal(terminal: Terminal<CrosstermBackend<Stdout>>) -> Result<Self> {
@@ -202,21 +211,29 @@ impl TerminalContext<CrosstermBackend<Stdout>> for ReplContext {
 
 /// A system that sets up the terminal context. This runs when the Repl is
 /// enabled to give it access to the terminal.
-fn manage_context(trigger: Trigger<ReplToggleEvent>, mut commands: Commands) {
+fn manage_context(
+    trigger: Trigger<ReplToggleEvent>,
+    existing: Option<Res<ReplContext>>,
+    mut commands: Commands,
+) {
     match trigger.event() {
         ReplToggleEvent::Enable => {
-            let Ok(terminal) = ReplContext::init() else {
-                error!("Failed to initialize terminal context");
-                return;
-            };
-            commands.insert_resource(terminal);
+            if existing.is_none() {
+                let Ok(terminal) = ReplContext::init() else {
+                    error!("Failed to initialize terminal context");
+                    return;
+                };
+                commands.insert_resource(terminal);
+            }
         }
         ReplToggleEvent::Disable => {
-            let Ok(_) = ReplContext::restore() else {
-                error!("Failed to remove terminal context");
-                return;
-            };
-            commands.remove_resource::<ReplContext>();
+            if existing.is_some() {
+                let Ok(_) = ReplContext::restore() else {
+                    error!("Failed to remove terminal context");
+                    return;
+                };
+                commands.remove_resource::<ReplContext>();
+            }
         }
     }
 }
@@ -229,20 +246,18 @@ fn cleanup_on_exit(_exit: Trigger<AppExit>, mut commands: Commands) {
     commands.remove_resource::<ReplContext>();
 }
 
-/// System that blocks event forwarding to Bevy when REPL is enabled
-/// This prevents key events from reaching game systems during REPL input.
-/// The toggle key is always allowed to pass through for REPL toggling.
-fn block_event_forwarding(mut key_events: EventReader<KeyEvent>, repl: Res<Repl>) {
-    // Read all events once and filter out the toggle key
-    let events: Vec<_> = key_events.read().collect();
-
-    for event in events {
-        // Allow toggle key to pass through
-        if let Some(toggle_key) = repl.toggle_key {
-            if event.code == toggle_key {
-                continue; // Skip blocking this event
-            }
-        }
-        // All other events are consumed (blocked) when REPL is enabled
-    }
+#[derive(Event)]
+pub enum ReplBufferEvent {
+    Insert(char),
+    Backspace,
+    Delete,
+    MoveLeft,
+    MoveRight,
+    JumpToStart,
+    JumpToEnd,
+    Clear,
+    Submit,
 }
+
+#[derive(Event)]
+pub struct ReplSubmitEvent(pub String);

@@ -3,7 +3,7 @@ members = [".", "bevy_repl_derive"]
 
 [package]
 name = "bevy_repl"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2024"
 description = "Add a REPL to headless Bevy applications"
 license = "MIT"
@@ -16,6 +16,7 @@ bevy = { version = "0.16.1", default-features = false, features = ["bevy_log"]}
 bevy_ratatui = { version = "0.9.2", features = ["crossterm"] }
 ratatui = "0.29.0"
 clap = { version = "4.5.43" }
+shell-words = "1.1"
 bevy_repl_derive = { version = "0.1.0", path = "./bevy_repl_derive", optional = true }
 
 # Error handling and logging
@@ -42,14 +43,6 @@ name = "minimal"
 path = "examples/minimal.rs"
 
 [[example]]
-name = "flag_args"
-path = "examples/flag_args.rs"
-
-[[example]]
-name = "optional_args"
-path = "examples/optional_args.rs"
-
-[[example]]
 name = "update_resource"
 path = "examples/update_resource.rs"
 
@@ -61,7 +54,6 @@ required-features = ["derive"]
 [[example]]
 name = "builder"
 path = "examples/builder.rs"
-required-features = ["derive"]
 
 [[example]]
 name = "window"
