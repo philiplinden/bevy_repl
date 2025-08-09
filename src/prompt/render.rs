@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use bevy_ratatui::crossterm::terminal;
-use crate::repl::{Repl, ReplSet, repl_is_enabled};
+use crate::repl::{Repl, ReplSet};
 use crate::prompt::ReplPrompt;
 
 pub struct PromptRenderPlugin;
@@ -13,12 +13,13 @@ impl Plugin for PromptRenderPlugin {
                 // When enabled, capture terminal input
                 display_prompt
                     .in_set(ReplSet::Render)
-                    .after(ReplSet::Buffer)
-                    .run_if(repl_is_enabled),
+                    .in_set(ReplSet::All)
+                    .after(ReplSet::Buffer),
             ),
         );
     }
 }
+
 /// System that displays the current input buffer at the bottom of the terminal
 /// Runs whenever the Repl resource changes
 pub(super) fn display_prompt(repl: Res<Repl>, prompt: Res<ReplPrompt>) {

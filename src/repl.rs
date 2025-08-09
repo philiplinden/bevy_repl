@@ -51,6 +51,7 @@ impl Plugin for ReplPlugin {
         app.configure_sets(
             Update,
             (
+                ReplSet::Pre,
                 ReplSet::Capture,
                 ReplSet::Buffer,
                 ReplSet::Render,
@@ -59,6 +60,14 @@ impl Plugin for ReplPlugin {
                 .chain()
                 .after(InputSet::EmitCrossterm)
                 .before(InputSet::Post),
+        );
+        // Wrapper set to anchor all REPL systems between ratatui input emission and post-processing
+        app.configure_sets(
+            Update,
+            ReplSet::All
+                .after(InputSet::EmitCrossterm)
+                .before(InputSet::Post)
+                .run_if(repl_is_enabled),
         );
     }
 }
@@ -137,6 +146,10 @@ pub fn repl_is_enabled(repl: Res<Repl>) -> bool {
 
 #[derive(SystemSet, Debug, Hash, PartialEq, Eq, Clone)]
 pub enum ReplSet {
+    /// Wrapper for all REPL systems to allow global ordering and run conditions
+    All,
+    /// Pre stage for consuming/forwarding behavior
+    Pre,
     /// Read terminal key events (when enabled)
     Capture,
     /// Update REPL buffer state from captured input

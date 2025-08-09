@@ -5,7 +5,7 @@ pub mod key_events;
 
 use bevy::prelude::*;
 
-use crate::repl::{ReplSet, repl_is_enabled};
+use crate::repl::{ReplSet};
 use self::input::PromptInputPlugin;
 use self::render::PromptRenderPlugin;
 use self::key_events::block_keyboard_input_forwarding;
@@ -43,8 +43,8 @@ impl Plugin for PromptPlugin {
                 // Finally block forwarding while enabled, after render and toggle
                 block_keyboard_input_forwarding
                     .in_set(ReplSet::Post)
-                    .after(ReplSet::Render)
-                    .run_if(repl_is_enabled),
+                    .in_set(ReplSet::All)
+                    .after(ReplSet::Render),
             ),
         );
     }

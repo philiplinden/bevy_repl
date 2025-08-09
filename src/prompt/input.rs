@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use bevy_ratatui::crossterm::event::{KeyCode as CrosstermKeyCode, KeyEventKind as CrosstermKeyEventKind};
 use bevy_ratatui::event::KeyEvent;
 use std::io::{stdout, Write};
-use crate::repl::{Repl, ReplBufferEvent, ReplSubmitEvent, ReplSet, repl_is_enabled};
+use crate::repl::{Repl, ReplBufferEvent, ReplSubmitEvent, ReplSet};
 
 pub struct PromptInputPlugin;
 
@@ -14,12 +14,12 @@ impl Plugin for PromptInputPlugin {
                 // When enabled, capture terminal input
                 capture_repl_input
                     .in_set(ReplSet::Capture)
-                    .run_if(repl_is_enabled),
+                    .in_set(ReplSet::All),
                 // Then update the REPL buffer explicitly after capture
                 update_repl_buffer
                     .in_set(ReplSet::Buffer)
-                    .after(ReplSet::Capture)
-                    .run_if(repl_is_enabled),
+                    .in_set(ReplSet::All)
+                    .after(ReplSet::Capture),
             ),
         );
     }
@@ -28,7 +28,6 @@ impl Plugin for PromptInputPlugin {
 fn capture_repl_input(
     mut crossterm_key_events: EventReader<KeyEvent>,
     mut buffer_events: EventWriter<ReplBufferEvent>,
-    repl: Res<Repl>,
 ) {
     for event in crossterm_key_events.read() {
         if event.kind == CrosstermKeyEventKind::Press {
@@ -115,4 +114,3 @@ fn update_repl_buffer(
         }
     }
 }
-
