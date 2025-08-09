@@ -1,3 +1,8 @@
+//! Builder-pattern command example for Bevy REPL.
+//!
+//! Demonstrates:
+//! - Defining a command with clap's builder API
+//! - Parsing args/flags and converting to an ECS event
 use std::time::Duration;
 
 use bevy::{app::ScheduleRunnerPlugin, prelude::*};
@@ -67,6 +72,23 @@ fn on_say(trigger: Trigger<SayCommand>) {
     }
 }
 
+fn instructions() {
+    println!();
+    println!("Welcome to the Bevy REPL builder example!");
+    println!();
+    println!("Try typing a command:");
+    println!("  `say <message>`            - Say a message");
+    println!("  `say -s <message>`         - Shout the message");
+    println!("  `say -r N <message>`       - Repeat N times");
+    println!("  `quit`                     - Close the app");
+    println!();
+    println!("The REPL can be toggled with:");
+    println!("  {:?}", Repl::default().toggle_key.unwrap());
+    println!();
+    println!("Press CTRL+C to exit any time.");
+    println!();
+}
+
 fn main() {
     App::new()
         .add_plugins((
@@ -78,5 +100,6 @@ fn main() {
         ))
         .add_repl_command::<SayCommand>()
         .add_observer(on_say)
+        .add_systems(Startup, instructions)
         .run();
 }

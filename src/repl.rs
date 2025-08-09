@@ -44,6 +44,8 @@ impl Plugin for ReplPlugin {
                 .after(InputSet::EmitCrossterm)
                 .before(InputSet::Post),
         );
+        // Emit toggle events on startup and whenever the state flips
+        app.add_systems(Update, notify_toggle.in_set(ReplSet::Toggle));
     }
 }
 
