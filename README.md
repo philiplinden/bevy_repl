@@ -635,6 +635,25 @@ App::new()
     .run();
 ```
 
+### Minimal renderer prompt does not scroll with terminal output
+This is a limitation of the minimal renderer. The prompt is rendered in the
+terminal below the normal stdout, but it does not stay at the bottom of the
+terminal if there are other messages sent to stdout. The REPL works as expected
+(inputs are loaded to the buffer and commands are parsed and executed normally),
+but the prompt may be hidden by other output.
+
+Instead of fixing this, I am focusing on the pretty prompt renderer, which
+resolves these issues at the cost of complexity and overhead. The pretty renderer
+uses a full TUI stack to render the prompt, which means it can stay at the bottom
+of the terminal and be visible even when other messages are sent to stdout. This
+also means that it is an "alternate screen" from the main terminal, so it only
+shows text that is sent to the alternate screen.
+
+If you don't want the pretty renderer, try to minimize outputs sent to stdout
+that come from systems other than REPL command observers. This is pretty easy to
+do by disabling `bevy::input::InputPlugin` or setting the max level log messages
+to be `warn` or `error`.
+
 ## Aspirations
 - [x] **Derive pattern** - Describe commands with clap's derive pattern.
 - [ ] **Toggleable** - The REPL is disabled by default and can be toggled. When
