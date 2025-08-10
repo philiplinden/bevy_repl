@@ -1,175 +1,137 @@
-//! Resource interaction example for Bevy REPL.
+//! REPL can modify resources at runtime example.
 //!
 //! Demonstrates:
-//! - Creating and mutating a Bevy `Resource`
-//! - Defining multiple REPL commands (start/stop/reset)
-//! - Emitting ECS events from parsed commands
-//! - Running conditional systems with `run_if`
-//! - FixedUpdate for time-based behavior
-//! - Running headless via `ScheduleRunnerPlugin`
-//! - Toggling the REPL and entering commands in the terminal
+//! - Defining a resource (`TimeScale`)
+//! - REPL command that reads/mutates a resource via an observer
+//! - Other systems reading the updated resource live
+//!
+//! Try:
+//!   time-scale            # prints current value
+//!   time-scale --set 2.0  # sets absolute value
+//!   time-scale --add -0.5 # adds delta to current value
+
 use std::time::Duration;
 
 use bevy::{app::ScheduleRunnerPlugin, prelude::*};
 use bevy_repl::prelude::*;
 
-// Timer state enum
-#[derive(Debug, Clone, PartialEq, Eq)]
-enum TimerState {
-    Stopped,
-    Running,
+// -------- Resource we will mutate at runtime --------
+#[derive(Resource, Debug, Clone, Copy)]
+struct TimeScale(pub f32);
+
+// A tiny frame counter to periodically show the current value without spamming
+#[derive(Resource, Debug, Default)]
+struct FrameCounter(pub u32);
+
+// -------- REPL command definition --------
+#[derive(Debug, Clone, Event, Default)]
+struct TimeScaleCommand {
+    set: Option<f32>,
+    add: Option<f32>,
 }
 
-// Timer resource that holds both the timer and its state
-#[derive(Resource, Debug)]
-struct TimerResource {
-    timer: Timer,
-    state: TimerState,
-    elapsed_seconds: f32,
+impl ReplCommand for TimeScaleCommand {
+    fn clap_command() -> clap::Command {
+        use clap::{value_parser, Arg, ArgGroup, Command};
+
+        Command::new("time-scale")
+            .about("Get or modify the TimeScale resource")
+            .arg(
+                Arg::new("set")
+                    .long("set")
+                    .num_args(1)
+                    .value_parser(value_parser!(f32))
+                    .help("Set absolute time scale (>= 0.0)"),
+            )
+            .arg(
+                Arg::new("add")
+                    .long("add")
+                    .num_args(1)
+                    .value_parser(value_parser!(f32))
+                    .help("Add delta to current time scale"),
+            )
+            .group(
+                ArgGroup::new("mode")
+                    .args(["set", "add"]) // at most one option
+                    .multiple(false)
+                    .required(false),
+            )
+            .after_help("If no flags are provided, prints the current TimeScale.")
+    }
+
+    fn to_event(matches: &clap::ArgMatches) -> ReplResult<Self> {
+        let set = matches.get_one::<f32>("set").copied();
+        let add = matches.get_one::<f32>("add").copied();
+        Ok(TimeScaleCommand { set, add })
+    }
 }
 
-impl Default for TimerResource {
-    fn default() -> Self {
-        Self {
-            timer: Timer::from_seconds(1.0, TimerMode::Repeating),
-            state: TimerState::Stopped,
-            elapsed_seconds: 0.0,
+// -------- Observer that mutates the resource --------
+fn on_time_scale(trigger: Trigger<TimeScaleCommand>, mut scale: ResMut<TimeScale>) {
+    let cmd = trigger.event();
+
+    match (cmd.set, cmd.add) {
+        (Some(value), None) => {
+            let new = value.max(0.0);
+            scale.0 = new;
+            repl_println!("TimeScale set to: {}", scale.0);
+        }
+        (None, Some(delta)) => {
+            let new = (scale.0 + delta).max(0.0);
+            scale.0 = new;
+            repl_println!("TimeScale changed by {delta:+}, now: {}", scale.0);
+        }
+        (None, None) => {
+            repl_println!("Current TimeScale: {}", scale.0);
+        }
+        (Some(_), Some(_)) => {
+            // Should be prevented by ArgGroup, but handle defensively
+            repl_println!("Error: specify at most one of --set or --add");
         }
     }
 }
 
-impl TimerResource {
-    fn start(&mut self) {
-        self.state = TimerState::Running;
-        self.timer.reset();
-        info!("Timer started");
-    }
-
-    fn stop(&mut self) {
-        self.state = TimerState::Stopped;
-        info!("Timer stopped at {:.2} seconds", self.elapsed_seconds);
-    }
-
-    fn reset(&mut self) {
-        self.elapsed_seconds = 0.0;
-        self.timer.reset();
-        self.state = TimerState::Stopped;
-        info!("Timer reset to 0.00 seconds");
-    }
-
-    fn is_running(&self) -> bool {
-        self.state == TimerState::Running
-    }
-}
-
-// Command structs
-#[derive(Debug, Clone, Event, Default)]
-struct StartTimerCommand;
-
-impl ReplCommand for StartTimerCommand {
-    fn clap_command() -> clap::Command {
-        clap::Command::new("start")
-            .about("Starts the timer")
-    }
-}
-
-#[derive(Debug, Clone, Event, Default)]
-struct StopTimerCommand;
-
-impl ReplCommand for StopTimerCommand {
-    fn clap_command() -> clap::Command {
-        clap::Command::new("stop")
-            .about("Stops the timer")
-    }
-}
-
-#[derive(Debug, Clone, Event, Default)]
-struct ResetTimerCommand;
-
-impl ReplCommand for ResetTimerCommand {
-    fn clap_command() -> clap::Command {
-        clap::Command::new("reset")
-            .about("Resets the timer to 0")
-    }
-}
-
-// Command handlers
-fn on_start_timer(_trigger: Trigger<StartTimerCommand>, mut timer: ResMut<TimerResource>) {
-    timer.start();
-}
-
-fn on_stop_timer(_trigger: Trigger<StopTimerCommand>, mut timer: ResMut<TimerResource>) {
-    timer.stop();
-}
-
-fn on_reset_timer(_trigger: Trigger<ResetTimerCommand>, mut timer: ResMut<TimerResource>) {
-    timer.reset();
-}
-
-fn timer_is_running(timer: Res<TimerResource>) -> bool {
-    timer.is_running()
-}
-
-fn display_timer_status(timer: Res<TimerResource>) {
-    let state_str = match timer.state {
-        TimerState::Running => "Running",
-        TimerState::Stopped => "Stopped",
-    };
-    info!("Timer Status: {} | Elapsed: {:.2} seconds", state_str, timer.elapsed_seconds);
-}
-
-// System that increments the timer when running
-fn update_timer(mut timer: ResMut<TimerResource>, time: Res<Time>) {
-    if timer.is_running() {
-        timer.timer.tick(time.delta());
-        
-        // Increment elapsed time by the delta time
-        timer.elapsed_seconds += time.delta_secs();
-        
-        // Log every second when running
-        if timer.timer.just_finished() {
-            info!("Timer: {:.2} seconds", timer.elapsed_seconds);
-        }
+// -------- Systems that read the resource live --------
+fn tick(mut frames: ResMut<FrameCounter>, scale: Res<TimeScale>) {
+    frames.0 = frames.0.wrapping_add(1);
+    if frames.0 % 60 == 0 {
+        repl_println!("Tick: frame={}, time-scale={}", frames.0, scale.0);
     }
 }
 
 fn instructions() {
-    println!();
-    println!("Welcome to the Bevy REPL resource example!");
-    println!();
-    println!("Try typing a command:");
-    println!("  `start`   - Start the timer");
-    println!("  `stop`    - Stop the timer");
-    println!("  `reset`   - Reset the timer to 0");
-    println!("  `quit`    - Close the app");
-    println!();
-    println!("The REPL can be toggled with:");
-    println!("  {:?}", Repl::default().toggle_key.unwrap());
-    println!();
-    println!("Press CTRL+C to exit any time.");
-    println!();
+    repl_println!();
+    repl_println!("Bevy REPL resource mutation example");
+    repl_println!();
+    repl_println!("Try typing in the REPL:");
+    repl_println!("  time-scale");
+    repl_println!("  time-scale --set 2.0");
+    repl_println!("  time-scale --add -0.5");
+    repl_println!("  quit");
+    repl_println!();
+    repl_println!("Press CTRL+C to exit any time.");
+    repl_println!();
 }
 
+fn setup(mut commands: Commands) {
+    commands.insert_resource(TimeScale(1.0));
+    commands.insert_resource(FrameCounter::default());
+}
 
 fn main() {
     App::new()
         .add_plugins((
-            MinimalPlugins
-                .set(ScheduleRunnerPlugin::run_loop(Duration::from_secs_f64(
-                    1.0 / 60.0,
-                ))),
-            bevy::log::LogPlugin::default(),
-            ReplPlugins,
+            // Headless loop in the terminal
+            MinimalPlugins.set(ScheduleRunnerPlugin::run_loop(Duration::from_secs_f64(1.0 / 60.0))),
+            // Required so the REPL can handle keyboard input
+            bevy::input::InputPlugin::default(),
+            // Turnkey REPL with minimal prompt renderer and default commands
+            ReplPlugins.set(PromptPlugin::pretty()),
         ))
-        .init_resource::<TimerResource>()
-        .add_repl_command::<StartTimerCommand>()
-        .add_repl_command::<StopTimerCommand>()
-        .add_repl_command::<ResetTimerCommand>()
-        .add_observer(on_start_timer)
-        .add_observer(on_stop_timer)
-        .add_observer(on_reset_timer)
-        .add_systems(Update, display_timer_status.run_if(timer_is_running))
-        .add_systems(FixedUpdate, update_timer)
-        .add_systems(Startup, instructions)
+        .add_repl_command::<TimeScaleCommand>()
+        .add_observer(on_time_scale)
+        .add_systems(Startup, setup)
+        .add_systems(Update, tick)
+        .add_systems(PostStartup, instructions.after(ScrollRegionReadySet))
         .run();
 }

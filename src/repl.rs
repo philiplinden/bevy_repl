@@ -1,21 +1,93 @@
 use bevy::prelude::*;
 use bevy_ratatui::{context::TerminalContext, event::InputSet};
 use std::io::{Stdout, stdout};
+use std::sync::atomic::{AtomicBool, Ordering};
 
 use ratatui::{Terminal, backend::CrosstermBackend};
 use std::collections::HashMap;
 
+/// A Bevy plugin that provides a Read-Eval-Print Loop (REPL) interface for interactive command input.
+///
+/// # Purpose
+/// The `ReplPlugin` enables a REPL terminal within your Bevy application, allowing users to enter commands and interact with the app at runtime.
+///
+/// # Configuration Options
+/// - `enable_on_startup`: Determines whether the REPL is enabled when the app starts.
+///   - Use [`ReplPlugin::enabled()`] to start enabled (default).
+///   - Use [`ReplPlugin::disabled()`] to start disabled.
+///   - Use [`ReplPlugin::with_enabled(bool)`] for explicit control.
+///
+/// # Usage
+/// Add the plugin to your Bevy app:
+/// ```
+/// use your_crate::ReplPlugin;
+/// App::new().add_plugin(ReplPlugin::enabled());
+/// ```
 pub struct ReplPlugin {
     enable_on_startup: bool,
-    toggle_key: Option<KeyCode>,
 }
 
 impl Default for ReplPlugin {
     fn default() -> Self {
         Self {
             enable_on_startup: true,
-            toggle_key: Some(KeyCode::Backquote),
         }
+    }
+}
+
+impl ReplPlugin {
+    /// Create a REPL plugin that starts enabled (default).
+    pub fn enabled() -> Self {
+        Self { enable_on_startup: true }
+    }
+
+    /// Create a REPL plugin that starts disabled (no runtime toggle in v1).
+    pub fn disabled() -> Self {
+        Self { enable_on_startup: false }
+    }
+
+    /// Configure whether the REPL starts enabled.
+    pub fn with_enabled(enabled: bool) -> Self {
+        Self { enable_on_startup: enabled }
+    }
+}
+/// Install safety nets to always restore the terminal on abnormal exits.
+///
+/// - Panic hook: best-effort `disable_raw_mode()` before delegating to the previous hook.
+/// - Ctrl-C handler: best-effort `disable_raw_mode()` on SIGINT/SIGTERM.
+///
+/// Notes:
+/// - Idempotent and safe to call multiple times.
+/// - Does not handle SIGKILL or panic=abort where no user code runs.
+/// Global flag set to `true` when a Ctrl+C (SIGINT) or termination signal is received.
+///
+/// Used by the signal handler to notify the main application logic that a shutdown has been requested.
+/// This is an `AtomicBool` to ensure safe concurrent access between the signal handler thread and the main thread.
+/// The main thread can poll this flag to detect if Ctrl+C was pressed and exit gracefully.
+static CTRL_C_HIT: AtomicBool = AtomicBool::new(false);
+
+fn install_terminal_safety_nets() {
+    static ONCE: std::sync::Once = std::sync::Once::new();
+    ONCE.call_once(|| {
+        let prev = std::panic::take_hook();
+        std::panic::set_hook(Box::new(move |info| {
+            let _ = bevy_ratatui::crossterm::terminal::disable_raw_mode();
+            prev(info);
+        }));
+
+        // Best-effort signal handler for Ctrl-C and termination.
+        let _ = ctrlc::set_handler(|| {
+            let _ = bevy_ratatui::crossterm::terminal::disable_raw_mode();
+            // Mark that Ctrl+C was pressed so the Bevy app can exit gracefully.
+            CTRL_C_HIT.store(true, Ordering::SeqCst);
+        });
+    });
+}
+
+// Poll for Ctrl+C from the signal handler and request app exit.
+fn ctrlc_exit_check(mut exit: EventWriter<AppExit>) {
+    if CTRL_C_HIT.swap(false, Ordering::SeqCst) {
+        exit.write(AppExit::Success);
     }
 }
 
@@ -23,18 +95,22 @@ impl Plugin for ReplPlugin {
     fn build(&self, app: &mut App) {
         app.insert_resource(Repl {
             enabled: self.enable_on_startup,
-            toggle_key: self.toggle_key,
             ..default()
         });
         app.add_event::<ReplSubmitEvent>();
         app.add_event::<ReplBufferEvent>();
-        app.add_event::<ReplToggleEvent>();
+        // Internal lifecycle event to manage terminal context without runtime toggle
+        app.add_event::<ReplLifecycleEvent>();
         app.add_observer(manage_context);
+        app.add_systems(Startup, emit_enable_if_enabled);
+        app.add_observer(on_app_exit_emit_disable);
         app.add_observer(cleanup_on_exit);
+        // Exit the app gracefully if the user presses Ctrl+C.
+        app.add_systems(Update, ctrlc_exit_check);
         app.configure_sets(
             Update,
             (
-                ReplSet::Toggle,
+                ReplSet::Pre,
                 ReplSet::Capture,
                 ReplSet::Buffer,
                 ReplSet::Render,
@@ -44,15 +120,22 @@ impl Plugin for ReplPlugin {
                 .after(InputSet::EmitCrossterm)
                 .before(InputSet::Post),
         );
-        // Emit toggle events on startup and whenever the state flips
-        app.add_systems(Update, notify_toggle.in_set(ReplSet::Toggle));
+        // Wrapper set to anchor all REPL systems between ratatui input emission and post-processing
+        app.configure_sets(
+            Update,
+            ReplSet::All
+                .after(InputSet::EmitCrossterm)
+                .before(InputSet::Post)
+                .run_if(repl_is_enabled),
+        );
+        // Install global safety nets for abnormal exits.
+        install_terminal_safety_nets();
     }
 }
 
 #[derive(Resource)]
 pub struct Repl {
     pub enabled: bool,
-    pub toggle_key: Option<KeyCode>,
     pub buffer: String,
     pub cursor_pos: usize,
     pub history: Vec<String>,
@@ -65,7 +148,6 @@ impl Default for Repl {
     fn default() -> Self {
         Self {
             enabled: true,
-            toggle_key: Some(KeyCode::Backquote),
             buffer: String::new(),
             cursor_pos: 0,
             history: Vec::new(),
@@ -77,15 +159,6 @@ impl Default for Repl {
 }
 
 impl Repl {
-    pub fn toggle(&mut self) {
-        if self.enabled {
-            self.enabled = false;
-            info!("REPL disabled");
-        } else {
-            self.enabled = true;
-            info!("REPL enabled");
-        }
-    }
     pub fn drain_buffer(&mut self) -> String {
         let buffer = self.buffer.clone();
         self.clear_buffer();
@@ -128,36 +201,16 @@ impl Repl {
     }
 }
 
-#[derive(Event)]
-pub enum ReplToggleEvent {
-    Enable,
-    Disable,
-}
-
 pub fn repl_is_enabled(repl: Res<Repl>) -> bool {
     repl.enabled
 }
 
-/// Emit a toggle event if the REPL state has changed.
-pub fn notify_toggle(
-    repl: Res<Repl>,
-    mut last_state: Local<bool>,
-    mut toggle_events: EventWriter<ReplToggleEvent>,
-) {
-    if *last_state != repl.enabled {
-        if repl.enabled {
-            toggle_events.write(ReplToggleEvent::Enable);
-        } else {
-            toggle_events.write(ReplToggleEvent::Disable);
-        }
-        *last_state = repl.enabled;
-    }
-}
-
 #[derive(SystemSet, Debug, Hash, PartialEq, Eq, Clone)]
 pub enum ReplSet {
-    /// Detect toggle via Bevy keyboard input
-    Toggle,
+    /// Wrapper for all REPL systems to allow global ordering and run conditions
+    All,
+    /// Pre stage for consuming/forwarding behavior
+    Pre,
     /// Read terminal key events (when enabled)
     Capture,
     /// Update REPL buffer state from captured input
@@ -169,10 +222,29 @@ pub enum ReplSet {
 }
 
 #[derive(Resource, Deref, DerefMut, Debug)]
-pub struct ReplContext(Terminal<CrosstermBackend<Stdout>>);
+/// Terminal context used when `bevy_ratatui::RatatuiContext` is not available.
+///
+/// This keeps rendering on the main terminal screen (no alternate screen) using
+/// `crossterm` via `ratatui`. It exists to provide a minimal, dependency-light
+/// fallback so the REPL can render without the full ratatui stack.
+pub struct FallbackTerminalContext(Terminal<CrosstermBackend<Stdout>>);
 
-impl ReplContext {
-    /// Create a new ReplContext with a terminal and enable raw mode.
+/// Guard resource that ensures terminal raw mode is disabled when dropped.
+///
+/// This complements `FallbackTerminalContext::restore()` and provides
+/// a final line of defense during unwinding or unexpected teardown.
+#[derive(Resource, Debug)]
+struct RawModeGuard;
+
+impl Drop for RawModeGuard {
+    fn drop(&mut self) {
+        // Idempotent, ignore errors; we just want to best-effort restore.
+        let _ = bevy_ratatui::crossterm::terminal::disable_raw_mode();
+    }
+}
+
+impl FallbackTerminalContext {
+    /// Create a new `FallbackTerminalContext` with a terminal and enable raw mode.
     ///
     /// This is a workaround to initialize a `bevy_ratatui` terminal context
     /// without spawning an alternate screen.
@@ -190,7 +262,7 @@ impl ReplContext {
     }
 }
 
-impl TerminalContext<CrosstermBackend<Stdout>> for ReplContext {
+impl TerminalContext<CrosstermBackend<Stdout>> for FallbackTerminalContext {
     fn init() -> Result<Self> {
         let stdout = stdout();
         // Enable raw mode but stay in main screen
@@ -211,41 +283,69 @@ impl TerminalContext<CrosstermBackend<Stdout>> for ReplContext {
     }
 }
 
-/// A system that sets up the terminal context. This runs when the Repl is
-/// enabled to give it access to the terminal.
+#[derive(Event)]
+enum ReplLifecycleEvent {
+    Enable,
+    Disable,
+}
+
+fn emit_enable_if_enabled(repl: Res<Repl>, mut writer: EventWriter<ReplLifecycleEvent>) {
+    if repl.enabled {
+        writer.write(ReplLifecycleEvent::Enable);
+    }
+}
+
+fn on_app_exit_emit_disable(_exit: Trigger<AppExit>, mut writer: EventWriter<ReplLifecycleEvent>) {
+    writer.write(ReplLifecycleEvent::Disable);
+}
+
+/// Manage the terminal context on lifecycle events (startup/shutdown).
 fn manage_context(
-    trigger: Trigger<ReplToggleEvent>,
-    existing: Option<Res<ReplContext>>,
+    trigger: Trigger<ReplLifecycleEvent>,
+    existing: Option<Res<FallbackTerminalContext>>,
     mut commands: Commands,
 ) {
     match trigger.event() {
-        ReplToggleEvent::Enable => {
+        ReplLifecycleEvent::Enable => {
             if existing.is_none() {
-                let Ok(terminal) = ReplContext::init() else {
+                let Ok(terminal) = FallbackTerminalContext::init() else {
                     error!("Failed to initialize terminal context");
                     return;
                 };
                 commands.insert_resource(terminal);
+                // Insert the guard so that any unexpected teardown restores raw mode.
+                commands.insert_resource(RawModeGuard);
             }
         }
-        ReplToggleEvent::Disable => {
+        ReplLifecycleEvent::Disable => {
             if existing.is_some() {
-                let Ok(_) = ReplContext::restore() else {
+                let Ok(_) = FallbackTerminalContext::restore() else {
                     error!("Failed to remove terminal context");
                     return;
                 };
-                commands.remove_resource::<ReplContext>();
+                commands.remove_resource::<FallbackTerminalContext>();
+                // Dropping the guard will also best-effort disable raw mode.
+                commands.remove_resource::<RawModeGuard>();
             }
         }
     }
 }
 
-fn cleanup_on_exit(_exit: Trigger<AppExit>, mut commands: Commands) {
-    let Ok(_) = ReplContext::restore() else {
-        error!("Failed to remove terminal context");
-        return;
-    };
-    commands.remove_resource::<ReplContext>();
+fn cleanup_on_exit(
+    _exit: Trigger<AppExit>,
+    mut commands: Commands,
+    existing: Option<Res<FallbackTerminalContext>>,
+) {
+    // Ensure the resource is removed even if the lifecycle observer didn't run
+    if existing.is_some() {
+        let Ok(_) = FallbackTerminalContext::restore() else {
+            error!("Failed to remove terminal context");
+            return;
+        };
+        commands.remove_resource::<FallbackTerminalContext>();
+        // Drop the guard on exit path as well.
+        commands.remove_resource::<RawModeGuard>();
+    }
 }
 
 #[derive(Event)]

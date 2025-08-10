@@ -19,20 +19,15 @@ fn on_ping(_trigger: Trigger<PingCommand>) {
 }
 
 fn instructions() {
-    println!();
-    println!("Welcome to the Bevy REPL window example!");
-    println!();
-    println!("Try typing a command:");
-    println!("  `ping`    - Trigger the ping command. (it outputs Pong)");
-    println!("  `quit`    - Close the app.");
-    println!();
-    println!("The REPL can be toggled with:");
-    println!("  {:?}", Repl::default().toggle_key.unwrap());
-    println!();
-    println!("You can also close the window to exit the app.");
-    println!();
-    println!("Press CTRL+C to exit any time.");
-    println!();
+    repl_println!();
+    repl_println!("Welcome to the Bevy REPL window example!");
+    repl_println!();
+    repl_println!("Try typing a command:");
+    repl_println!("  `ping`    - Trigger the ping command. (it outputs Pong)");
+    repl_println!("  `quit`    - Close the app.");
+    repl_println!();
+    repl_println!("Press CTRL+C or close the window to exit.");
+    repl_println!();
 }
 
 fn main() {
@@ -49,6 +44,6 @@ fn main() {
         ))
         .add_repl_command::<PingCommand>()
         .add_observer(on_ping)
-        .add_systems(Startup, instructions)
+        .add_systems(PostStartup, instructions.after(ScrollRegionReadySet))
         .run();
 }

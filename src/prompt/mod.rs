@@ -1,28 +1,41 @@
-pub mod keymap;
 pub mod input;
-pub mod render;
+pub mod renderer;
 pub mod key_events;
 
 use bevy::prelude::*;
+use std::sync::Arc;
 
-use crate::repl::{ReplSet, repl_is_enabled};
+use crate::repl::{ReplSet};
 use self::input::PromptInputPlugin;
-use self::render::PromptRenderPlugin;
-use self::key_events::{on_toggle_key_bevy, block_keyboard_input_forwarding};
+use self::key_events::block_keyboard_input_forwarding;
+use self::renderer::{PromptRenderer, PromptRenderPlugin};
+
 
 #[derive(Resource, Clone)]
 pub struct PromptPlugin {
-    /// The prompt to display in the REPL console to the left of the input area.
-    pub prompt: String,
-    /// Enable a border around the REPL console.
-    pub border: bool,
+    pub config: ReplPromptConfig,
+    pub renderer: Arc<dyn PromptRenderer>,
 }
 
 impl Default for PromptPlugin {
     fn default() -> Self {
+        Self::minimal()
+    }
+}
+
+impl PromptPlugin {
+    pub fn minimal() -> Self {
         Self {
-            prompt: "> ".to_string(),
-            border: true,
+            config: ReplPromptConfig::minimal(),
+            renderer: Arc::new(renderer::minimal::MinimalRenderer),
+        }
+    }
+
+    #[cfg(feature = "pretty")]
+    pub fn pretty() -> Self {
+        Self {
+            config: ReplPromptConfig::pretty(),
+            renderer: Arc::new(renderer::pretty::PrettyRenderer),
         }
     }
 }
@@ -30,28 +43,43 @@ impl Default for PromptPlugin {
 impl Plugin for PromptPlugin {
     fn build(&self, app: &mut App) {
         app.insert_resource(ReplPrompt {
-            symbol: Some(self.prompt.clone()),
+            symbol: Some(self.config.symbol.clone().unwrap_or_else(|| "> ".to_string())),
             buffer: String::new(),
         });
-        // Compose prompt-related plugins
-        app.add_plugins((PromptInputPlugin, PromptRenderPlugin));
+        app.insert_resource(self.config.clone());
+        app.add_plugins(PromptInputPlugin);
+        app.add_plugins(PromptRenderPlugin { renderer: self.renderer.clone() });
         app.add_systems(
             Update,
             (
-                // Toggle detection first, explicitly before we block forwarding later
-                on_toggle_key_bevy
-                    .in_set(ReplSet::Toggle)
-                    .before(block_keyboard_input_forwarding),
-                // When enabled, capture terminal input
-                // Render prompt/UI
-                // Finally block forwarding while enabled, after render and toggle
                 block_keyboard_input_forwarding
                     .in_set(ReplSet::Post)
-                    .after(ReplSet::Render)
-                    .after(ReplSet::Toggle)
-                    .run_if(repl_is_enabled),
+                    .in_set(ReplSet::All)
+                    .after(ReplSet::Render),
             ),
         );
+    }
+}
+
+impl ReplPromptConfig {
+    /// Minimal preset: single-line bar, no border, no colors, no hint.
+    pub fn minimal() -> Self {
+        Self {
+            symbol: Some("> ".to_string()),
+            border: None,
+            color: None,
+            hint: None,
+        }
+    }
+
+    /// Pretty preset: border, colors, and right-aligned hint enabled.
+    pub fn pretty() -> Self {
+        Self {
+            symbol: Some("> ".to_string()),
+            border: Some(PromptBorderConfig::default()),
+            color: Some(PromptColorConfig::default()),
+            hint: Some(PromptHintConfig::default()),
+        }
     }
 }
 
@@ -60,3 +88,39 @@ pub struct ReplPrompt {
     pub symbol: Option<String>,
     pub buffer: String,
 }
+
+/// Visual configuration for the REPL prompt bar.
+#[derive(Resource, Clone)]
+pub struct ReplPromptConfig {
+    /// Prompt symbol to display before the buffer.
+    pub symbol: Option<String>,
+    /// Draw a border and title around the prompt bar.
+    pub border: Option<PromptBorderConfig>,
+    /// Enable colorful styles for title/prompt/hints.
+    pub color: Option<PromptColorConfig>,
+    /// Show a right-aligned hint text.
+    pub hint: Option<PromptHintConfig>,
+}
+
+impl Default for ReplPromptConfig {
+    fn default() -> Self {
+        Self {
+            symbol: Some("> ".to_string()),
+            border: Some(PromptBorderConfig::default()),
+            color: Some(PromptColorConfig::default()),
+            hint: Some(PromptHintConfig::default()),
+        }
+    }
+}
+
+/// Border styling configuration (placeholder for future fields)
+#[derive(Clone, Default)]
+pub struct PromptBorderConfig;
+
+/// Color styling configuration (placeholder for future fields)
+#[derive(Clone, Default)]
+pub struct PromptColorConfig;
+
+/// Hint styling/behavior configuration (placeholder for future fields)
+#[derive(Clone, Default)]
+pub struct PromptHintConfig;
