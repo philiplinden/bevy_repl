@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use bevy_ratatui::RatatuiContext;
 use crate::repl::{Repl, ReplContext, ReplSet};
 use crate::prompt::{ReplPrompt, ReplPromptConfig};
 use ratatui::layout::Rect;
@@ -53,16 +54,28 @@ impl Plugin for PromptRenderPlugin {
 
 /// Render entrypoint: delegates to the active renderer strategy
 pub(super) fn display_prompt(
-    term: Option<ResMut<ReplContext>>,
+    // Prefer ratatui's default terminal context when present (alternate screen)
+    term_ratatui: Option<ResMut<RatatuiContext>>, 
+    // Fallback to the crate's custom terminal context to preserve compatibility
+    term_custom: Option<ResMut<ReplContext>>, 
     repl: Res<Repl>,
     prompt: Res<ReplPrompt>,
     visuals: Option<Res<ReplPromptConfig>>,
     active: Res<ActiveRenderer>,
 ) {
-    let Some(mut term) = term else { return }; // No terminal context yet
     let visuals = visuals.map(|v| v.clone()).unwrap_or_default();
+
+    if let Some(mut term) = term_ratatui {
+        let _ = term.draw(|f| {
+            let area = Rect { x: 0, y: 0, width: f.area().width, height: f.area().height };
+            let ctx = RenderCtx { repl: &repl, prompt: &prompt, visuals: &visuals, area };
+            active.0.render(f, &ctx);
+        });
+        return;
+    }
+
+    let Some(mut term) = term_custom else { return }; // No terminal context yet
     let _ = term.draw(|f| {
-        // Use bottom-most area by default; concrete renderer can compute inner layout
         let area = Rect { x: 0, y: 0, width: f.area().width, height: f.area().height };
         let ctx = RenderCtx { repl: &repl, prompt: &prompt, visuals: &visuals, area };
         active.0.render(f, &ctx);

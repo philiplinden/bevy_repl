@@ -94,11 +94,65 @@ extension point for custom styles.
       .run();
   ```
 
-Notes:
+The example and docs assume the `pretty` feature is enabled so the rendering
+infrastructure is available. Custom renderers can ignore colors/borders entirely
+if you want a minimal look.
 
-- The example and docs assume the `pretty` feature is enabled so the rendering
-  infrastructure is available. Custom renderers can ignore colors/borders entirely
-  if you want a minimal look.
+#### Plugin groups and alternate screen
+
+- __When is the alternate screen active?__
+  - The alternate screen is active when `bevy_ratatui::RatatuiPlugins` is added to your app.
+  - Using `ReplPlugins` (the default/turnkey group) automatically adds `RatatuiPlugins`, so the REPL renders in the alternate screen via `RatatuiContext`.
+  - Using `MinimalReplPlugins` does not add `RatatuiPlugins`; the prompt renders on the main terminal screen using the fallback `ReplContext`.
+
+- __Minimal (no alternate screen, no built-ins)__
+
+  ```rust
+  use bevy::{app::ScheduleRunnerPlugin, prelude::*};
+  use bevy_repl::plugin::MinimalReplPlugins;
+  use std::time::Duration;
+
+  fn main() {
+      App::new()
+          .add_plugins((
+              MinimalPlugins.set(ScheduleRunnerPlugin::run_loop(Duration::from_secs_f64(1.0/60.0))),
+              // Minimal REPL: core + prompt + parser; main-screen rendering
+              MinimalReplPlugins,
+          ))
+          // Add your own commands (no built-ins in minimal)
+          // .add_repl_command::<YourCommand>()
+          // .add_observer(on_your_command)
+          .run();
+  }
+  ```
+
+- __Default/turnkey (alternate screen + built-ins)__
+
+  ```rust
+  use bevy::{app::ScheduleRunnerPlugin, prelude::*};
+  use bevy_repl::plugin::ReplPlugins;
+  use std::time::Duration;
+
+  fn main() {
+      App::new()
+          .add_plugins((
+              MinimalPlugins.set(ScheduleRunnerPlugin::run_loop(Duration::from_secs_f64(1.0/60.0))),
+              // Default REPL: adds RatatuiPlugins + minimal stack + built-ins
+              ReplPlugins,
+          ))
+          .run();
+  }
+  ```
+
+- __How to choose__
+  - Choose `MinimalReplPlugins` if you:
+    - Want to stay on the main terminal screen (no full TUI/pane UX).
+    - Intend to manage `bevy_ratatui` or other input/render stacks yourself.
+    - Prefer to opt-in to commands individually (no built-ins by default).
+  - Choose `ReplPlugins` if you:
+    - Want a turnkey setup with reliable prompt rendering in the alternate screen.
+    - Prefer sane defaults including built-in commands (`quit`, `help`, `clear`).
+    - Don’t need to wire `RatatuiPlugins` manually.
 
 ## Known Issues
 
