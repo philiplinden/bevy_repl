@@ -29,6 +29,7 @@ implementing a full TUI or rendering features.
       - [Custom renderer (feature-gated: `pretty`)](#custom-renderer-feature-gated-pretty)
       - [Plugin groups and alternate screen](#plugin-groups-and-alternate-screen)
     - [Robust printing in raw/alternate screen terminals](#robust-printing-in-rawalternate-screen-terminals)
+    - [Routing Bevy logs to the REPL](#routing-bevy-logs-to-the-repl)
     - [Startup ordering (PostStartup)](#startup-ordering-poststartup)
   - [Usage](#usage)
     - [REPL lifecycle (v1)](#repl-lifecycle-v1)
@@ -48,6 +49,8 @@ implementing a full TUI or rendering features.
     - [Runtime toggle is not supported](#runtime-toggle-is-not-supported)
     - [Key events are not forwarded to Bevy](#key-events-are-not-forwarded-to-bevy)
     - [Minimal renderer prompt does not scroll with terminal output](#minimal-renderer-prompt-does-not-scroll-with-terminal-output)
+    - [Pretty renderer log history doesn't scroll at all](#pretty-renderer-log-history-doesnt-scroll-at-all)
+    - [Shift+ aren't entered into the buffer](#shift-arent-entered-into-the-buffer)
   - [Aspirations](#aspirations)
   - [License](#license)
 
@@ -217,6 +220,53 @@ fn instructions() {
 ```
 
 If you truly need to emit raw `stdout` (e.g., piping to tools) while the REPL is active, consider temporarily suspending the TUI or buffering output and emitting it via `repl_println!`.
+
+### Routing Bevy logs to the REPL
+
+You can route logs produced by Bevy's `LogPlugin` (which uses `tracing`) into Bevy's ECS and print them via the REPL so they appear above the prompt and scroll correctly.
+
+- __How it works__
+  - A custom `tracing` Layer captures log events and forwards them through an `mpsc` channel to a Non-Send resource.
+  - A system transfers messages from the channel into an `Event<LogEvent>`.
+  - You can then read `Event<LogEvent>` yourself, or use the provided system that prints via `repl_println!` so lines render above the prompt.
+
+- __API__
+  - Module: `bevy_repl::log_ecs`
+  - Layer hook for Bevy's `LogPlugin`: `repl_log_custom_layer`
+  - Event type: `LogEvent`
+  - Optional print system: `print_log_events_system`
+
+- __Setup__
+
+```rust
+use bevy::prelude::*;
+use bevy_repl::prelude::*; // re-exports repl_log_custom_layer, LogEvent, print_log_events_system
+
+fn main() {
+    App::new()
+        .add_plugins((
+            // Configure Bevy logging as usual, but attach our custom layer
+            DefaultPlugins.set(bevy::log::LogPlugin {
+                // Example: show up to TRACE from your app, keep others at WARN
+                level: bevy::log::Level::TRACE,
+                filter: "warn,my_app=trace".to_string(),
+                custom_layer: repl_log_custom_layer,
+                ..Default::default()
+            }),
+            // Enable the REPL (pretty renderer recommended)
+            ReplPlugins.set(PromptPlugin::pretty()),
+        ))
+        // Option A: print captured log events via the REPL
+        .add_systems(Update, print_log_events_system)
+        // Option B: or read Event<LogEvent> in your own systems
+        .run();
+}
+```
+
+- __Notes__
+  - This approach relies on Bevy's `LogPlugin` and its `custom_layer` hook; you don't need to install a global `tracing` subscriber yourself.
+  - The provided printing system uses `repl_println!` to cooperate with the prompt's scroll region.
+  - If you prefer full control, omit `print_log_events_system` and consume `Event<LogEvent>` directly.
 
 ### Startup ordering (PostStartup)
 
@@ -707,6 +757,18 @@ that come from systems other than REPL command observers. This is pretty easy to
 do by disabling `bevy::input::InputPlugin` or setting the max level log messages
 to be `warn` or `error`.
 
+### Pretty renderer log history doesn't scroll at all
+You can't scroll up to see earlier logs in the history because the TUI doesn't
+have scrolling enabled (yet). This is possible, just not implemented yet.
+
+If you have a lot of logs or history is important, stick to the minimal
+renderer.
+
+### Shift+<Char> aren't entered into the buffer
+`Shift + lowercase letter` is ignored by the prompt. This is because the prompt
+captures only characters, not chords. Since shift is a modifier, extra logic is
+needed to support it. This is not implemented yet.
+
 ## Aspirations
 - [x] **Derive pattern** - Describe commands with clap's derive pattern.
 - [ ] **Toggleable** - The REPL is disabled by default and can be toggled. When
@@ -714,16 +776,19 @@ to be `warn` or `error`.
   prompt is hidden.
 - [x] **Pretty prompt** - Show the prompt in the terminal below the normal
   stdout, including the current buffer content.
+- [ ] **Scrolling pretty prompt** - The pretty renderer makes an alternate
+  screen but doesn't allow you to scroll up to see past input.
 - [x] **Support for games with rendering and windowing** - The REPL is designed to
   work from the terminal, but the terminal normally prints logs when there is a
   window too. The REPL still works from the terminal while using the window for
   rendering if the console is enabled.
 - [ ] **Support for games with TUIs** - The REPL is designed to work as a sort of
   sidecar to the normal terminal output, so _in theory_ it should be compatible
-  with games that use an alternate TUI screen. I don't know if it actually works.
-- [ ] **Command history** - Use keybindings to navigate past commands
+  with games that use an alternate TUI screen. I don't know if it actually
+  works, probably only with the minimal renderer or perhaps a custom renderer.
 - [ ] **Customizable keybinds** - Allow the user to configure the REPL keybinds for
   all REPL controls, not just the toggle key.
+- [ ] **Command history** - Use keybindings to navigate past commands
 - [ ] **Help text and command completion** - Use `clap`'s help text and completion
   features to provide a better REPL experience and allow for command discovery.
 

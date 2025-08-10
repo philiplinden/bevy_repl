@@ -6,6 +6,7 @@ pub mod plugin;
 pub mod prompt;
 pub mod repl;
 pub mod print;
+pub mod log_ecs;
 
 pub mod prelude {
     pub use crate::built_ins::ReplDefaultCommandsPlugin;
@@ -27,6 +28,13 @@ pub mod prelude {
     // Bring the robust printing macro into the prelude for convenient use.
     // This allows: `use bevy_repl::prelude::*;` then `repl_println!(...)`.
     pub use crate::repl_println;
+
+    pub use crate::log_ecs::{
+        custom_layer as repl_log_custom_layer,
+        install_tracing_to_repl_fmt,
+        LogEvent,
+        print_log_events_system,
+    };
 
     #[cfg(feature = "derive")]
     pub use bevy_repl_derive::ReplCommand;

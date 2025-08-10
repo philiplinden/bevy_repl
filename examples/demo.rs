@@ -380,8 +380,8 @@ Type `next` to proceed, or `back` to go to the previous step.
 Text you type into the REPL is parsed by clap into commands and arguments.
 Aliases are alternate mappings to the same underlying command.
 
-Try: `say Hello world`
-Or try an alias of say: `s Hello world`, `print Hello world`, `echo Hello world`
+Try: `say hello world`
+Or try an alias of say: `s hello world`, `print hello world`, `echo hello world`
 `next` to proceed.
 "#,
             );

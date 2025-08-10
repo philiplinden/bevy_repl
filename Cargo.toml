@@ -12,7 +12,7 @@ keywords = ["bevy", "repl", "console", "debugging"]
 categories = ["game-development", "development-tools"]
 
 [dependencies]
-bevy = { version = "0.16.1", default-features = false, features = ["bevy_log"]}
+bevy = { version = "0.16.1", default-features = false, features = ["bevy_log", "trace"]}
 bevy_ratatui = { version = "0.9.2", features = ["crossterm"] }
 ratatui = "0.29.0"
 clap = { version = "4.5.43" }
@@ -83,6 +83,15 @@ path = "examples/builtins.rs"
 [[example]]
 name = "aliases"
 path = "examples/aliases.rs"
+
+[[example]]
+name = "log_pretty"
+path = "examples/log_pretty.rs"
+required-features = ["pretty"]
+
+[[example]]
+name = "log_minimal"
+path = "examples/log_minimal.rs"
 
 [[example]]
 name = "key_events_suppressed"
