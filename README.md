@@ -20,11 +20,17 @@ implementing a full TUI or rendering features.
 
 ## Features
 
+Theoretically all clap features are supported, but I have only tested `derive`.
+Override the `clap` features in your `Cargo.toml` to enable or disable
+additional features at your own risk.
+
+### Derive
 Use the `derive` feature to support clap's derive pattern for REPL commands.
 `#[derive(ReplCommand)]` will automatically implement the `ReplCommand` trait
 and create an event with the command's arguments and options. Configure the
 response by adding an observer for the REPL command like normal.
 
+### Built-in commands
 Enable built-in commands with feature flags. Each command is enabled separately
 by a feature flag. Use the `default_commands` feature to enable all built-in
 commands.
@@ -36,8 +42,63 @@ commands.
 | `help` | `help` | Show clap help text |
 | `clear` | `clear` | Clear the REPL input buffer |
 
-Clap features are technically supported, but have not been tested. Override the
-`clap` features in your `Cargo.toml` to enable or disable additional features.
+### Prompt styling
+
+The prompt can be styled with the `pretty` feature. The feature adds a border,
+colorful styles for title/prompt/hints, and a right-aligned hint text.
+
+- __Minimal (default)__
+  - Appearance: 1-line bottom prompt with symbol + input. No border/colors/hint.
+  - Compilation: no styling code compiled; lean terminal manipulation only.
+  - Config: only `ReplPromptConfig.symbol` is honored.
+  - Use: `cargo run` (no extra feature flags).
+
+- __Pretty (`--features pretty`)__
+  - Appearance: border with title, colored styles, right-aligned usage hint.
+  - Compilation: styling code compiled and enabled.
+  - Config: presets or explicit `ReplPromptConfig { symbol, border, color, hint }`.
+  - Use: `cargo run --example pretty --features pretty`.
+
+#### Custom renderer (feature-gated: `pretty`)
+
+You can swap the prompt renderer at runtime by overriding the `ActiveRenderer` resource
+with your own implementation of the `PromptRenderer` trait. This is the recommended
+extension point for custom styles.
+
+- Build and run the demo custom renderer example:
+
+  ```bash
+  cargo run --example custom_renderer --features pretty
+  ```
+
+- Minimal usage (in your Bevy app):
+
+  ```rust
+  use bevy_repl::prompt::render::{ActiveRenderer, PromptRenderer, RenderCtx};
+
+  struct MyRenderer;
+  impl PromptRenderer for MyRenderer {
+      fn render(&self, f: &mut ratatui::Frame<'_>, ctx: &RenderCtx) {
+          // draw a simple 1-line prompt in your own style
+          // (see examples/custom_renderer.rs for a complete reference)
+          let area = bevy_repl::prompt::helpers::bottom_bar_area(ctx.area, 1);
+          let prompt = ctx.prompt.symbol.clone().unwrap_or_default();
+          let spans = [ratatui::text::Span::raw(prompt), ratatui::text::Span::raw(&ctx.repl.buffer)];
+          f.render_widget(ratatui::widgets::Paragraph::new(ratatui::text::Line::from(spans)), area);
+      }
+  }
+
+  App::new()
+      .add_plugins(ReplPlugins)
+      .insert_resource(ActiveRenderer(Box::new(MyRenderer)))
+      .run();
+  ```
+
+Notes:
+
+- The example and docs assume the `pretty` feature is enabled so the rendering
+  infrastructure is available. Custom renderers can ignore colors/borders entirely
+  if you want a minimal look.
 
 ## Known Issues
 
@@ -179,6 +240,43 @@ struct CommandWithArgs {
 }
 ```
 
+### Prompt styling
+
+- __Appearance__
+  - Without the `pretty` feature (default): minimal prompt. One-line bar fixed to the bottom, showing only the prompt symbol and input buffer. No border, colors, or hint.
+  - With the `pretty` feature: enhanced prompt. Optional border with title, colored styles for title/prompt/hints, and a right-aligned usage hint.
+
+- __Compilation__
+  - Minimal build (no `pretty`): styling code is not compiled. No extra terminal manipulation beyond positioning the single-line prompt.
+  - Pretty build (`--features pretty`): styling code is compiled in and used by the renderer.
+
+- __Configuration__
+  - The prompt is configured via `ReplPromptConfig`. In minimal builds, only the `symbol` is honored; styling options are ignored.
+  - In pretty builds, you can use presets or customize:
+
+    ```rust
+    // Presets chosen automatically by ReplPlugins based on the feature flag
+    // pretty off  -> ReplPromptConfig::minimal()
+    // pretty on   -> ReplPromptConfig::pretty()
+
+    // Override at runtime (pretty build):
+    app.insert_resource(bevy_repl::prompt::ReplPromptConfig::pretty());
+    // or
+    app.insert_resource(bevy_repl::prompt::ReplPromptConfig::minimal());
+    // or explicit fields (pretty build):
+    app.insert_resource(bevy_repl::prompt::ReplPromptConfig {
+        symbol: Some("> ".to_string()),
+        border: Some(bevy_repl::prompt::PromptBorderConfig::default()),
+        color: Some(bevy_repl::prompt::PromptColorConfig::default()),
+        hint: Some(bevy_repl::prompt::PromptHintConfig::default()),
+    });
+    ```
+
+  - To run the pretty example:
+    ```bash
+    cargo run --example pretty --features pretty
+    ```
+
 ### Default Keybinds
 
 When the REPL is enabled, the following keybinds are available:
@@ -246,6 +344,8 @@ bottom of the terminal that supports keyboard input. The normal headless output
 is shifted up to make room for the input console, and everything else is
 printed to the terminal normally. The app is truly running headless, and the
 "partial-TUI" is directly modifying the terminal output with `crossterm`.
+
+Fancy REPL styling like a border and colors are available with the `pretty` feature.
 
 ```toml
 [dependencies]
@@ -384,6 +484,38 @@ inputs to Bevy as normal keycode events. However, this means that the app input
 handling fundamentally changes, even when the REPL is disabled. For development,
 it is more useful to have the app behave exactly as a normal headless app when
 the REPL is disabled to preserve consistency in input handling behavior.
+
+### Prompt styling
+
+The REPL prompt supports two visual modes controlled by a simple resource and optional feature flag:
+
+- __Minimal__ (default baseline): 1-line bottom bar, no border/colors/hint.
+  - Opt-in at runtime with `PromptMinimalPlugin`:
+
+    ```rust
+    app.add_plugins(PromptMinimalPlugin);
+    ```
+
+- __Pretty__ (feature-gated): border, colorful title/prompt, right-aligned hint.
+  - Enable feature and run:
+
+    ```bash
+    cargo run --example pretty --features pretty
+    ```
+
+  - When the `pretty` feature is enabled, `ReplPlugins` uses the pretty preset automatically. You can still override visuals by inserting `ReplPromptConfig` at runtime.
+
+Advanced users can customize visuals via the `ReplPromptConfig` resource:
+
+```rust
+// Use presets
+app.insert_resource(ReplPromptConfig::pretty());
+// or
+app.insert_resource(ReplPromptConfig::minimal());
+
+// Or customize explicitly
+app.insert_resource(ReplPromptConfig { border: true, color: false, hint: true });
+```
 
 ## Aspirations
 - [x] **Derive pattern** - Describe commands with clap's derive pattern.

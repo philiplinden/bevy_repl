@@ -30,6 +30,7 @@ tracing = { version = "0.1", features = [
 default = [
     "dev",
     "default_commands",
+    "pretty",
 ]
 dev = ["bevy/dynamic_linking"]
 default_commands = ["quit", "clear", "help"]
@@ -37,6 +38,7 @@ quit = []
 clear = []
 help = []
 derive = ["bevy_repl_derive", "clap/derive"]
+pretty = []
 
 [[example]]
 name = "minimal"
@@ -54,10 +56,6 @@ required-features = ["derive"]
 [[example]]
 name = "builder"
 path = "examples/builder.rs"
-
-[[example]]
-name = "toggle"
-path = "examples/toggle.rs"
 
 [[example]]
 name = "window"
@@ -83,12 +81,25 @@ path = "examples/key_events_suppressed.rs"
 [[example]]
 name = "spawn_entity"
 path = "examples/spawn_entity.rs"
-required-features = ["derive"]
 
 [[example]]
 name = "query"
 path = "examples/query.rs"
-required-features = ["derive"]
+
+[[example]]
+name = "pretty"
+path = "examples/pretty.rs"
+required-features = ["pretty"]
+
+[[example]]
+name = "pretty_custom"
+path = "examples/pretty_custom.rs"
+required-features = ["pretty"]
+
+[[example]]
+name = "custom_renderer"
+path = "examples/custom_renderer.rs"
+required-features = ["pretty"]
 
 # Idiomatic Bevy code often triggers these lints, and the CI workflow treats them as errors.
 # In some cases they may still signal poor code quality however, so consider commenting out these lines.

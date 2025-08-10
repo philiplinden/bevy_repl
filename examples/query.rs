@@ -9,15 +9,32 @@ use std::time::Duration;
 
 use bevy::{app::ScheduleRunnerPlugin, prelude::*};
 use bevy_repl::prelude::*;
-use clap::Parser;
 
 /// List entities, optionally filtering by a substring of their Name component.
-#[derive(Parser, ReplCommand, Debug, Clone, Event, Default)]
-#[command(name = "list", about = "List entities, optionally filter by name substring")] 
+#[derive(Debug, Clone, Event, Default)]
 struct ListCommand {
     /// Optional substring to filter `Name` by
-    #[arg(short = 'n', long = "name-contains")]
     name_contains: Option<String>,
+}
+
+impl ReplCommand for ListCommand {
+    fn clap_command() -> clap::Command {
+        clap::Command::new("list")
+            .about("List entities, optionally filter by name substring")
+            .arg(
+                clap::Arg::new("name_contains")
+                    .short('n')
+                    .long("name-contains")
+                    .num_args(1)
+                    .required(false)
+                    .help("Optional substring to filter Name by"),
+            )
+    }
+
+    fn to_event(matches: &clap::ArgMatches) -> bevy_repl::command::ReplResult<Self> {
+        let name_contains = matches.get_one::<String>("name_contains").cloned();
+        Ok(ListCommand { name_contains })
+    }
 }
 
 /// Observer demonstrating a read-only ECS query inside the handler.

@@ -12,7 +12,7 @@ pub mod prelude {
     pub use crate::command::ReplCommand;
     pub use crate::command::{ReplAppExt, ReplResult};
     pub use crate::plugin::ReplPlugins;
-    pub use crate::prompt::{PromptPlugin, ReplPrompt};
+    pub use crate::prompt::{PromptPlugin, ReplPromptConfig, ReplPrompt};
     pub use crate::repl::{
         Repl, ReplBufferEvent, ReplContext, ReplPlugin, ReplSet, ReplSubmitEvent, repl_is_enabled,
     };

@@ -1,4 +1,6 @@
 //! Minimal Bevy REPL example.
+//! 
+//! It's minimal in the sense that it has the minimum features enabled and the least dependencies.
 //!
 //! Demonstrates:
 //! - Registering a simple `ReplCommand` (ping)

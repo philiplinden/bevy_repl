@@ -9,15 +9,32 @@ use std::time::Duration;
 
 use bevy::{app::ScheduleRunnerPlugin, prelude::*};
 use bevy_repl::prelude::*;
-use clap::Parser;
 
 /// Spawn an entity with an optional `Name` component.
-#[derive(Parser, ReplCommand, Debug, Clone, Event, Default)]
-#[command(name = "spawn", about = "Spawn an entity, optionally with a name")] 
+#[derive(Debug, Clone, Event, Default)]
 struct SpawnEntityCommand {
     /// Optional name to attach to the spawned entity
-    #[arg(short = 'n', long = "name")]
     name: Option<String>,
+}
+
+impl ReplCommand for SpawnEntityCommand {
+    fn clap_command() -> clap::Command {
+        clap::Command::new("spawn")
+            .about("Spawn an entity, optionally with a name")
+            .arg(
+                clap::Arg::new("name")
+                    .short('n')
+                    .long("name")
+                    .num_args(1)
+                    .required(false)
+                    .help("Optional name to attach to the spawned entity"),
+            )
+    }
+
+    fn to_event(matches: &clap::ArgMatches) -> bevy_repl::command::ReplResult<Self> {
+        let name = matches.get_one::<String>("name").cloned();
+        Ok(SpawnEntityCommand { name })
+    }
 }
 
 /// Observer that handles the `spawn` command and spawns into the ECS.
