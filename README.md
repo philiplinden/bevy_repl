@@ -38,9 +38,9 @@ commands.
 | Feature Flag | Command | Description |
 | --- | --- | --- |
 | `default_commands` | `quit`, `help`, `clear` | Enable all built-in commands |
-| `quit` | `quit`, `q`, CTRL+C | Gracefully terminate the application |
-| `help` | `help` | Show clap help text |
-| `clear` | `clear` | Clear the REPL input buffer |
+| `quit` | `quit`, `q`, `exit` | Gracefully terminate the application |
+| `help` | `help` | Show clap help text (not yet implemented) |
+| `clear` | `clear` | Clear the terminal output |
 
 ### Prompt styling
 
@@ -57,7 +57,7 @@ colorful styles for title/prompt/hints, and a right-aligned hint text.
   - Appearance: border with title, colored styles, right-aligned usage hint.
   - Compilation: styling code compiled and enabled.
   - Config: presets or explicit `ReplPromptConfig { symbol, border, color, hint }`.
-  - Use: `cargo run --example pretty --features pretty`.
+  - Use `ReplPlugins.set(PromptPlugin::pretty())` as shown below.
 
 #### Custom renderer (feature-gated: `pretty`)
 
@@ -74,14 +74,14 @@ extension point for custom styles.
 - Minimal usage (in your Bevy app):
 
   ```rust
-  use bevy_repl::prompt::render::{ActiveRenderer, PromptRenderer, RenderCtx};
+  use bevy_repl::prompt::renderer::{PromptRenderer, RenderCtx};
 
   struct MyRenderer;
   impl PromptRenderer for MyRenderer {
       fn render(&self, f: &mut ratatui::Frame<'_>, ctx: &RenderCtx) {
           // draw a simple 1-line prompt in your own style
           // (see examples/custom_renderer.rs for a complete reference)
-          let area = bevy_repl::prompt::helpers::bottom_bar_area(ctx.area, 1);
+          let area = bevy_repl::prompt::renderer::helpers::bottom_bar_area(ctx.area, 1);
           let prompt = ctx.prompt.symbol.clone().unwrap_or_default();
           let spans = [ratatui::text::Span::raw(prompt), ratatui::text::Span::raw(&ctx.repl.buffer)];
           f.render_widget(ratatui::widgets::Paragraph::new(ratatui::text::Line::from(spans)), area);
@@ -89,8 +89,10 @@ extension point for custom styles.
   }
 
   App::new()
-      .add_plugins(ReplPlugins)
-      .insert_resource(ActiveRenderer(Box::new(MyRenderer)))
+      .add_plugins(ReplPlugins.set(PromptPlugin {
+        renderer: MyRenderer,
+        ..default()
+      }))
       .run();
   ```
 
@@ -103,7 +105,7 @@ if you want a minimal look.
 - __When is the alternate screen active?__
   - The alternate screen is active when `bevy_ratatui::RatatuiPlugins` is added to your app.
   - Using `ReplPlugins` (the default/turnkey group) automatically adds `RatatuiPlugins`, so the REPL renders in the alternate screen via `RatatuiContext`.
-  - Using `MinimalReplPlugins` does not add `RatatuiPlugins`; the prompt renders on the main terminal screen using the fallback `ReplContext`.
+  - Using `MinimalReplPlugins` adds some but not all Ratatui Plugins; the prompt renders on the main terminal screen using the fallback `FallbackTerminalContext`.
 
 - __Minimal (no alternate screen, no built-ins)__
 
@@ -154,12 +156,12 @@ if you want a minimal look.
     - Prefer sane defaults including built-in commands (`quit`, `help`, `clear`).
     - Don’t need to wire `RatatuiPlugins` manually.
 
-## Known Issues
+  By default `ReplPlugins` uses the minimal prompt renderer. To enable the pretty renderer when the `pretty` feature is on, use `ReplPlugins.set(PromptPlugin::pretty())`.
 
-- Input area does not stay pinned to the bottom of the terminal, and the prompt symbol does not display.
+## Known issues
+
 - Runtime toggle is not supported in v1 (planned for a future version).
-- Key events may leak through the REPL to Bevy when the REPL is enabled.
-- Built-in `help` and `clear` commands are currently non-functional.
+- Built-in `help` command is not yet implemented.
 
 ## Usage
 
@@ -168,14 +170,7 @@ mode too through the terminal while the app is running.
 
 ### REPL lifecycle (v1)
 
-For v1 there is no runtime toggle. The REPL is either enabled at startup or inert for the entire run.
-
-- __Configure at startup__: Use `ReplPlugin::enabled()`, `ReplPlugin::disabled()`, or `ReplPlugin::with_enabled(bool)`.
-- __When enabled__: The plugin initializes terminal raw mode and inserts a `ReplContext` at startup. REPL systems run and consume input intended for the prompt.
-- __When disabled__: No REPL resources or systems are registered; the application behaves as if the REPL is absent.
-- __Shutdown__: On `AppExit`, raw mode is restored and `ReplContext` is removed.
-
-Internally, this lifecycle is handled with event-based observers (Enable on startup; Disable on exit). There is intentionally no key-based toggle in v1.
+For v1 there is no runtime toggle. The REPL is enabled when you add the plugin group and remains active for the run.
 
 Trigger commands by typing them in the REPL input buffer and pressing `Enter`.
 The REPL will parse the command and trigger an event with the command's arguments
@@ -253,13 +248,17 @@ fn main() {
                 bevy::app::ScheduleRunnerPlugin::run_loop(
                     Duration::from_secs_f32(1. / 60.)
                 )
-            )),
-            ReplPlugin,
+            ),
+            // Bevy input plugin is required to detect keyboard inputs
+            bevy::input::InputPlugin::default(),
+            // Default REPL stack (alternate screen, built-ins) with minimal renderer
+            ReplPlugins,
         ))
         .add_repl_command::<SimpleCommandWithoutArgs>()
         .add_observer(on_simple)
         .add_repl_command::<CommandWithArgs>()
-        .add_observer(on_command_with_args);
+        .add_observer(on_command_with_args)
+        .run();
 }
 ```
 
@@ -269,7 +268,7 @@ Enable the `derive` feature in your `Cargo.toml` to use the derive pattern.
 
 ```toml
 [dependencies]
-bevy_repl = { version = "0.1.0", features = ["derive"] }
+bevy_repl = { version = "0.3.0", features = ["derive"] }
 ```
 
 Then derive the `ReplCommand` trait on your command struct along with clap's
@@ -309,11 +308,10 @@ struct CommandWithArgs {
   - In pretty builds, you can use presets or customize:
 
     ```rust
-    // Presets chosen automatically by ReplPlugins based on the feature flag
-    // pretty off  -> ReplPromptConfig::minimal()
-    // pretty on   -> ReplPromptConfig::pretty()
-
-    // Override at runtime (pretty build):
+    // ReplPlugins uses the minimal renderer by default.
+    // To enable the pretty renderer (with the `pretty` feature enabled), either:
+    //   - Set the plugin group: ReplPlugins.set(PromptPlugin::pretty())
+    //   - Or override visuals at runtime:
     app.insert_resource(bevy_repl::prompt::ReplPromptConfig::pretty());
     // or
     app.insert_resource(bevy_repl::prompt::ReplPromptConfig::minimal());
@@ -331,7 +329,7 @@ struct CommandWithArgs {
     cargo run --example pretty --features pretty
     ```
 
-### Default Keybinds
+### Default keybinds
 
 When the REPL is enabled, the following keybinds are available:
 
@@ -343,7 +341,9 @@ When the REPL is enabled, the following keybinds are available:
 | `Home/End` | Jump to start/end of line |
 | `Backspace` | Delete character before cursor |
 | `Delete` | Delete character at cursor |
-| `CTRL+C` | Exit application |
+| `Esc` | Clear input buffer |
+
+Note: `Ctrl+C` behaves like a normal terminal interrupt and is not handled by the REPL.
 
 ## Design
 
@@ -403,7 +403,7 @@ Fancy REPL styling like a border and colors are available with the `pretty` feat
 
 ```toml
 [dependencies]
-bevy_repl = { version = "0.1.0", features = ["default-commands"] }
+bevy_repl = { version = "0.3.0", features = ["default-commands"] }
 ```
 
 **REPL disabled (regular headless mode):**
