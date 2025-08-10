@@ -223,7 +223,7 @@ If you truly need to emit raw `stdout` (e.g., piping to tools) while the REPL is
 
 ### Routing Bevy logs to the REPL
 
-You can route logs produced by Bevy's `LogPlugin` (which uses `tracing`) into Bevy's ECS and print them via the REPL so they appear above the prompt and scroll correctly.
+You can route logs produced by Bevy's `tracing` pipeline to the REPL so they appear above the prompt and scroll correctly.
 
 - __How it works__
   - A custom `tracing` Layer captures log events and forwards them through an `mpsc` channel to a Non-Send resource.
@@ -236,37 +236,27 @@ You can route logs produced by Bevy's `LogPlugin` (which uses `tracing`) into Be
   - Event type: `LogEvent`
   - Optional print system: `print_log_events_system`
 
-- __Setup__
+- __Recommended setup (preserve colors/format & avoid duplicate stdout)__
+
+If you primarily want logs to print above the prompt with the usual colors/formatting, install the REPL-aware fmt layer and disable the native stdout logger. Importantly, call the installer BEFORE adding `DefaultPlugins`.
 
 ```rust
 use bevy::prelude::*;
-use bevy_repl::prelude::*; // re-exports repl_log_custom_layer, LogEvent, print_log_events_system
+use bevy_repl::prelude::*;
 
 fn main() {
+    // 1) Install REPL-aware fmt layer before plugins
+    tracing_to_repl_fmt();
+
     App::new()
         .add_plugins((
-            // Configure Bevy logging as usual, but attach our custom layer
-            DefaultPlugins.set(bevy::log::LogPlugin {
-                // Example: show up to TRACE from your app, keep others at WARN
-                level: bevy::log::Level::TRACE,
-                filter: "warn,my_app=trace".to_string(),
-                custom_layer: repl_log_custom_layer,
-                ..Default::default()
-            }),
-            // Enable the REPL (pretty renderer recommended)
+            // 2) Disable Bevy's stdout logger to prevent duplicate/garbled output
+            DefaultPlugins.build().disable::<bevy::log::LogPlugin>(),
             ReplPlugins.set(PromptPlugin::pretty()),
         ))
-        // Option A: print captured log events via the REPL
-        .add_systems(Update, print_log_events_system)
-        // Option B: or read Event<LogEvent> in your own systems
         .run();
 }
 ```
-
-- __Notes__
-  - This approach relies on Bevy's `LogPlugin` and its `custom_layer` hook; you don't need to install a global `tracing` subscriber yourself.
-  - The provided printing system uses `repl_println!` to cooperate with the prompt's scroll region.
-  - If you prefer full control, omit `print_log_events_system` and consume `Event<LogEvent>` directly.
 
 ### Startup ordering (PostStartup)
 
@@ -290,6 +280,8 @@ fn main() {
 ```
 
 ## Usage
+
+> Note: When routing logs to the REPL (to keep formatting/colors and avoid prompt corruption), we recommend disabling Bevy's native stdout logger: `DefaultPlugins.build().disable::<bevy::log::LogPlugin>()`. Use the provided REPL-aware formatter (see Routing Bevy logs to the REPL) or a custom layer instead.
 
 The REPL is designed to be used in headless mode, but it can be used in windowed
 mode too through the terminal while the app is running.

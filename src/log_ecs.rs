@@ -116,10 +116,28 @@ impl std::io::Write for ReplWriter {
 
 /// Install a global tracing subscriber with a fmt layer that writes to the REPL printer.
 /// Call this BEFORE adding `DefaultPlugins`, and disable `LogPlugin` to avoid duplicate stdout.
-pub fn install_tracing_to_repl_fmt() {
+pub fn tracing_to_repl_fmt() {
+    tracing_to_repl_fmt_with_level(bevy::log::Level::INFO);
+}
+
+/// Same as `install_tracing_to_repl_fmt`, but lets you choose the max log level
+/// (to mirror the `level` used by Bevy's `LogPlugin`).
+pub fn tracing_to_repl_fmt_with_level(level: bevy::log::Level) {
     use ts::{fmt, prelude::*, registry::Registry};
+    use ts::filter::LevelFilter;
+
+    let lf = match level {
+        bevy::log::Level::ERROR => LevelFilter::ERROR,
+        bevy::log::Level::WARN => LevelFilter::WARN,
+        bevy::log::Level::INFO => LevelFilter::INFO,
+        bevy::log::Level::DEBUG => LevelFilter::DEBUG,
+        bevy::log::Level::TRACE => LevelFilter::TRACE,
+    };
+
     let layer = fmt::layer()
         .with_ansi(true)
-        .with_writer(ReplMakeWriter);
+        .with_writer(ReplMakeWriter)
+        .with_filter(lf);
+
     let _ = Registry::default().with(layer).try_init();
 }

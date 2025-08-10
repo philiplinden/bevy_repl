@@ -1,7 +1,7 @@
 //! REPL feature demo
 //!
 //! Interactive walkthrough of the main features of the REPL
-//! 
+//!
 //! For this demo, we enabled the following feature flags:
 //! - `quit` to enable the `quit` command (included with `default_commands` feature)
 //! - `pretty` to use a fancy style prompt (`PromptPlugin::pretty()`)
@@ -123,6 +123,8 @@ impl Plugin for DemoPlugin {
 #[derive(Debug, Clone, Event, Default)]
 struct SayCommand {
     message: String,
+    repeat: usize,
+    shout: bool,
 }
 
 // Implement ReplCommand trait with builder pattern
@@ -135,14 +137,36 @@ impl ReplCommand for SayCommand {
                     .help("Message to say")
                     .required(true),
             )
-            .alias("s")
-            .alias("print")
-            .alias("echo")
+            .arg(
+                clap::Arg::new("repeat")
+                    .short('r')
+                    .long("repeat")
+                    .help("Number of times to repeat")
+                    .default_value("1"),
+            )
+            .arg(
+                clap::Arg::new("shout")
+                    .short('s')
+                    .long("shout")
+                    .help("Shout the message")
+                    .action(clap::ArgAction::SetTrue)
+                    .num_args(0),
+            )
     }
 
     fn to_event(matches: &clap::ArgMatches) -> ReplResult<Self> {
         let message = matches.get_one::<String>("message").unwrap().clone();
-        Ok(SayCommand { message })
+        let repeat = matches
+            .get_one::<String>("repeat")
+            .and_then(|s| s.parse::<usize>().ok())
+            .unwrap_or(1);
+        let shout = matches.get_flag("shout");
+
+        Ok(SayCommand {
+            message,
+            repeat,
+            shout,
+        })
     }
 }
 
@@ -150,9 +174,18 @@ impl ReplCommand for SayCommand {
 fn on_say(trigger: Trigger<SayCommand>) {
     let command = trigger.event();
 
-    let message = command.message.clone();
+    let message = if command.shout {
+        command.message.to_uppercase()
+    } else {
+        command.message.clone()
+    };
     // Print the main message
     repl_println!("Saying: {}", message);
+
+    // Print repeated messages
+    for i in 0..command.repeat {
+        repl_println!("{}: {}", i + 1, message);
+    }
 }
 
 // --- Logging demo: start/stop a periodic log stream with auto-stop ---
@@ -287,13 +320,13 @@ impl ReplCommand for QueryCommand {
 fn on_query(trigger: Trigger<QueryCommand>, query: Query<(Entity, &Name)>) {
     let sub = trigger.event().substring.to_lowercase();
     let mut found = 0usize;
+    repl_println!("Matches: {}", found);
     for (e, name) in query.iter() {
         if name.as_str().to_lowercase().contains(&sub) {
             repl_println!("- {:?}: {}", e, name.as_str());
             found += 1;
         }
     }
-    repl_println!("Matches: {}", found);
 }
 
 #[derive(Debug, Clone, Event, Default)]
@@ -350,17 +383,37 @@ fn run_step_instructions(mut state: ResMut<DemoState>) {
     state.last_printed = Some(state.step);
     match state.step {
         DemoStep::Intro => {
-            repl_println!("\x1b[36m d8b                                                               d8b \x1b[0m");
-            repl_println!("\x1b[96m ?88                                                               88P \x1b[0m");
-            repl_println!("\x1b[35m  88b                                                             d88  \x1b[0m");
-            repl_println!("\x1b[33m  888888b  d8888b?88   d8P?88   d8P       88bd88b d8888b?88,.d88b,888  \x1b[0m");
-            repl_println!("\x1b[32m  88P `?8bd8b_,dPd88  d8P'd88   88        88P'  `d8b_,dP`?88'  ?88?88  \x1b[0m");
-            repl_println!("\x1b[34m d88,  d8888b    ?8b ,88' ?8(  d88       d88     88b      88b  d8P 88b \x1b[0m");
-            repl_println!("\x1b[35m d88'`?88P'`?888P'`?888P'  `?88P'?8b     d88'     `?888P'  888888P'  88b\x1b[0m");
-            repl_println!("\x1b[36m                                  )88                      88P'         \x1b[0m");
-            repl_println!("\x1b[37m                                 ,d8P                     d88           \x1b[0m");
-            repl_println!("\x1b[90m                              `?888P'                     ?8P           \x1b[0m");
-            
+            repl_println!(
+                "\x1b[36m d8b                                                               d8b \x1b[0m"
+            );
+            repl_println!(
+                "\x1b[96m ?88                                                               88P \x1b[0m"
+            );
+            repl_println!(
+                "\x1b[35m  88b                                                             d88  \x1b[0m"
+            );
+            repl_println!(
+                "\x1b[33m  888888b  d8888b?88   d8P?88   d8P       88bd88b d8888b?88,.d88b,888  \x1b[0m"
+            );
+            repl_println!(
+                "\x1b[32m  88P `?8bd8b_,dPd88  d8P'd88   88        88P'  `d8b_,dP`?88'  ?88?88  \x1b[0m"
+            );
+            repl_println!(
+                "\x1b[34m d88,  d8888b    ?8b ,88' ?8(  d88       d88     88b      88b  d8P 88b \x1b[0m"
+            );
+            repl_println!(
+                "\x1b[35m d88'`?88P'`?888P'`?888P'  `?88P'?8b     d88'     `?888P'  888888P'  88b\x1b[0m"
+            );
+            repl_println!(
+                "\x1b[36m                                  )88                      88P'         \x1b[0m"
+            );
+            repl_println!(
+                "\x1b[37m                                 ,d8P                     d88           \x1b[0m"
+            );
+            repl_println!(
+                "\x1b[90m                              `?888P'                     ?8P           \x1b[0m"
+            );
+
             repl_print_block(
                 r#"
 Welcome to the Bevy REPL demo!
@@ -379,9 +432,15 @@ Type `next` to proceed, or `back` to go to the previous step.
 ------
 Text you type into the REPL is parsed by clap into commands and arguments.
 Aliases are alternate mappings to the same underlying command.
+Since we are using clap for parsing, we its whole API, including flags like --help.
 
-Try: `say hello world`
-Or try an alias of say: `s hello world`, `print hello world`, `echo hello world`
+Try: `say hello world` or `echo hello world`
+
+Options:
+    `--shout`           make the output uppercase
+    `--repeat <number>` repeat the output <number> times
+    `--help`            show help for the command
+
 `next` to proceed.
 "#,
             );
@@ -479,11 +538,17 @@ Type `quit` to exit, or `next` to restart at the beginning.
 }
 
 fn main() {
+    // Install a global fmt layer that writes logs directly to the REPL printer,
+    // preserving colors and formatting. Do this BEFORE adding DefaultPlugins.
+    tracing_to_repl_fmt();
+
     App::new()
         .add_plugins((
-            DefaultPlugins.set(ScheduleRunnerPlugin::run_loop(Duration::from_secs_f64(
-                1.0 / 60.0,
-            ))),
+            DefaultPlugins
+                .set(ScheduleRunnerPlugin::run_loop(Duration::from_secs_f64(
+                    1.0 / 60.0,
+                )))
+                .disable::<bevy::log::LogPlugin>(),
             ReplPlugins.set(PromptPlugin::pretty()),
             DemoPlugin,
         ))

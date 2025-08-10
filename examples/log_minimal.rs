@@ -26,7 +26,7 @@ fn spam_logs(mut timer: ResMut<SpamTimer>, time: Res<Time>) {
 fn main() {
     // Install a global fmt layer that writes logs directly to the REPL printer,
     // preserving colors/formatting. Do this BEFORE adding DefaultPlugins.
-    install_tracing_to_repl_fmt();
+    tracing_to_repl_fmt();
 
     App::new()
         .add_plugins((

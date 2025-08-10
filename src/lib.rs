@@ -31,7 +31,8 @@ pub mod prelude {
 
     pub use crate::log_ecs::{
         custom_layer as repl_log_custom_layer,
-        install_tracing_to_repl_fmt,
+        tracing_to_repl_fmt,
+        tracing_to_repl_fmt_with_level,
         LogEvent,
         print_log_events_system,
     };

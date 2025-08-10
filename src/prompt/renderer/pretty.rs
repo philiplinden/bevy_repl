@@ -6,11 +6,11 @@ use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Borders, Paragraph};
 
 use bevy::prelude::*;
-use std::io::{self, stdout, Write};
+use std::io::{stdout, Write};
 use bevy_ratatui::crossterm::terminal;
 
 use crate::prompt::ReplPromptConfig;
-use crate::print::{set_scroll_region_info, printed_lines, repl_print};
+use crate::print::{set_scroll_region_info, printed_lines};
 use super::{PromptRenderer, RenderCtx};
 use super::helpers::{bottom_bar_area, buffer_window, cursor_position};
 use crate::repl::{Repl, ReplSet};

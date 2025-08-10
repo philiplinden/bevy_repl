@@ -60,39 +60,86 @@ Output demo.gif
 Require cargo
 
 Set Shell "bash"
-Set FontSize 24
-Set Width 1200
-Set Height 1200
+Set FontSize 20
+Set Width 1400
+Set Height 1600
 
-Type "cargo run --quiet --example demo" Enter
-Sleep 5s
-Type "next" Enter
-Sleep 2s
-Type "say hello" Enter
-Type "echo world" Enter
-Sleep 2s
-Type "next" Enter
-Sleep 2s
-# Type "start" Enter
-# Sleep 2s
-# Type "stop" Enter
-# Sleep 2s
-Type "next" Enter
-Sleep 2s
-Type "ping" Enter
-Sleep 2s
-Type "next" Enter
-Sleep 2s
-Type "spawn foo" Enter
-Type "spawn bar" Enter
-Type "spawn baz" Enter
-Type "list" Enter
+Type "cargo run --quiet --example demo"
+Enter
+Sleep 10s
+Type "next"
 Sleep 1s
-Type "query b" Enter
+Enter
+Sleep 3s
+Type "say --help"
 Sleep 1s
-Type "remove bar" Enter
-Type "list" Enter
-Sleep 2s
-Type "next" Enter
+Enter
 Sleep 5s
-Type "quit" Enter
+Type "say hello" 
+Sleep 1s 
+Enter
+Sleep 3s
+Type "echo world --repeat 3" 
+Sleep 1s 
+Enter
+Sleep 3s
+Type "say what? --shout" 
+Sleep 1s 
+Enter
+Sleep 3s
+Type "next" 
+Sleep 1s 
+Enter
+Sleep 3s
+Type "start" 
+Sleep 1s 
+Enter
+Sleep 3s
+Type "stop" 
+Sleep 1s 
+Enter
+Sleep 3s
+Type "next" 
+Sleep 1s 
+Enter
+Sleep 3s
+Type "ping" 
+Sleep 1s 
+Enter
+Sleep 3s
+Type "next" 
+Sleep 1s 
+Enter
+Sleep 3s
+Type "spawn foo" 
+Sleep 1s 
+Enter
+Type "spawn bar" 
+Sleep 1s 
+Enter
+Type "spawn baz" 
+Sleep 1s 
+Enter
+Type "list" 
+Sleep 1s 
+Enter
+Sleep 3s
+Type "query b" 
+Sleep 1s 
+Enter
+Sleep 3s
+Type "remove bar" 
+Sleep 1s 
+Enter
+Type "list" 
+Sleep 1s 
+Enter
+Sleep 3s
+Type "next" 
+Sleep 1s 
+Enter
+Sleep 5s
+Type "quit" 
+Sleep 3s 
+Enter
+Sleep 3s
