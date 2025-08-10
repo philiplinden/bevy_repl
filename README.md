@@ -3,19 +3,22 @@
 ![Made with VHS](https://vhs.charm.sh/vhs-6kUt4mnyvUcmbpVfWzHx4s.gif)
 
 An interactive REPL for headless Bevy apps powered by `clap` for command parsing
-and `bevy_ratatui` for terminal input and output. The plugin adds a togglable
-text input area below the terminal output for interaction even in headless mode.
+and `bevy_ratatui` for terminal input and output. The plugin adds a text input
+area below the terminal output for interaction even in headless mode.
 
-- Unobtrusive, toggleable TUI console below normal terminal output
+- Unobtrusive TUI console below normal terminal output
 - Command parsing and CLI features from `clap`  
-- Observer-based command execution system
-- Full Bevy ECS access for both read and write operations
+- Observer-based command execution system with full Bevy ECS access for both
+  read and write operations
+- Logging integration with `bevy_log` and `tracing` for unified output display
+- Support for custom prompt rendering and minimal prompt mode
+- Works in tandem with windowed apps from the terminal
+- Built-in commands for common tasks (just `quit` for now)
 
-The REPL is designed as an alternative to [makspll/bevy-console] for Bevy apps
+The REPL is designed as an alternative to
+[makspll/bevy-console](https://github.com/makspll/bevy-console) for Bevy apps
 that want a terminal-like console to modify the game at runtime without
 implementing a full TUI or rendering features.
-
-[makspll/bevy-console]: https://github.com/makspll/bevy-console
 
 > This is my first public Bevy plugin, and I vibe-coded a large part
 > of it. **You have been warned.**
