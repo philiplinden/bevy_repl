@@ -7,10 +7,12 @@ on:
     paths-ignore: # don't trigger on changes to these files
       - "CHANGELOG.md"
   push:
-    branches:
-      - "main"
+    # branches:
+    #   - "main"
     paths-ignore: # don't trigger on changes to these files
       - "CHANGELOG.md"
+  workflow_dispatch:
+    
 
 jobs:
   update-changelog:
