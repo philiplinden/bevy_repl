@@ -18,6 +18,39 @@ implementing a full TUI or rendering features.
 > This is my first public Bevy plugin, and I vibe-coded a large part
 > of it. **You have been warned.**
 
+## Table of Contents
+
+- [bevy\_repl](#bevy_repl)
+  - [Table of Contents](#table-of-contents)
+  - [Features](#features)
+    - [Derive](#derive)
+    - [Built-in commands](#built-in-commands)
+    - [Prompt styling](#prompt-styling)
+      - [Custom renderer (feature-gated: `pretty`)](#custom-renderer-feature-gated-pretty)
+      - [Plugin groups and alternate screen](#plugin-groups-and-alternate-screen)
+    - [Robust printing in raw/alternate screen terminals](#robust-printing-in-rawalternate-screen-terminals)
+    - [Startup ordering (PostStartup)](#startup-ordering-poststartup)
+  - [Usage](#usage)
+    - [REPL lifecycle (v1)](#repl-lifecycle-v1)
+    - [Builder pattern (default)](#builder-pattern-default)
+    - [Derive pattern (requires `derive` feature)](#derive-pattern-requires-derive-feature)
+    - [Prompt styling](#prompt-styling-1)
+    - [Default keybinds](#default-keybinds)
+  - [Design](#design)
+    - [Headless mode](#headless-mode)
+    - [REPL Console](#repl-console)
+    - [Command parsing](#command-parsing)
+    - [Scheduling](#scheduling)
+    - [Directly modifying the terminal (to-do)](#directly-modifying-the-terminal-to-do)
+    - [Prompt styling](#prompt-styling-2)
+  - [Known issues \& limitations](#known-issues--limitations)
+    - [Built-in `help` and `clear` commands are not yet implemented](#built-in-help-and-clear-commands-are-not-yet-implemented)
+    - [Runtime toggle is not supported](#runtime-toggle-is-not-supported)
+    - [Key events are not forwarded to Bevy](#key-events-are-not-forwarded-to-bevy)
+    - [Minimal renderer prompt does not scroll with terminal output](#minimal-renderer-prompt-does-not-scroll-with-terminal-output)
+  - [Aspirations](#aspirations)
+  - [License](#license)
+
 ## Features
 
 Theoretically all clap features are supported, but I have only tested `derive`.
@@ -163,9 +196,8 @@ if you want a minimal look.
 When the REPL is active, the terminal often runs in raw mode and may use the alternate screen. In these contexts, normal `println!` can leave the cursor in an odd position or produce inconsistent newlines. To ensure safe, consistent output, use the provided `bevy_repl::repl_println!` macro instead of `println!`.
 
 - __What it does__
-  - Moves the cursor to column 0 before printing
-  - Writes your message followed by CRLF (`\r\n`)
-  - Flushes stdout immediately
+  - Minimal renderer: moves the cursor to column 0 before printing, writes CRLF (`\r\n`), and flushes stdout.
+  - Pretty renderer: additionally cooperates with the terminal scroll region reserved for the prompt; before printing it moves to the last scrollable line so output scrolls above the prompt without overwriting it.
 
 - __When to use__
   - Any time you print from systems/observers while the REPL is active
@@ -185,6 +217,27 @@ fn instructions() {
 ```
 
 If you truly need to emit raw `stdout` (e.g., piping to tools) while the REPL is active, consider temporarily suspending the TUI or buffering output and emitting it via `repl_println!`.
+
+### Startup ordering (PostStartup)
+
+- __Why__: In pretty mode, the prompt reserves the bottom lines with a terminal scroll region. Startup prints (like instructions) should run after this region is established to avoid overlapping the prompt.
+- __How__: Use the global `ScrollRegionReadySet` to order your startup prints. This label exists in all builds; in minimal mode it’s a no-op.
+
+```rust
+use bevy::prelude::*;
+use bevy_repl::prelude::*;
+
+fn instructions() {
+    bevy_repl::repl_println!("Welcome!");
+}
+
+fn main() {
+    App::new()
+        .add_plugins(ReplPlugins)
+        .add_systems(PostStartup, instructions.after(ScrollRegionReadySet))
+        .run();
+}
+```
 
 ## Usage
 
