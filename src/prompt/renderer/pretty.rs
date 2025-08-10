@@ -1,14 +1,97 @@
+use super::ScrollRegionReadySet;
+
 use ratatui::layout::Rect;
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Borders, Paragraph};
 
+use bevy::prelude::*;
+use std::io::{stdout, Write};
+use bevy_ratatui::crossterm::terminal;
+
 use crate::prompt::ReplPromptConfig;
+use crate::print::{set_scroll_region_info, printed_lines};
 use super::{PromptRenderer, RenderCtx};
 use super::helpers::{bottom_bar_area, buffer_window, cursor_position};
+use crate::repl::{Repl, ReplSet};
 
 /// Return whether border is enabled under pretty feature.
 pub fn border_on(cfg: &ReplPromptConfig) -> bool { cfg.border.is_some() }
+
+pub struct ScrollRegionPlugin;
+
+impl Plugin for ScrollRegionPlugin {
+    fn build(&self, app: &mut App) {
+        // Ensure region is set early (before any PostStartup prints)
+        app.add_systems(Startup, manage_pretty_scroll_region);
+        // Run once in PostStartup too, in the labeled set, to catch cases where
+        // terminal size isn't ready at Startup and to provide ordering guarantees.
+        app.add_systems(PostStartup, manage_pretty_scroll_region.in_set(ScrollRegionReadySet));
+        app.add_systems(
+            Update,
+            (
+                manage_pretty_scroll_region
+                    .in_set(ReplSet::Render)
+                    .in_set(ReplSet::All)
+                    .after(ReplSet::Buffer)
+                    .before(super::display_prompt),
+            ),
+        );
+    }
+}
+
+/// Ensure the terminal scroll region reserves the bottom prompt area so that
+/// stdout/logs scroll above the REPL prompt instead of overwriting it.
+fn manage_pretty_scroll_region(
+    repl: Res<Repl>,
+    visuals: Option<Res<ReplPromptConfig>>,
+    mut last: Local<Option<(bool, u16, u16)>>, // (enabled, height, reserved_lines)
+) {
+    // Determine desired reserved lines for the prompt area: pretty uses a border (3 lines).
+    let vis = visuals.map(|v| v.clone()).unwrap_or_default();
+    let border_on = vis.border.is_some();
+    let reserved_lines: u16 = if repl.enabled && border_on { 3 } else { 0 };
+
+    // Read terminal size; if unavailable, do nothing
+    let Ok((_w, h)) = terminal::size() else { return };
+
+    let desired = (repl.enabled, h, reserved_lines);
+    if last.as_ref() == Some(&desired) {
+        return; // No change
+    }
+
+    let mut out = stdout();
+    let prev_reserved = last.as_ref().map(|t| t.2).unwrap_or(0);
+    if reserved_lines == 0 {
+        // If we never set a region before, do nothing (avoid touching terminal on minimal startup)
+        if last.is_some() {
+            // Reset to full region
+            let _ = write!(out, "\x1B[r");
+            // Publish reset so printers stop repositioning
+            set_scroll_region_info(h, 0);
+        }
+    } else {
+        // DECSTBM: ESC[{top};{bottom}r with 1-based coordinates
+        // Reserve `reserved_lines` at the bottom => bottom = h - reserved_lines
+        let bottom = h.saturating_sub(reserved_lines);
+        let _ = write!(out, "\x1B[1;{}r", bottom);
+        // Publish region so printers can target bottom of scrollable area
+        set_scroll_region_info(h, reserved_lines);
+        // If this is the first time enabling reservation (or transitioning from 0),
+        // scroll the region up by emitting newlines at the last scrollable line. This is
+        // generally more predictable across terminals than CSI S.
+        if prev_reserved == 0 && printed_lines() > 0 {
+            // Move to last scrollable line (1-based row: bottom)
+            let _ = write!(out, "\x1B[{};1H", bottom);
+            for _ in 0..reserved_lines {
+                let _ = write!(out, "\n");
+            }
+        }
+    }
+    let _ = out.flush();
+
+    *last = Some(desired);
+}
 
 /// Compute full bar height based on border state.
 pub fn bar_height(border_on: bool) -> u16 { if border_on { 3 } else { 1 } }

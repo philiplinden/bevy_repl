@@ -24,17 +24,8 @@ use bevy::{app::ScheduleRunnerPlugin, prelude::*};
 use bevy_repl::prelude::*;
 use std::time::Duration;
 
-fn main() {
-    App::new()
-        .add_plugins((
-            // Headless loop in the terminal
-            MinimalPlugins
-                .set(ScheduleRunnerPlugin::run_loop(Duration::from_secs_f64(1.0 / 60.0))),
-            bevy::input::InputPlugin::default(),
-            ReplPlugins,
-        ))
-        .add_systems(PostStartup, instructions)
-        .run();
+fn yes_no(v: bool) -> &'static str {
+    if v { "ENABLED" } else { "disabled" }
 }
 
 fn instructions() {
@@ -65,6 +56,15 @@ fn instructions() {
     repl_println!();
 }
 
-fn yes_no(v: bool) -> &'static str {
-    if v { "ENABLED" } else { "disabled" }
+fn main() {
+    App::new()
+        .add_plugins((
+            // Headless loop in the terminal
+            MinimalPlugins
+                .set(ScheduleRunnerPlugin::run_loop(Duration::from_secs_f64(1.0 / 60.0))),
+            bevy::input::InputPlugin::default(),
+            ReplPlugins,
+        ))
+        .add_systems(PostStartup, instructions.after(ScrollRegionReadySet))
+        .run();
 }

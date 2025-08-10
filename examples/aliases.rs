@@ -74,6 +74,6 @@ fn main() {
         ))
         .add_repl_command::<SayCommand>()
         .add_observer(on_say)
-        .add_systems(PostStartup, instructions)
+        .add_systems(PostStartup, instructions.after(ScrollRegionReadySet))
         .run();
 }
