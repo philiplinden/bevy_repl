@@ -13,8 +13,22 @@ pub fn bottom_bar_area(total: Rect, height: u16) -> Rect {
     }
 }
 
-/// Compute a visible window of the input buffer such that the cursor remains visible.
-/// Returns (visible_slice, start_index_of_slice).
+/// Computes a visible window (substring) of the input buffer such that the cursor remains visible within the given width.
+///
+/// The function ensures that the returned slice of the buffer is at most `visible_width` characters wide and contains the character at the `cursor` position (or as close as possible if the cursor is near the start or end).
+///
+/// # Arguments
+/// * `buffer` - The full input string to window.
+/// * `cursor` - The current cursor position (as a byte index into `buffer`).
+/// * `visible_width` - The maximum number of characters to display in the window.
+///
+/// # Returns
+/// A tuple containing:
+/// * `String` - The visible slice of the buffer to display.
+/// * `usize` - The starting character index in `buffer` of the visible slice.
+///
+/// # Algorithm
+/// The function calculates a window of up to `visible_width` characters that ends at or after the cursor position, ensuring the cursor is always visible. If the buffer is shorter than `visible_width`, the entire buffer is shown. If the cursor is near the end, the window shifts left to keep the cursor visible.
 pub fn buffer_window(buffer: &str, cursor: usize, visible_width: u16) -> (String, usize) {
     if visible_width == 0 {
         return (String::new(), 0);

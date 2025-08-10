@@ -40,12 +40,19 @@ impl Plugin for ScrollRegionPlugin {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ScrollRegionState {
+    pub enabled: bool,
+    pub height: u16,
+    pub reserved_lines: u16,
+}
+
 /// Ensure the terminal scroll region reserves the bottom prompt area so that
 /// stdout/logs scroll above the REPL prompt instead of overwriting it.
 fn manage_pretty_scroll_region(
     repl: Res<Repl>,
     visuals: Option<Res<ReplPromptConfig>>,
-    mut last: Local<Option<(bool, u16, u16)>>, // (enabled, height, reserved_lines)
+    mut last: Local<Option<ScrollRegionState>>,
 ) {
     // Determine desired reserved lines for the prompt area: pretty uses a border (3 lines).
     let vis = visuals.map(|v| v.clone()).unwrap_or_default();
@@ -55,13 +62,13 @@ fn manage_pretty_scroll_region(
     // Read terminal size; if unavailable, do nothing
     let Ok((_w, h)) = terminal::size() else { return };
 
-    let desired = (repl.enabled, h, reserved_lines);
+    let desired = ScrollRegionState { enabled: repl.enabled, height: h, reserved_lines };
     if last.as_ref() == Some(&desired) {
         return; // No change
     }
 
     let mut out = stdout();
-    let prev_reserved = last.as_ref().map(|t| t.2).unwrap_or(0);
+    let prev_reserved = last.as_ref().map(|t| t.reserved_lines).unwrap_or(0);
     if reserved_lines == 0 {
         // If we never set a region before, do nothing (avoid touching terminal on minimal startup)
         if last.is_some() {
@@ -75,22 +82,41 @@ fn manage_pretty_scroll_region(
         // Reserve `reserved_lines` at the bottom => bottom = h - reserved_lines
         let bottom = h.saturating_sub(reserved_lines);
         let _ = write!(out, "\x1B[1;{}r", bottom);
-        // Publish region so printers can target bottom of scrollable area
         set_scroll_region_info(h, reserved_lines);
-        // If this is the first time enabling reservation (or transitioning from 0),
-        // scroll the region up by emitting newlines at the last scrollable line. This is
-        // generally more predictable across terminals than CSI S.
-        if prev_reserved == 0 && printed_lines() > 0 {
-            // Move to last scrollable line (1-based row: bottom)
-            let _ = write!(out, "\x1B[{};1H", bottom);
-            for _ in 0..reserved_lines {
-                let _ = write!(out, "\n");
-            }
-        }
+        scroll_reserved_region_up(&mut out, bottom, reserved_lines, prev_reserved, printed_lines());
     }
     let _ = out.flush();
 
     *last = Some(desired);
+}
+
+/// Scroll the reserved region up by emitting newlines at the last scrollable line.
+///
+/// This is used when the scroll region is first enabled (or transitioning from 0),
+/// to ensure that the prompt area at the bottom is clear and that output appears
+/// above the reserved region. This is generally more predictable across terminals
+/// than using CSI S (scroll up).
+///
+/// # Arguments
+/// * `out` - The output stream to write terminal escape codes to.
+/// * `bottom` - The 1-based row number of the last scrollable line.
+/// * `reserved_lines` - The number of lines reserved at the bottom.
+/// * `prev_reserved` - The previous number of reserved lines.
+/// * `printed_lines` - The number of lines already printed to the terminal.
+fn scroll_reserved_region_up(
+    out: &mut std::io::Stdout,
+    bottom: u16,
+    reserved_lines: u16,
+    prev_reserved: u16,
+    printed_lines: usize,
+) {
+    if prev_reserved == 0 && printed_lines > 0 {
+        // Move to last scrollable line (1-based row: bottom)
+        let _ = write!(out, "\x1B[{};1H", bottom);
+        for _ in 0..reserved_lines {
+            let _ = write!(out, "\n");
+        }
+    }
 }
 
 /// Compute full bar height based on border state.
