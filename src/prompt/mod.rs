@@ -1,26 +1,41 @@
 pub mod input;
-pub mod render;
+pub mod renderer;
 pub mod key_events;
-pub mod helpers;
-#[cfg(feature = "pretty")]
-pub mod pretty;
 
 use bevy::prelude::*;
+use std::sync::Arc;
 
 use crate::repl::{ReplSet};
 use self::input::PromptInputPlugin;
-use self::render::PromptRenderPlugin;
 use self::key_events::block_keyboard_input_forwarding;
+use self::renderer::{PromptRenderer, PromptRenderPlugin};
+
 
 #[derive(Resource, Clone)]
 pub struct PromptPlugin {
     pub config: ReplPromptConfig,
+    pub renderer: Arc<dyn PromptRenderer>,
 }
 
 impl Default for PromptPlugin {
     fn default() -> Self {
+        Self::minimal()
+    }
+}
+
+impl PromptPlugin {
+    pub fn minimal() -> Self {
         Self {
-            config: ReplPromptConfig::default(),
+            config: ReplPromptConfig::minimal(),
+            renderer: Arc::new(renderer::minimal::MinimalRenderer),
+        }
+    }
+
+    #[cfg(feature = "pretty")]
+    pub fn pretty() -> Self {
+        Self {
+            config: ReplPromptConfig::pretty(),
+            renderer: Arc::new(renderer::pretty::PrettyRenderer),
         }
     }
 }
@@ -31,16 +46,12 @@ impl Plugin for PromptPlugin {
             symbol: Some(self.config.symbol.clone().unwrap_or_else(|| "> ".to_string())),
             buffer: String::new(),
         });
-        // Visual configuration resource
         app.insert_resource(self.config.clone());
-        // Compose prompt-related plugins
-        app.add_plugins((PromptInputPlugin, PromptRenderPlugin));
+        app.add_plugins(PromptInputPlugin);
+        app.add_plugins(PromptRenderPlugin { renderer: self.renderer.clone() });
         app.add_systems(
             Update,
             (
-                // When enabled, capture terminal input
-                // Render prompt/UI
-                // Finally block forwarding while enabled, after render and toggle
                 block_keyboard_input_forwarding
                     .in_set(ReplSet::Post)
                     .in_set(ReplSet::All)

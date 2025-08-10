@@ -41,8 +41,16 @@ derive = ["bevy_repl_derive", "clap/derive"]
 pretty = []
 
 [[example]]
+name = "demo"
+path = "examples/demo.rs"
+
+[[example]]
 name = "minimal"
 path = "examples/minimal.rs"
+
+[[example]]
+name = "fixed_update"
+path = "examples/fixed_update.rs"
 
 [[example]]
 name = "update_resource"

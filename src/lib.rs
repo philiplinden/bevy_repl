@@ -11,10 +11,14 @@ pub mod prelude {
     #[cfg(not(feature = "derive"))]
     pub use crate::command::ReplCommand;
     pub use crate::command::{ReplAppExt, ReplResult};
-    pub use crate::plugin::ReplPlugins;
-    pub use crate::prompt::{PromptPlugin, ReplPromptConfig, ReplPrompt};
+    pub use crate::plugin::{MinimalReplPlugins, ReplPlugins};
+    pub use crate::prompt::{
+        PromptPlugin, ReplPrompt, ReplPromptConfig,
+        renderer::{ActiveRenderer, PromptRenderPlugin, PromptRenderer, minimal::MinimalRenderer},
+    };
     pub use crate::repl::{
-        Repl, ReplBufferEvent, ReplContext, ReplPlugin, ReplSet, ReplSubmitEvent, repl_is_enabled,
+        FallbackTerminalContext, Repl, ReplBufferEvent, ReplPlugin, ReplSet, ReplSubmitEvent,
+        repl_is_enabled,
     };
     #[cfg(feature = "derive")]
     pub use bevy_repl_derive::ReplCommand;

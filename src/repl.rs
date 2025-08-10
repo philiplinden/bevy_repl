@@ -161,10 +161,15 @@ pub enum ReplSet {
 }
 
 #[derive(Resource, Deref, DerefMut, Debug)]
-pub struct ReplContext(Terminal<CrosstermBackend<Stdout>>);
+/// Terminal context used when `bevy_ratatui::RatatuiContext` is not available.
+///
+/// This keeps rendering on the main terminal screen (no alternate screen) using
+/// `crossterm` via `ratatui`. It exists to provide a minimal, dependency-light
+/// fallback so the REPL can render without the full ratatui stack.
+pub struct FallbackTerminalContext(Terminal<CrosstermBackend<Stdout>>);
 
-impl ReplContext {
-    /// Create a new ReplContext with a terminal and enable raw mode.
+impl FallbackTerminalContext {
+    /// Create a new `FallbackTerminalContext` with a terminal and enable raw mode.
     ///
     /// This is a workaround to initialize a `bevy_ratatui` terminal context
     /// without spawning an alternate screen.
@@ -182,7 +187,7 @@ impl ReplContext {
     }
 }
 
-impl TerminalContext<CrosstermBackend<Stdout>> for ReplContext {
+impl TerminalContext<CrosstermBackend<Stdout>> for FallbackTerminalContext {
     fn init() -> Result<Self> {
         let stdout = stdout();
         // Enable raw mode but stay in main screen
@@ -222,13 +227,13 @@ fn on_app_exit_emit_disable(_exit: Trigger<AppExit>, mut writer: EventWriter<Rep
 /// Manage the terminal context on lifecycle events (startup/shutdown).
 fn manage_context(
     trigger: Trigger<ReplLifecycleEvent>,
-    existing: Option<Res<ReplContext>>,
+    existing: Option<Res<FallbackTerminalContext>>,
     mut commands: Commands,
 ) {
     match trigger.event() {
         ReplLifecycleEvent::Enable => {
             if existing.is_none() {
-                let Ok(terminal) = ReplContext::init() else {
+                let Ok(terminal) = FallbackTerminalContext::init() else {
                     error!("Failed to initialize terminal context");
                     return;
                 };
@@ -237,11 +242,11 @@ fn manage_context(
         }
         ReplLifecycleEvent::Disable => {
             if existing.is_some() {
-                let Ok(_) = ReplContext::restore() else {
+                let Ok(_) = FallbackTerminalContext::restore() else {
                     error!("Failed to remove terminal context");
                     return;
                 };
-                commands.remove_resource::<ReplContext>();
+                commands.remove_resource::<FallbackTerminalContext>();
             }
         }
     }
@@ -250,15 +255,15 @@ fn manage_context(
 fn cleanup_on_exit(
     _exit: Trigger<AppExit>,
     mut commands: Commands,
-    existing: Option<Res<ReplContext>>,
+    existing: Option<Res<FallbackTerminalContext>>,
 ) {
     // Ensure the resource is removed even if the lifecycle observer didn't run
     if existing.is_some() {
-        let Ok(_) = ReplContext::restore() else {
+        let Ok(_) = FallbackTerminalContext::restore() else {
             error!("Failed to remove terminal context");
             return;
         };
-        commands.remove_resource::<ReplContext>();
+        commands.remove_resource::<FallbackTerminalContext>();
     }
 }
 

@@ -39,15 +39,19 @@ fn instructions() {
 fn main() {
     App::new()
         .add_plugins((
-            DefaultPlugins
+            MinimalPlugins
                 // Run headless in the terminal
                 .set(ScheduleRunnerPlugin::run_loop(Duration::from_secs_f64(
                     1.0 / 60.0,
                 ))),
-            ReplPlugins,
+            // Input plugin is required so the REPL can handle keyboard input
+            bevy::input::InputPlugin::default(),
+            // Use the minimal renderer with a custom ratatui context that
+            // operates in the main terminal instead of an alternate screen
+            MinimalReplPlugins,
         ))
         .add_repl_command::<PingCommand>()
         .add_observer(on_ping)
-        .add_systems(Startup, instructions)
+        .add_systems(PostStartup, instructions)
         .run();
 }

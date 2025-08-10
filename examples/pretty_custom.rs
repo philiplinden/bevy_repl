@@ -7,7 +7,13 @@
 //! Run with: `cargo run --example pretty_manual --features pretty`
 
 use bevy::{app::ScheduleRunnerPlugin, prelude::*};
-use bevy_repl::{prelude::*, prompt::{PromptBorderConfig, PromptColorConfig, PromptHintConfig}};
+use bevy_repl::{
+    prelude::*,
+    prompt::{
+        PromptBorderConfig, PromptColorConfig, PromptHintConfig, renderer::pretty::PrettyRenderer,
+    },
+};
+use std::sync::Arc;
 use std::time::Duration;
 
 #[derive(Debug, Clone, Event, Default)]
@@ -41,6 +47,7 @@ fn main() {
             MinimalPlugins.set(ScheduleRunnerPlugin::run_loop(Duration::from_secs_f64(
                 1.0 / 60.0,
             ))),
+            bevy::input::InputPlugin::default(),
             ReplPlugins.set(PromptPlugin {
                 config: ReplPromptConfig {
                     symbol: Some("λ ".into()),
@@ -48,10 +55,11 @@ fn main() {
                     color: Some(PromptColorConfig::default()),
                     hint: Some(PromptHintConfig::default()),
                 },
+                renderer: Arc::new(PrettyRenderer),
             }),
         ))
         .add_repl_command::<PingCommand>()
         .add_observer(on_ping)
-        .add_systems(Startup, instructions)
+        .add_systems(PostStartup, instructions)
         .run();
 }

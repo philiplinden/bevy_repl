@@ -44,6 +44,6 @@ fn main() {
         ))
         .add_repl_command::<PingCommand>()
         .add_observer(on_ping)
-        .add_systems(Startup, instructions)
+        .add_systems(PostStartup, instructions)
         .run();
 }

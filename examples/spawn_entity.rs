@@ -68,10 +68,11 @@ fn main() {
     App::new()
         .add_plugins((
             MinimalPlugins.set(ScheduleRunnerPlugin::run_loop(Duration::from_secs_f64(1.0 / 60.0))),
+            bevy::input::InputPlugin::default(),
             ReplPlugins,
         ))
         .add_repl_command::<SpawnEntityCommand>()
         .add_observer(on_spawn)
-        .add_systems(Startup, instructions)
+        .add_systems(PostStartup, instructions)
         .run();
 }

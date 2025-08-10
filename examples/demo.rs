@@ -37,10 +37,9 @@ fn instructions() {
 fn main() {
     App::new()
         .add_plugins((
-            MinimalPlugins.set(ScheduleRunnerPlugin::run_loop(Duration::from_secs_f64(
+            DefaultPlugins.set(ScheduleRunnerPlugin::run_loop(Duration::from_secs_f64(
                 1.0 / 60.0,
             ))),
-            bevy::input::InputPlugin::default(),
             ReplPlugins.set(PromptPlugin::pretty()),
         ))
         .add_repl_command::<PingCommand>()

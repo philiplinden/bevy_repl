@@ -58,7 +58,7 @@ fn on_list(trigger: Trigger<ListCommand>, query: Query<(Entity, Option<&Name>)>)
 }
 
 /// Spawn some example entities so we have something to list.
-fn seed(mut commands: Commands) {
+fn spawn_entities(mut commands: Commands) {
     commands.spawn(Name::new("Alice"));
     commands.spawn(Name::new("Bob"));
     commands.spawn(Name::new("Carol"));
@@ -82,10 +82,12 @@ fn main() {
     App::new()
         .add_plugins((
             MinimalPlugins.set(ScheduleRunnerPlugin::run_loop(Duration::from_secs_f64(1.0 / 60.0))),
+            bevy::input::InputPlugin::default(),
             ReplPlugins,
         ))
-        .add_systems(Startup, (seed, instructions))
         .add_repl_command::<ListCommand>()
         .add_observer(on_list)
+        .add_systems(Startup, spawn_entities)
+        .add_systems(PostStartup, instructions)
         .run();
 }

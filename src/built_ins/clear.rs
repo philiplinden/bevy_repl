@@ -15,7 +15,7 @@ impl crate::command::ReplCommand for ClearCommand {
     }
 }
 
-fn on_clear(_trigger: Trigger<ClearCommand>, mut terminal: ResMut<ReplContext>) {
+fn on_clear(_trigger: Trigger<ClearCommand>, mut terminal: ResMut<FallbackTerminalContext>) {
     match terminal.clear() {
         Ok(_) => return,
         Err(e) => error!("Failed to clear terminal: {}", e),

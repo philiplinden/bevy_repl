@@ -4,8 +4,8 @@ use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Borders, Paragraph};
 
 use crate::prompt::ReplPromptConfig;
+use super::{PromptRenderer, RenderCtx};
 use super::helpers::{bottom_bar_area, buffer_window, cursor_position};
-use super::render::{PromptRenderer, RenderCtx};
 
 /// Return whether border is enabled under pretty feature.
 pub fn border_on(cfg: &ReplPromptConfig) -> bool { cfg.border.is_some() }
@@ -125,4 +125,3 @@ impl PromptRenderer for PrettyRenderer {
         f.set_cursor_position((cursor_x, cursor_y));
     }
 }
-

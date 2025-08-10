@@ -27,20 +27,6 @@ fn on_ping(_trigger: Trigger<PingCommand>) {
     println!("Pong");
 }
 
-fn main() {
-    App::new()
-        .add_plugins((
-            DefaultPlugins
-                // Run headless in the terminal
-                .set(ScheduleRunnerPlugin::run_loop(Duration::from_secs_f64(
-                    1.0 / 60.0,
-                ))),
-            ReplPlugins.set(ReplPlugin::enabled()),
-            EventDemoPlugin,
-        ))
-        .run();
-}
-
 struct EventDemoPlugin;
 
 impl Plugin for EventDemoPlugin {
@@ -129,4 +115,21 @@ fn instructions() {
     println!();
     println!("Press CTRL+C to exit any time.");
     println!();
+}
+
+fn main() {
+    App::new()
+        .add_plugins((
+            DefaultPlugins
+                // Run headless in the terminal
+                .set(ScheduleRunnerPlugin::run_loop(Duration::from_secs_f64(
+                    1.0 / 60.0,
+                ))),
+            ReplPlugins.set(ReplPlugin::enabled()),
+            EventDemoPlugin,
+        ))
+        .add_repl_command::<PingCommand>()
+        .add_observer(on_ping)
+        .add_systems(PostStartup, instructions)
+        .run();
 }
