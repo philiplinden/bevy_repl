@@ -1,5 +1,7 @@
 # bevy_repl
 
+![Made with VHS](https://vhs.charm.sh/vhs-6kUt4mnyvUcmbpVfWzHx4s.gif)
+
 An interactive REPL for headless Bevy apps powered by `clap` for command parsing
 and `bevy_ratatui` for terminal input and output. The plugin adds a togglable
 text input area below the terminal output for interaction even in headless mode.
