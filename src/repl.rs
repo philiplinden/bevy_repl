@@ -6,6 +6,23 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use ratatui::{Terminal, backend::CrosstermBackend};
 use std::collections::HashMap;
 
+/// A Bevy plugin that provides a Read-Eval-Print Loop (REPL) interface for interactive command input.
+///
+/// # Purpose
+/// The `ReplPlugin` enables a REPL terminal within your Bevy application, allowing users to enter commands and interact with the app at runtime.
+///
+/// # Configuration Options
+/// - `enable_on_startup`: Determines whether the REPL is enabled when the app starts.
+///   - Use [`ReplPlugin::enabled()`] to start enabled (default).
+///   - Use [`ReplPlugin::disabled()`] to start disabled.
+///   - Use [`ReplPlugin::with_enabled(bool)`] for explicit control.
+///
+/// # Usage
+/// Add the plugin to your Bevy app:
+/// ```
+/// use your_crate::ReplPlugin;
+/// App::new().add_plugin(ReplPlugin::enabled());
+/// ```
 pub struct ReplPlugin {
     enable_on_startup: bool,
 }
@@ -42,6 +59,11 @@ impl ReplPlugin {
 /// Notes:
 /// - Idempotent and safe to call multiple times.
 /// - Does not handle SIGKILL or panic=abort where no user code runs.
+/// Global flag set to `true` when a Ctrl+C (SIGINT) or termination signal is received.
+///
+/// Used by the signal handler to notify the main application logic that a shutdown has been requested.
+/// This is an `AtomicBool` to ensure safe concurrent access between the signal handler thread and the main thread.
+/// The main thread can poll this flag to detect if Ctrl+C was pressed and exit gracefully.
 static CTRL_C_HIT: AtomicBool = AtomicBool::new(false);
 
 fn install_terminal_safety_nets() {
