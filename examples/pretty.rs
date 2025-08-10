@@ -19,19 +19,19 @@ impl ReplCommand for PingCommand {
 }
 
 fn on_ping(_trigger: Trigger<PingCommand>) {
-    println!("Pong");
+    repl_println!("Pong");
 }
 
 fn instructions() {
-    println!();
-    println!("Welcome to the Bevy REPL pretty prompt example!");
-    println!();
-    println!("Try typing a command:");
-    println!("  `ping`    - Trigger the ping command. (it outputs Pong)");
-    println!("  `quit`    - Close the app.");
-    println!();
-    println!("Press CTRL+C to exit any time.");
-    println!();
+    repl_println!();
+    repl_println!("Welcome to the Bevy REPL pretty prompt example!");
+    repl_println!();
+    repl_println!("Try typing a command:");
+    repl_println!("  `ping`    - Trigger the ping command. (it outputs Pong)");
+    repl_println!("  `quit`    - Close the app.");
+    repl_println!();
+    repl_println!("Press CTRL+C to exit any time.");
+    repl_println!();
 }
 
 fn main() {

@@ -57,17 +57,17 @@ impl ReplCommand for PingCommand {
 }
 
 fn on_ping(_: Trigger<PingCommand>) {
-    println!("Pong");
+    repl_println!("Pong");
 }
 
 fn instructions() {
-    println!();
-    println!("Bevy REPL custom renderer example (pretty)");
-    println!();
-    println!("Try typing in the REPL:");
-    println!("  ping");
-    println!("Press CTRL+C to exit any time.");
-    println!();
+    repl_println!();
+    repl_println!("Bevy REPL custom renderer example (pretty)");
+    repl_println!();
+    repl_println!("Try typing in the REPL:");
+    repl_println!("  ping");
+    repl_println!("Press CTRL+C to exit any time.");
+    repl_println!();
 }
 
 fn main() {

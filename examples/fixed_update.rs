@@ -134,17 +134,17 @@ fn update_timer(mut timer: ResMut<TimerResource>, time: Res<Time>) {
 }
 
 fn instructions() {
-    println!();
-    println!("Welcome to the Bevy REPL resource example!");
-    println!();
-    println!("Try typing a command:");
-    println!("  `start`   - Start the timer");
-    println!("  `stop`    - Stop the timer");
-    println!("  `reset`   - Reset the timer to 0");
-    println!("  `quit`    - Close the app");
-    println!();
-    println!("Press CTRL+C to exit any time.");
-    println!();
+    repl_println!();
+    repl_println!("Welcome to the Bevy REPL resource example!");
+    repl_println!();
+    repl_println!("Try typing a command:");
+    repl_println!("  `start`   - Start the timer");
+    repl_println!("  `stop`    - Stop the timer");
+    repl_println!("  `reset`   - Reset the timer to 0");
+    repl_println!("  `quit`    - Close the app");
+    repl_println!();
+    repl_println!("Press CTRL+C to exit any time.");
+    repl_println!();
 }
 
 
@@ -155,6 +155,7 @@ fn main() {
                 .set(ScheduleRunnerPlugin::run_loop(Duration::from_secs_f64(
                     1.0 / 60.0,
                 ))),
+            bevy::input::InputPlugin::default(),
             bevy::log::LogPlugin::default(),
             ReplPlugins,
         ))

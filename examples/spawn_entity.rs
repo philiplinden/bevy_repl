@@ -48,20 +48,20 @@ fn on_spawn(trigger: Trigger<SpawnEntityCommand>, mut commands: Commands) {
     }
 
     let id = e.id();
-    println!("Spawned entity with id: {:?}", id);
+    repl_println!("Spawned entity with id: {:?}", id);
 }
 
 fn instructions() {
-    println!();
-    println!("Welcome to the Bevy REPL spawn example!");
-    println!();
-    println!("Try typing a command:");
-    println!("  `spawn`                  - Spawn an unnamed entity");
-    println!("  `spawn -n Alice`         - Spawn an entity named 'Alice'");
-    println!("  `quit`                   - Close the app");
-    println!();
-    println!("Press CTRL+C to exit any time.");
-    println!();
+    repl_println!();
+    repl_println!("Welcome to the Bevy REPL spawn example!");
+    repl_println!();
+    repl_println!("Try typing a command:");
+    repl_println!("  `spawn`                  - Spawn an unnamed entity");
+    repl_println!("  `spawn -n Alice`         - Spawn an entity named 'Alice'");
+    repl_println!("  `quit`                   - Close the app");
+    repl_println!();
+    repl_println!("Press CTRL+C to exit any time.");
+    repl_println!();
 }
 
 fn main() {

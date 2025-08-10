@@ -64,26 +64,26 @@ fn on_say(trigger: Trigger<SayCommand>) {
         command.message.clone()
     };
     // Print the main message
-    println!("Saying: {}", message);
+    repl_println!("Saying: {}", message);
     
     // Print repeated messages
     for i in 0..command.repeat {
-        println!("{}: {}", i + 1, message);
+        repl_println!("{}: {}", i + 1, message);
     }
 }
 
 fn instructions() {
-    println!();
-    println!("Welcome to the Bevy REPL builder example!");
-    println!();
-    println!("Try typing a command:");
-    println!("  `say <message>`            - Say a message");
-    println!("  `say -s <message>`         - Shout the message");
-    println!("  `say -r N <message>`       - Repeat N times");
-    println!("  `quit`                     - Close the app");
-    println!();
-    println!("Press CTRL+C to exit any time.");
-    println!();
+    repl_println!();
+    repl_println!("Welcome to the Bevy REPL builder example!");
+    repl_println!();
+    repl_println!("Try typing a command:");
+    repl_println!("  `say <message>`            - Say a message");
+    repl_println!("  `say -s <message>`         - Shout the message");
+    repl_println!("  `say -r N <message>`       - Repeat N times");
+    repl_println!("  `quit`                     - Close the app");
+    repl_println!();
+    repl_println!("Press CTRL+C to exit any time.");
+    repl_println!();
 }
 
 fn main() {

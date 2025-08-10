@@ -47,20 +47,20 @@ fn on_say(trigger: Trigger<SayCommand>) {
 
     let message = command.message.clone();
     // Print the main message
-    println!("Saying: {}", message);
+    repl_println!("Saying: {}", message);
 }
 
 fn instructions() {
-    println!();
-    println!("Bevy REPL aliases example (clap)");
-    println!();
-    println!("These are all equivalent:");
-    println!("  say     <message>");
-    println!("  s       <message>");
-    println!("  print   <message>");
-    println!("  echo    <message>");
-    println!("Press CTRL+C to exit any time.");
-    println!();
+    repl_println!();
+    repl_println!("Bevy REPL aliases example (clap)");
+    repl_println!();
+    repl_println!("These are all equivalent:");
+    repl_println!("  say     <message>");
+    repl_println!("  s       <message>");
+    repl_println!("  print   <message>");
+    repl_println!("  echo    <message>");
+    repl_println!("Press CTRL+C to exit any time.");
+    repl_println!();
 }
 
 fn main() {

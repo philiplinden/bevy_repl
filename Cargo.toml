@@ -18,6 +18,7 @@ ratatui = "0.29.0"
 clap = { version = "4.5.43" }
 shell-words = "1.1"
 bevy_repl_derive = { version = "0.1.0", path = "./bevy_repl_derive", optional = true }
+ctrlc = "3"
 
 # Error handling and logging
 anyhow = "1.0"
@@ -48,6 +49,10 @@ path = "examples/demo.rs"
 name = "minimal"
 path = "examples/minimal.rs"
 
+# [[example]]
+# name = "toggle"
+# path = "examples/toggle.rs"
+
 [[example]]
 name = "fixed_update"
 path = "examples/fixed_update.rs"
@@ -77,10 +82,6 @@ path = "examples/builtins.rs"
 [[example]]
 name = "aliases"
 path = "examples/aliases.rs"
-
-[[example]]
-name = "key_events_forwarded"
-path = "examples/key_events_forwarded.rs"
 
 [[example]]
 name = "key_events_suppressed"

@@ -74,19 +74,19 @@ fn on_time_scale(trigger: Trigger<TimeScaleCommand>, mut scale: ResMut<TimeScale
         (Some(value), None) => {
             let new = value.max(0.0);
             scale.0 = new;
-            println!("TimeScale set to: {}", scale.0);
+            repl_println!("TimeScale set to: {}", scale.0);
         }
         (None, Some(delta)) => {
             let new = (scale.0 + delta).max(0.0);
             scale.0 = new;
-            println!("TimeScale changed by {delta:+}, now: {}", scale.0);
+            repl_println!("TimeScale changed by {delta:+}, now: {}", scale.0);
         }
         (None, None) => {
-            println!("Current TimeScale: {}", scale.0);
+            repl_println!("Current TimeScale: {}", scale.0);
         }
         (Some(_), Some(_)) => {
             // Should be prevented by ArgGroup, but handle defensively
-            println!("Error: specify at most one of --set or --add");
+            repl_println!("Error: specify at most one of --set or --add");
         }
     }
 }
@@ -95,22 +95,22 @@ fn on_time_scale(trigger: Trigger<TimeScaleCommand>, mut scale: ResMut<TimeScale
 fn tick(mut frames: ResMut<FrameCounter>, scale: Res<TimeScale>) {
     frames.0 = frames.0.wrapping_add(1);
     if frames.0 % 60 == 0 {
-        println!("Tick: frame={}, time-scale={}", frames.0, scale.0);
+        repl_println!("Tick: frame={}, time-scale={}", frames.0, scale.0);
     }
 }
 
 fn instructions() {
-    println!();
-    println!("Bevy REPL resource mutation example");
-    println!();
-    println!("Try typing in the REPL:");
-    println!("  time-scale");
-    println!("  time-scale --set 2.0");
-    println!("  time-scale --add -0.5");
-    println!("  quit");
-    println!();
-    println!("Press CTRL+C to exit any time.");
-    println!();
+    repl_println!();
+    repl_println!("Bevy REPL resource mutation example");
+    repl_println!();
+    repl_println!("Try typing in the REPL:");
+    repl_println!("  time-scale");
+    repl_println!("  time-scale --set 2.0");
+    repl_println!("  time-scale --add -0.5");
+    repl_println!("  quit");
+    repl_println!();
+    repl_println!("Press CTRL+C to exit any time.");
+    repl_println!();
 }
 
 fn setup(mut commands: Commands) {

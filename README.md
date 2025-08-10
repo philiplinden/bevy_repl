@@ -158,10 +158,33 @@ if you want a minimal look.
 
   By default `ReplPlugins` uses the minimal prompt renderer. To enable the pretty renderer when the `pretty` feature is on, use `ReplPlugins.set(PromptPlugin::pretty())`.
 
-## Known issues
+### Robust printing in raw/alternate screen terminals
 
-- Runtime toggle is not supported in v1 (planned for a future version).
-- Built-in `help` command is not yet implemented.
+When the REPL is active, the terminal often runs in raw mode and may use the alternate screen. In these contexts, normal `println!` can leave the cursor in an odd position or produce inconsistent newlines. To ensure safe, consistent output, use the provided `bevy_repl::repl_println!` macro instead of `println!`.
+
+- __What it does__
+  - Moves the cursor to column 0 before printing
+  - Writes your message followed by CRLF (`\r\n`)
+  - Flushes stdout immediately
+
+- __When to use__
+  - Any time you print from systems/observers while the REPL is active
+  - Especially in raw mode or when using the alternate screen (e.g., with `ReplPlugins`)
+
+- __Example__
+
+```rust
+fn on_ping(_trigger: Trigger<PingCommand>) {
+    bevy_repl::repl_println!("Pong");
+}
+
+fn instructions() {
+    bevy_repl::repl_println!();
+    bevy_repl::repl_println!("Welcome to the Bevy REPL!");
+}
+```
+
+If you truly need to emit raw `stdout` (e.g., piping to tools) while the REPL is active, consider temporarily suspending the TUI or buffering output and emitting it via `repl_println!`.
 
 ## Usage
 
@@ -570,13 +593,54 @@ app.insert_resource(ReplPromptConfig::minimal());
 // Or customize explicitly
 app.insert_resource(ReplPromptConfig { border: true, color: false, hint: true });
 ```
+## Known issues & limitations
+
+### Built-in `help` and `clear` commands are not yet implemented
+I have `help` and `clear` implemented as placeholders. I don't consider this
+crate to be feature-complete until these are implemented.
+
+### Runtime toggle is not supported
+For a true "console" experience, the REPL should be able to be toggled on and
+off at runtime. Ideally, you could run your headless application with it
+disabled and then toggle it on when you need to debug.
+
+This is not supported yet (believe me, I tried!) mostly because I was running
+into too many issues with raw mode, crossterm events, and bevy events all at the
+same time. It's definitely possible, but I haven't had the time to implement it.
+
+### Key events are not forwarded to Bevy
+All key events are cleared by the REPL when it is enabled, so they are not
+forwarded to Bevy and causing unexpected behavior when typing in the prompt.
+This is a tradeoff between simplicity and utility. It would be simpler to enable
+raw mode and detect raw keycode commands for the toggle key, then forward the
+raw inputs to Bevy as normal keycode events. However, this means that the app
+input handling fundamentally changes, even when the REPL is disabled. For
+development, it is more useful to have the app behave exactly as a normal
+headless app when the REPL is disabled to preserve consistency in input handling
+behavior.
+
+If you really need key events or button input while the REPL is enabled, you can place your event
+reader system _before_ the `ReplPlugin` in the app schedule. This will ensure
+that your system is called before the REPL plugin, so keyboard and button
+inputs can be read before the REPL clears them.
+
+```rust
+App::new()
+    .add_plugins((
+        MinimalPlugins.set(ScheduleRunnerPlugin::run_loop(Duration::from_secs_f64(1.0/60.0))),
+        // Minimal REPL: core + prompt + parser; main-screen rendering
+        MinimalReplPlugins,
+    ))
+    .add_systems(Update, your_event_reader_system.before(bevy_repl::ReplSet::Pre))
+    .run();
+```
 
 ## Aspirations
 - [x] **Derive pattern** - Describe commands with clap's derive pattern.
 - [ ] **Toggleable** - The REPL is disabled by default and can be toggled. When
   disabled, the app runs normally in the terminal, no REPL systems run, and the
   prompt is hidden.
-- [ ] **Pretty prompt** - Show the prompt in the terminal below the normal
+- [x] **Pretty prompt** - Show the prompt in the terminal below the normal
   stdout, including the current buffer content.
 - [x] **Support for games with rendering and windowing** - The REPL is designed to
   work from the terminal, but the terminal normally prints logs when there is a

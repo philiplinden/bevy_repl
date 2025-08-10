@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 use bevy_ratatui::{context::TerminalContext, event::InputSet};
 use std::io::{Stdout, stdout};
+use std::sync::atomic::{AtomicBool, Ordering};
 
 use ratatui::{Terminal, backend::CrosstermBackend};
 use std::collections::HashMap;
@@ -33,6 +34,40 @@ impl ReplPlugin {
         Self { enable_on_startup: enabled }
     }
 }
+/// Install safety nets to always restore the terminal on abnormal exits.
+///
+/// - Panic hook: best-effort `disable_raw_mode()` before delegating to the previous hook.
+/// - Ctrl-C handler: best-effort `disable_raw_mode()` on SIGINT/SIGTERM.
+///
+/// Notes:
+/// - Idempotent and safe to call multiple times.
+/// - Does not handle SIGKILL or panic=abort where no user code runs.
+static CTRL_C_HIT: AtomicBool = AtomicBool::new(false);
+
+fn install_terminal_safety_nets() {
+    static ONCE: std::sync::Once = std::sync::Once::new();
+    ONCE.call_once(|| {
+        let prev = std::panic::take_hook();
+        std::panic::set_hook(Box::new(move |info| {
+            let _ = bevy_ratatui::crossterm::terminal::disable_raw_mode();
+            prev(info);
+        }));
+
+        // Best-effort signal handler for Ctrl-C and termination.
+        let _ = ctrlc::set_handler(|| {
+            let _ = bevy_ratatui::crossterm::terminal::disable_raw_mode();
+            // Mark that Ctrl+C was pressed so the Bevy app can exit gracefully.
+            CTRL_C_HIT.store(true, Ordering::SeqCst);
+        });
+    });
+}
+
+// Poll for Ctrl+C from the signal handler and request app exit.
+fn ctrlc_exit_check(mut exit: EventWriter<AppExit>) {
+    if CTRL_C_HIT.swap(false, Ordering::SeqCst) {
+        exit.write(AppExit::Success);
+    }
+}
 
 impl Plugin for ReplPlugin {
     fn build(&self, app: &mut App) {
@@ -48,6 +83,8 @@ impl Plugin for ReplPlugin {
         app.add_systems(Startup, emit_enable_if_enabled);
         app.add_observer(on_app_exit_emit_disable);
         app.add_observer(cleanup_on_exit);
+        // Exit the app gracefully if the user presses Ctrl+C.
+        app.add_systems(Update, ctrlc_exit_check);
         app.configure_sets(
             Update,
             (
@@ -69,6 +106,8 @@ impl Plugin for ReplPlugin {
                 .before(InputSet::Post)
                 .run_if(repl_is_enabled),
         );
+        // Install global safety nets for abnormal exits.
+        install_terminal_safety_nets();
     }
 }
 
@@ -168,6 +207,20 @@ pub enum ReplSet {
 /// fallback so the REPL can render without the full ratatui stack.
 pub struct FallbackTerminalContext(Terminal<CrosstermBackend<Stdout>>);
 
+/// Guard resource that ensures terminal raw mode is disabled when dropped.
+///
+/// This complements `FallbackTerminalContext::restore()` and provides
+/// a final line of defense during unwinding or unexpected teardown.
+#[derive(Resource, Debug)]
+struct RawModeGuard;
+
+impl Drop for RawModeGuard {
+    fn drop(&mut self) {
+        // Idempotent, ignore errors; we just want to best-effort restore.
+        let _ = bevy_ratatui::crossterm::terminal::disable_raw_mode();
+    }
+}
+
 impl FallbackTerminalContext {
     /// Create a new `FallbackTerminalContext` with a terminal and enable raw mode.
     ///
@@ -238,6 +291,8 @@ fn manage_context(
                     return;
                 };
                 commands.insert_resource(terminal);
+                // Insert the guard so that any unexpected teardown restores raw mode.
+                commands.insert_resource(RawModeGuard);
             }
         }
         ReplLifecycleEvent::Disable => {
@@ -247,6 +302,8 @@ fn manage_context(
                     return;
                 };
                 commands.remove_resource::<FallbackTerminalContext>();
+                // Dropping the guard will also best-effort disable raw mode.
+                commands.remove_resource::<RawModeGuard>();
             }
         }
     }
@@ -264,6 +321,8 @@ fn cleanup_on_exit(
             return;
         };
         commands.remove_resource::<FallbackTerminalContext>();
+        // Drop the guard on exit path as well.
+        commands.remove_resource::<RawModeGuard>();
     }
 }
 

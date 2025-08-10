@@ -5,6 +5,7 @@ pub mod command;
 pub mod plugin;
 pub mod prompt;
 pub mod repl;
+pub mod print;
 
 pub mod prelude {
     pub use crate::built_ins::ReplDefaultCommandsPlugin;
@@ -20,6 +21,12 @@ pub mod prelude {
         FallbackTerminalContext, Repl, ReplBufferEvent, ReplPlugin, ReplSet, ReplSubmitEvent,
         repl_is_enabled,
     };
+    // Low-level printer if callers prefer a function over the macro.
+    pub use crate::print::repl_print;
+    // Bring the robust printing macro into the prelude for convenient use.
+    // This allows: `use bevy_repl::prelude::*;` then `repl_println!(...)`.
+    pub use crate::repl_println;
+
     #[cfg(feature = "derive")]
     pub use bevy_repl_derive::ReplCommand;
 }

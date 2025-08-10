@@ -42,7 +42,7 @@ fn on_list(trigger: Trigger<ListCommand>, query: Query<(Entity, Option<&Name>)>)
     let cmd = trigger.event();
     let needle = cmd.name_contains.as_deref();
 
-    println!("Entities:");
+    repl_println!("Entities:");
     let mut count = 0usize;
     for (entity, name_opt) in query.iter() {
         let name_str = name_opt.map(|n| n.as_str()).unwrap_or("<unnamed>");
@@ -51,10 +51,10 @@ fn on_list(trigger: Trigger<ListCommand>, query: Query<(Entity, Option<&Name>)>)
                 continue;
             }
         }
-        println!("  {:?}: {}", entity, name_str);
+        repl_println!("  {:?}: {}", entity, name_str);
         count += 1;
     }
-    println!("Total listed: {}", count);
+    repl_println!("Total listed: {}", count);
 }
 
 /// Spawn some example entities so we have something to list.
@@ -66,16 +66,16 @@ fn spawn_entities(mut commands: Commands) {
 }
 
 fn instructions() {
-    println!();
-    println!("Welcome to the Bevy REPL query example!");
-    println!();
-    println!("Try typing a command:");
-    println!("  `list`                         - List all entities");
-    println!("  `list -n Al`                   - List entities whose name contains 'Al'");
-    println!("  `quit`                         - Close the app");
-    println!();
-    println!("Press CTRL+C to exit any time.");
-    println!();
+    repl_println!();
+    repl_println!("Welcome to the Bevy REPL query example!");
+    repl_println!();
+    repl_println!("Try typing a command:");
+    repl_println!("  `list`                         - List all entities");
+    repl_println!("  `list -n Al`                   - List entities whose name contains 'Al'");
+    repl_println!("  `quit`                         - Close the app");
+    repl_println!();
+    repl_println!("Press CTRL+C to exit any time.");
+    repl_println!();
 }
 
 fn main() {
