@@ -61,85 +61,85 @@ Require cargo
 
 Set Shell "bash"
 Set FontSize 20
-Set Width 1400
-Set Height 1600
+Set Width 1600
+Set Height 800
 
-Type "cargo run --quiet --example demo"
-Enter
+Hide
+Type "cargo run --quiet --example demo" Enter
+Show
 Sleep 10s
 Type "next"
-Sleep 1s
-Enter
 Sleep 3s
+Enter
+Sleep 4s
 Type "say --help"
-Sleep 1s
+Sleep 3s
 Enter
 Sleep 5s
 Type "say hello" 
-Sleep 1s 
+Sleep 3s 
 Enter
-Sleep 3s
+Sleep 4s
 Type "echo world --repeat 3" 
-Sleep 1s 
+Sleep 3s 
 Enter
-Sleep 3s
+Sleep 4s
 Type "say what? --shout" 
-Sleep 1s 
+Sleep 3s 
 Enter
-Sleep 3s
+Sleep 4s
 Type "next" 
-Sleep 1s 
+Sleep 3s 
 Enter
-Sleep 3s
+Sleep 4s
 Type "start" 
-Sleep 1s 
+Sleep 3s 
 Enter
-Sleep 3s
+Sleep 4s
 Type "stop" 
-Sleep 1s 
+Sleep 3s 
 Enter
-Sleep 3s
+Sleep 4s
 Type "next" 
-Sleep 1s 
+Sleep 3s 
 Enter
-Sleep 3s
+Sleep 4s
 Type "ping" 
-Sleep 1s 
+Sleep 3s 
 Enter
-Sleep 3s
+Sleep 4s
 Type "next" 
-Sleep 1s 
+Sleep 3s 
 Enter
-Sleep 3s
+Sleep 4s
 Type "spawn foo" 
-Sleep 1s 
+Sleep 3s 
 Enter
 Type "spawn bar" 
-Sleep 1s 
+Sleep 3s 
 Enter
 Type "spawn baz" 
-Sleep 1s 
+Sleep 3s 
 Enter
 Type "list" 
-Sleep 1s 
+Sleep 3s 
 Enter
-Sleep 3s
+Sleep 4s
 Type "query b" 
-Sleep 1s 
+Sleep 3s 
 Enter
-Sleep 3s
+Sleep 4s
 Type "remove bar" 
-Sleep 1s 
+Sleep 3s 
 Enter
 Type "list" 
-Sleep 1s 
+Sleep 3s 
 Enter
-Sleep 3s
+Sleep 4s
 Type "next" 
-Sleep 1s 
+Sleep 3s 
 Enter
 Sleep 5s
 Type "quit" 
-Sleep 3s 
+Sleep 4s 
 Enter
-Sleep 3s

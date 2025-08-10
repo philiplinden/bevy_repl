@@ -137,6 +137,7 @@ impl ReplCommand for SayCommand {
                     .help("Message to say")
                     .required(true),
             )
+            .alias("echo")
             .arg(
                 clap::Arg::new("repeat")
                     .short('r')
@@ -320,13 +321,13 @@ impl ReplCommand for QueryCommand {
 fn on_query(trigger: Trigger<QueryCommand>, query: Query<(Entity, &Name)>) {
     let sub = trigger.event().substring.to_lowercase();
     let mut found = 0usize;
-    repl_println!("Matches: {}", found);
     for (e, name) in query.iter() {
         if name.as_str().to_lowercase().contains(&sub) {
-            repl_println!("- {:?}: {}", e, name.as_str());
+            repl_println!("({})  {:?}: {}", found + 1, e, name.as_str());
             found += 1;
         }
     }
+    repl_println!("Matches: {}", found);
 }
 
 #[derive(Debug, Clone, Event, Default)]
