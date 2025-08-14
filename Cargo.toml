@@ -15,14 +15,14 @@ categories = ["game-development", "development-tools"]
 bevy = { version = "0.16.1", default-features = false, features = ["bevy_log", "trace"]}
 bevy_ratatui = { version = "0.9.2", features = ["crossterm"] }
 ratatui = "0.29.0"
-clap = { version = "4.5.43" }
+clap = { version = "4.5.45" }
 shell-words = "1.1"
 bevy_repl_derive = { version = "0.1.0", path = "./bevy_repl_derive", optional = true }
 ctrlc = "3"
 once_cell = { version = "1", optional = true }
 
 # Error handling and logging
-anyhow = "1.0"
+anyhow = "1.0.99"
 tracing = { version = "0.1", features = [
     "max_level_debug",
     "release_max_level_warn",
