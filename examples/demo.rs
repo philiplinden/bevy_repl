@@ -233,7 +233,7 @@ fn log_streamer(time: Res<Time>, mut stream: ResMut<LogStream>) {
     if stream.active {
         if stream.tick.tick(time.delta()).just_finished() {
             // Use logging to stdout to demonstrate scrolling above prompt
-            bevy::log::info!("demo log tick at {:.2}s", time.elapsed_secs());
+            bevy::log::info!("tick at {:.2}s", time.elapsed_secs());
         }
         if let Some(timer) = stream.auto_stop.as_mut() {
             if timer.tick(time.delta()).finished() {

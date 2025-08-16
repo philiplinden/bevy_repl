@@ -135,6 +135,7 @@ pub fn tracing_to_repl_fmt_with_level(level: bevy::log::Level) {
     };
 
     let layer = fmt::layer()
+        .compact()
         .with_ansi(true)
         .with_writer(ReplMakeWriter)
         .with_filter(lf);
