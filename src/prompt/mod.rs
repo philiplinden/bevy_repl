@@ -5,16 +5,24 @@ pub mod key_events;
 use bevy::prelude::*;
 use std::sync::Arc;
 
-use crate::repl::{ReplSet};
+use crate::repl::ReplSet;
+use crate::log_ecs::InFrameLogPlugin;
 use self::input::PromptInputPlugin;
 use self::key_events::block_keyboard_input_forwarding;
 use self::renderer::{PromptRenderer, PromptRenderPlugin};
 
+#[derive(Clone)]
+pub enum PromptMode {
+    InFrame,
+    #[cfg(feature = "pretty")]
+    AlternateScreen,
+}
 
 #[derive(Resource, Clone)]
 pub struct PromptPlugin {
     pub config: ReplPromptConfig,
     pub renderer: Arc<dyn PromptRenderer>,
+    pub mode: PromptMode,
 }
 
 impl Default for PromptPlugin {
@@ -28,7 +36,8 @@ impl PromptPlugin {
         Self {
             config: ReplPromptConfig::minimal(),
             renderer: Arc::new(renderer::minimal::MinimalRenderer),
-        }
+            mode: PromptMode::InFrame,
+        }   
     }
 
     #[cfg(feature = "pretty")]
@@ -36,6 +45,7 @@ impl PromptPlugin {
         Self {
             config: ReplPromptConfig::pretty(),
             renderer: Arc::new(renderer::pretty::PrettyRenderer),
+            mode: PromptMode::AlternateScreen,
         }
     }
 }
@@ -49,6 +59,10 @@ impl Plugin for PromptPlugin {
         app.insert_resource(self.config.clone());
         app.add_plugins(PromptInputPlugin);
         app.add_plugins(PromptRenderPlugin { renderer: self.renderer.clone() });
+        // InFrame mode enables in-frame logging integration
+        if matches!(self.mode, PromptMode::InFrame) {
+            app.add_plugins(InFrameLogPlugin);
+        }
         app.add_systems(
             Update,
             (

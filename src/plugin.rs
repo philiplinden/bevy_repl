@@ -1,5 +1,4 @@
 use bevy::app::{PluginGroup, PluginGroupBuilder};
-
 use bevy_ratatui::{RatatuiPlugins,
     event::EventPlugin,
     cleanup::CleanupPlugin,

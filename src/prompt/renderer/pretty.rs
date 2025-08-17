@@ -14,6 +14,7 @@ use super::{PromptRenderer, RenderCtx};
 use crate::print::{printed_lines, set_scroll_region_info};
 use crate::prompt::ReplPromptConfig;
 use crate::repl::{Repl, ReplSet};
+use crate::log_ecs::LogBuffer;
 
 /// Return whether border is enabled under pretty feature.
 pub fn border_on(cfg: &ReplPromptConfig) -> bool {
@@ -56,7 +57,12 @@ fn manage_pretty_scroll_region(
     repl: Res<Repl>,
     visuals: Option<Res<ReplPromptConfig>>,
     mut last: Local<Option<ScrollRegionState>>,
+    in_frame_logs: Option<Res<LogBuffer>>,
 ) {
+    // If in-frame logging is enabled (LogBuffer exists), don't manage a terminal scroll region.
+    if in_frame_logs.is_some() {
+        return;
+    }
     // Determine desired reserved lines for the prompt area: pretty uses a border (3 lines).
     let vis = visuals.map(|v| v.clone()).unwrap_or_default();
     let border_on = vis.border.is_some();

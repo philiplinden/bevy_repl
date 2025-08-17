@@ -35,6 +35,8 @@ implementing a full TUI or rendering features.
       - [Plugin groups and alternate screen](#plugin-groups-and-alternate-screen)
     - [Robust printing in raw/alternate screen terminals](#robust-printing-in-rawalternate-screen-terminals)
     - [Routing Bevy logs to the REPL](#routing-bevy-logs-to-the-repl)
+      - [Approach A: REPL-orchestrated capture (turnkey)](#approach-a-repl-orchestrated-capture-turnkey)
+      - [Approach B: Bevy LogPlugin + custom\_layer (keep Bevy fmt/style)](#approach-b-bevy-logplugin--custom_layer-keep-bevy-fmtstyle)
     - [Startup ordering (PostStartup)](#startup-ordering-poststartup)
   - [Usage](#usage)
     - [REPL lifecycle (v1)](#repl-lifecycle-v1)
@@ -230,35 +232,91 @@ If you truly need to emit raw `stdout` (e.g., piping to tools) while the REPL is
 
 You can route logs produced by Bevy's `tracing` pipeline to the REPL so they appear above the prompt and scroll correctly.
 
-- __How it works__
-  - A custom `tracing` Layer captures log events and forwards them through an `mpsc` channel to a Non-Send resource.
-  - A system transfers messages from the channel into an `Event<LogEvent>`.
-  - You can then read `Event<LogEvent>` yourself, or use the provided system that prints via `repl_println!` so lines render above the prompt.
+A custom `tracing` Layer captures log events and forwards them through an `mpsc`
+channel to a Non-Send resource. A system transfers messages from the channel
+into an `Event<LogEvent>`. You can then read `Event<LogEvent>` yourself, print
+via `repl_println!`, or render in-frame via a `LogBuffer`.
 
-- __API__
-  - Module: `bevy_repl::log_ecs`
-  - Layer hook for Bevy's `LogPlugin`: `repl_log_custom_layer`
-  - Event type: `LogEvent`
-  - Optional print system: `print_log_events_system`
+`LogCaptureConfig { level, capacity, init_subscriber }` configures in-frame logging when using `InFrameLogPlugin`:
 
-- __Recommended setup (preserve colors/format & avoid duplicate stdout)__
+- `level`: max level when installing our own subscriber
+- `capacity`: `LogBuffer` size for in-frame rendering
+- `init_subscriber`: if true, install a global subscriber with the capture layer; set false when using Bevy's `LogPlugin.custom_layer`.
 
-If you primarily want logs to print above the prompt with the usual colors/formatting, install the REPL-aware fmt layer and disable the native stdout logger. Importantly, call the installer BEFORE adding `DefaultPlugins`.
+#### Approach A: REPL-orchestrated capture (turnkey)
+
+This approach lets the REPL manage the entire logging pipeline from scratch. The REPL installs its own global `tracing` subscriber with a capture layer, bypassing Bevy's `LogPlugin` entirely. This is simpler to set up since you only need to configure `LogCaptureConfig` and add `InFrameLogPlugin`. However, you lose Bevy's default log formatting and any custom formatting you might have configured through `LogPlugin`. All log output will use the REPL's own formatting instead of Bevy's structured output style.
+
+**Note:**
+- In minimal mode, in-frame logging is enabled automatically by the minimal renderer stack.
+- In pretty mode (alternate screen), logs are intended to appear above the
+  prompt via the ratatui-managed scroll region; in-frame logging is not enabled
+  by default.
+- You can force in-frame logging in any mode by adding
+  `bevy_repl::log_ecs::InFrameLogPlugin` yourself (not generally recommended for
+  pretty mode).
+  - Minimal mode or when you explicitly want logs inside the ratatui frame (no
+    scroll region). Not recommended with the pretty/alternate-screen prompt unless
+    you intentionally want to replace the scroll-region behavior with in-frame
+    rendering.
+  - If you plan to use pretty mode’s scroll region, don’t include `InFrameLogPlugin`
+    in `ReplPlugins` (or remove it), otherwise pretty will detect `LogBuffer` and skip
+    the scroll region.
 
 ```rust
-use bevy::prelude::*;
-use bevy_repl::prelude::*;
+use bevy::{app::ScheduleRunnerPlugin, prelude::*};
+use bevy_repl::log_ecs::{LogCaptureConfig, InFrameLogPlugin};
+use std::time::Duration;
 
 fn main() {
-    // 1) Install REPL-aware fmt layer before plugins
-    tracing_to_repl_fmt();
-
     App::new()
-        .add_plugins((
-            // 2) Disable Bevy's stdout logger to prevent duplicate/garbled output
-            DefaultPlugins.build().disable::<bevy::log::LogPlugin>(),
-            ReplPlugins.set(PromptPlugin::pretty()),
-        ))
+        .add_plugins(
+            MinimalPlugins.set(ScheduleRunnerPlugin::run_loop(Duration::from_secs_f64(1.0/60.0)))
+        )
+        .add_plugins(bevy::input::InputPlugin::default())
+        // Configure logging: REPL installs a global subscriber with the capture layer
+        .insert_resource(LogCaptureConfig { level: bevy::log::Level::INFO, capacity: 512, init_subscriber: true })
+        .add_plugins(InFrameLogPlugin) // capture -> ECS -> LogBuffer
+        .add_plugins(bevy_repl::plugin::ReplPlugins)
+        .run();
+}
+```
+
+Note:
+- This configuration keeps Bevy’s formatted logs on stdout. The REPL’s in-frame
+  buffer shows minimal `level + message` lines.
+- To render formatted logs inside the REPL (instead of stdout), prefer the
+  fmt-to-REPL approach via `bevy_repl::log_ecs::tracing_to_repl_fmt()` and
+  disable `bevy::log::LogPlugin` to avoid duplicates.
+
+#### Approach B: Bevy LogPlugin + custom_layer (keep Bevy fmt/style)
+
+This pattern preserves Bevy's default logging format and style on stdout while
+also capturing messages for the REPL in-frame buffer (which displays minimal
+lines). Use this when you want to keep Bevy's structured output or you're
+already using `LogPlugin` in your app. Tradeoff: you may see duplicate output
+(stdout + in-frame). Set `init_subscriber: false` to avoid subscriber conflicts.
+
+```rust
+use bevy::{app::ScheduleRunnerPlugin, prelude::*};
+use bevy_repl::log_ecs::{CapturePlumbingPlugin, custom_layer, LogCaptureConfig, InFrameLogPlugin};
+use std::time::Duration;
+
+fn main() {
+    App::new()
+        .add_plugins(
+            MinimalPlugins.set(ScheduleRunnerPlugin::run_loop(Duration::from_secs_f64(1.0/60.0)))
+        )
+        .add_plugins(bevy::input::InputPlugin::default())
+        // 1) Prepare plumbing so custom_layer can read the sender
+        .add_plugins(CapturePlumbingPlugin)
+        // 2) Configure buffer; do NOT install a global subscriber here
+        .insert_resource(LogCaptureConfig { level: bevy::log::Level::INFO, capacity: 512, init_subscriber: false })
+        // 3) Orchestrate drain -> buffer for in-frame rendering
+        .add_plugins(InFrameLogPlugin)
+        // 4) Use Bevy's LogPlugin and attach our capture Layer
+        .add_plugins(bevy::log::LogPlugin { custom_layer: |app| custom_layer(app), ..Default::default() })
+        .add_plugins(bevy_repl::plugin::ReplPlugins)
         .run();
 }
 ```

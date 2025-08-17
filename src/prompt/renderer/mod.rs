@@ -5,11 +5,12 @@ pub mod pretty;
 
 use bevy::prelude::*;
 use bevy_ratatui::RatatuiContext;
-use crate::repl::{Repl, FallbackTerminalContext, ReplSet};
-
-use crate::prompt::{ReplPrompt, ReplPromptConfig};
 use ratatui::layout::Rect;
 use std::sync::Arc;
+
+use crate::repl::{Repl, FallbackTerminalContext, ReplSet};
+use crate::prompt::{ReplPrompt, ReplPromptConfig};
+use crate::log_ecs::{LogBuffer, LogLine};
 
 /// Public label: "scroll region ready". Always available, even in minimal mode.
 #[derive(SystemSet, Debug, Hash, PartialEq, Eq, Clone)]
@@ -25,6 +26,8 @@ pub struct RenderCtx<'a> {
     pub prompt: &'a ReplPrompt,
     pub visuals: &'a ReplPromptConfig,
     pub area: Rect,
+    /// Optional snapshot of recent logs to render inside the frame (top-aligned)
+    pub logs: Option<Vec<LogLine>>,
 }
 
 /// Strategy interface for prompt rendering
@@ -66,14 +69,19 @@ pub(super) fn display_prompt(
     repl: Res<Repl>,
     prompt: Res<ReplPrompt>,
     visuals: Option<Res<ReplPromptConfig>>,
+    logs_buf: Option<Res<LogBuffer>>,
     active: Res<ActiveRenderer>,
 ) {
     let visuals = visuals.map(|v| v.clone()).unwrap_or_default();
+    // Take a cheap snapshot of recent logs if present
+    let logs_snapshot: Option<Vec<LogLine>> = logs_buf
+        .as_ref()
+        .map(|b| b.lines.iter().cloned().collect());
 
     if let Some(mut term) = term_ratatui {
         let _ = term.draw(|f| {
             let area = Rect { x: 0, y: 0, width: f.area().width, height: f.area().height };
-            let ctx = RenderCtx { repl: &repl, prompt: &prompt, visuals: &visuals, area };
+            let ctx = RenderCtx { repl: &repl, prompt: &prompt, visuals: &visuals, area, logs: logs_snapshot.clone() };
             active.0.render(f, &ctx);
         });
         return;
@@ -82,7 +90,7 @@ pub(super) fn display_prompt(
     let Some(mut term) = term_fallback else { return }; // No terminal context yet
     let _ = term.draw(|f| {
         let area = Rect { x: 0, y: 0, width: f.area().width, height: f.area().height };
-        let ctx = RenderCtx { repl: &repl, prompt: &prompt, visuals: &visuals, area };
+        let ctx = RenderCtx { repl: &repl, prompt: &prompt, visuals: &visuals, area, logs: logs_snapshot.clone() };
         active.0.render(f, &ctx);
     });
 }

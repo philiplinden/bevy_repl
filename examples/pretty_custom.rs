@@ -10,7 +10,8 @@ use bevy::{app::ScheduleRunnerPlugin, prelude::*};
 use bevy_repl::{
     prelude::*,
     prompt::{
-        PromptBorderConfig, PromptColorConfig, PromptHintConfig, renderer::pretty::PrettyRenderer,
+        PromptBorderConfig, PromptColorConfig, PromptHintConfig, PromptMode,
+        renderer::pretty::PrettyRenderer,
     },
 };
 use std::sync::Arc;
@@ -56,6 +57,7 @@ fn main() {
                     hint: Some(PromptHintConfig::default()),
                 },
                 renderer: Arc::new(PrettyRenderer),
+                mode: PromptMode::AlternateScreen,
             }),
         ))
         .add_repl_command::<PingCommand>()
