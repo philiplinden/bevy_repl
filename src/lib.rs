@@ -15,11 +15,10 @@ pub mod prelude {
     pub use crate::command::{ReplAppExt, ReplResult};
     pub use crate::plugin::{MinimalReplPlugins, ReplPlugins};
     pub use crate::prompt::{
-        PromptPlugin, ReplPrompt, config::ReplPromptConfig,
-        renderer::{ActiveRenderer, PromptRenderPlugin, PromptRenderer, minimal::MinimalRenderer},
+        PromptPlugin, config::{PromptHint, PromptSymbol, ReplPromptConfig},
+        renderer::{ActiveRenderer, PromptRenderPlugin, PromptRenderer},
     };
-    pub use crate::repl::{
-        FallbackTerminalContext, Repl, ReplBufferEvent, ReplPlugin, ReplSet, ReplSubmitEvent,
+    pub use crate::repl::{Repl, ReplBufferEvent, ReplPlugin, ReplSet, ReplSubmitEvent,
         repl_is_enabled,
     };
     // Low-level printer if callers prefer a function over the macro.

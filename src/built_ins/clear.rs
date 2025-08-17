@@ -1,5 +1,6 @@
 use bevy::prelude::*;
 use crate::prelude::*;
+use crate::prompt::renderer::stdout::StdoutTerminalContext;
 
 pub fn plugin(app: &mut App) {
     app.add_repl_command::<ClearCommand>();
@@ -15,9 +16,13 @@ impl crate::command::ReplCommand for ClearCommand {
     }
 }
 
-fn on_clear(_trigger: Trigger<ClearCommand>, mut terminal: ResMut<FallbackTerminalContext>) {
-    match terminal.clear() {
-        Ok(_) => return,
-        Err(e) => error!("Failed to clear terminal: {}", e),
+fn on_clear(_trigger: Trigger<ClearCommand>, terminal: Option<ResMut<StdoutTerminalContext>>) {
+    if let Some(mut term) = terminal {
+        if let Err(e) = term.clear() {
+            error!("Failed to clear terminal: {}", e);
+        }
+    } else {
+        // No stdout terminal context present (likely in alt-screen). No-op; next frame redraws UI.
+        info!("Clear requested, but no StdoutTerminalContext present; skipping.");
     }
 }

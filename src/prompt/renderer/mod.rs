@@ -1,39 +1,44 @@
-pub mod minimal;
+pub mod stdout;
 pub mod helpers;
-#[cfg(feature = "pretty")]
-pub mod pretty;
+pub mod alt_screen;
 
 use bevy::prelude::*;
 use bevy_ratatui::RatatuiContext;
 use ratatui::layout::Rect;
 use std::sync::Arc;
 
-use crate::repl::{Repl, FallbackTerminalContext, ReplSet};
-use crate::prompt::{ReplPrompt, ReplPromptConfig};
-use crate::log_ecs::{LogBuffer, LogLine};
+use crate::repl::{Repl, ReplSet};
+use crate::prompt::ReplPromptConfig;
+use crate::log_ecs::{LogBuffer, LogLine, CaptureSubscriberPlugin, print_log_events_system};
+use self::stdout::StdoutTerminalContext;
 
 pub struct PromptRenderPlugin {
     pub renderer: Arc<dyn PromptRenderer>,
 }
 
-/// Rendering context passed to renderers
-pub struct RenderCtx<'a> {
-    pub repl: &'a Repl,
-    pub prompt: &'a ReplPrompt,
-    pub visuals: &'a ReplPromptConfig,
-    pub area: Rect,
-    /// Optional snapshot of recent logs to render inside the frame (top-aligned)
-    pub logs: Option<Vec<LogLine>>,
-}
-
 /// Strategy interface for prompt rendering
 pub trait PromptRenderer: Send + Sync + 'static {
     fn render(&self, _f: &mut ratatui::Frame<'_>, _ctx: &RenderCtx) {}
+    /// Configure logging for this renderer. Default: stdout engine
+    fn configure_logging(&self, app: &mut App) {
+        app.add_plugins(CaptureSubscriberPlugin::default());
+        app.add_systems(Update, print_log_events_system);
+    }
+    fn configure_context(&self, _app: &mut App) {}
 }
 
 /// Active renderer resource; apps can override this to customize styling
 #[derive(Resource, Clone)]
 pub struct ActiveRenderer(pub Arc<dyn PromptRenderer>);
+
+/// Rendering context passed to renderers
+pub struct RenderCtx<'a> {
+    pub repl: &'a Repl,
+    pub cfg: &'a ReplPromptConfig,
+    pub area: Rect,
+    /// Optional snapshot of recent logs to render inside the frame (top-aligned)
+    pub logs: Option<Vec<LogLine>>,
+}
 
 impl Plugin for PromptRenderPlugin {
     fn build(&self, app: &mut App) {
@@ -48,42 +53,41 @@ impl Plugin for PromptRenderPlugin {
                     .after(ReplSet::Buffer),
             ),
         );
-        #[cfg(feature = "pretty")]
-        app.add_plugins(pretty::ScrollRegionPlugin);
     }
 }
 
 /// Render entrypoint: delegates to the active renderer strategy
 pub(super) fn display_prompt(
-    // Prefer ratatui's default terminal context when present (alternate screen)
-    term_ratatui: Option<ResMut<RatatuiContext>>, 
-    // Fallback to the crate's custom terminal context to preserve compatibility
-    term_fallback: Option<ResMut<FallbackTerminalContext>>, 
     repl: Res<Repl>,
-    prompt: Res<ReplPrompt>,
-    visuals: Option<Res<ReplPromptConfig>>,
+    cfg: Option<Res<ReplPromptConfig>>,
     logs_buf: Option<Res<LogBuffer>>,
     active: Res<ActiveRenderer>,
+    // Prefer ratatui's default terminal context when present (alternate screen)
+    term_ratatui: Option<ResMut<RatatuiContext>>,
+    // Fallback to our stdout terminal context when present
+    term_stdout: Option<ResMut<StdoutTerminalContext>>,
 ) {
-    let visuals = visuals.map(|v| v.clone()).unwrap_or_default();
+    let cfg = cfg.map(|v| v.clone()).unwrap_or_default();
     // Take a cheap snapshot of recent logs if present
     let logs_snapshot: Option<Vec<LogLine>> = logs_buf
         .as_ref()
         .map(|b| b.lines.iter().cloned().collect());
+    let _ = logs_snapshot; // kept for future in-frame renderers
 
     if let Some(mut term) = term_ratatui {
         let _ = term.draw(|f| {
             let area = Rect { x: 0, y: 0, width: f.area().width, height: f.area().height };
-            let ctx = RenderCtx { repl: &repl, prompt: &prompt, visuals: &visuals, area, logs: logs_snapshot.clone() };
+            let ctx = RenderCtx { repl: &repl, cfg: &cfg, area, logs: logs_snapshot.clone() };
             active.0.render(f, &ctx);
         });
         return;
     }
 
-    let Some(mut term) = term_fallback else { return }; // No terminal context yet
-    let _ = term.draw(|f| {
-        let area = Rect { x: 0, y: 0, width: f.area().width, height: f.area().height };
-        let ctx = RenderCtx { repl: &repl, prompt: &prompt, visuals: &visuals, area, logs: logs_snapshot.clone() };
-        active.0.render(f, &ctx);
-    });
+    if let Some(mut term) = term_stdout {
+        let _ = term.draw(|f| {
+            let area = Rect { x: 0, y: 0, width: f.area().width, height: f.area().height };
+            let ctx = RenderCtx { repl: &repl, cfg: &cfg, area, logs: logs_snapshot.clone() };
+            active.0.render(f, &ctx);
+        });
+    }
 }

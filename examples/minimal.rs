@@ -43,9 +43,11 @@ fn main() {
                 .set(ScheduleRunnerPlugin::run_loop(Duration::from_secs_f64(
                     1.0 / 60.0,
                 ))),
+            // Log plugin is not required but makes Bevy's logs look prettier
+            bevy::log::LogPlugin::default(),
             // Input plugin is required so the REPL can handle keyboard input
             bevy::input::InputPlugin::default(),
-            // Use the minimal renderer with a custom ratatui context that
+            // Use a minimal renderer with a custom ratatui context that
             // operates in the main terminal instead of an alternate screen
             MinimalReplPlugins,
         ))

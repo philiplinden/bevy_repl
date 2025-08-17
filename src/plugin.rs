@@ -24,7 +24,7 @@ impl PluginGroup for MinimalReplPlugins {
             // Add the REPL core
             .add(crate::repl::ReplPlugin::default())
             .add(crate::command::ParserPlugin)
-            .add(crate::prompt::PromptPlugin::minimal())
+            .add(crate::prompt::PromptPlugin::stdout())
     }
 }
 

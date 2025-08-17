@@ -8,10 +8,8 @@
 //!
 //! This avoids newline/cursor issues that can happen in raw or alternate screen modes.
 
-#[cfg(feature = "pretty")]
 use once_cell::sync::OnceCell;
 use std::io::{Write, stdout};
-#[cfg(feature = "pretty")]
 use std::sync::RwLock;
 use std::sync::atomic::{AtomicU64, Ordering};
 
@@ -21,16 +19,13 @@ use bevy_ratatui::crossterm::{
 };
 
 // Shared scroll-region info: (terminal_height, reserved_bottom_lines)
-#[cfg(feature = "pretty")]
 static SCROLL_REGION_INFO: OnceCell<RwLock<Option<(u16, u16)>>> = OnceCell::new();
 
-#[cfg(feature = "pretty")]
 fn scroll_region_info() -> &'static RwLock<Option<(u16, u16)>> {
     SCROLL_REGION_INFO.get_or_init(|| RwLock::new(None))
 }
 
 /// Set current scroll-region info; pretty renderer calls this when it updates the region.
-#[cfg(feature = "pretty")]
 pub fn set_scroll_region_info(height: u16, reserved_bottom: u16) {
     if let Ok(mut guard) = scroll_region_info().write() {
         if reserved_bottom == 0 {
@@ -42,26 +37,13 @@ pub fn set_scroll_region_info(height: u16, reserved_bottom: u16) {
 }
 
 /// Read current scroll-region info.
-#[cfg(feature = "pretty")]
 pub fn get_scroll_region_info() -> Option<(u16, u16)> {
     scroll_region_info().read().ok().and_then(|g| *g)
-}
-
-// No-op stubs when pretty is disabled
-#[cfg(not(feature = "pretty"))]
-#[inline]
-pub fn set_scroll_region_info(_: u16, _: u16) {}
-
-#[cfg(not(feature = "pretty"))]
-#[inline]
-pub fn get_scroll_region_info() -> Option<(u16, u16)> {
-    None
 }
 
 // Track how many lines have been printed
 static PRINT_COUNT: AtomicU64 = AtomicU64::new(0);
 
-#[inline]
 pub fn printed_lines() -> usize {
     PRINT_COUNT.load(Ordering::Relaxed).try_into().unwrap()
 }

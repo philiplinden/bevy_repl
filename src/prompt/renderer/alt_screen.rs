@@ -8,10 +8,10 @@ use std::io::{Write, stdout};
 
 use super::helpers::{bottom_bar_area, buffer_window, cursor_position};
 use super::{PromptRenderer, RenderCtx};
+use crate::log_ecs::LogBuffer;
 use crate::print::{printed_lines, set_scroll_region_info};
 use crate::prompt::ReplPromptConfig;
 use crate::repl::{Repl, ReplSet};
-use crate::log_ecs::LogBuffer;
 
 pub struct ScrollRegionPlugin;
 
@@ -20,11 +20,9 @@ impl Plugin for ScrollRegionPlugin {
         app.add_systems(PostStartup, manage_pretty_scroll_region);
         app.add_systems(
             Update,
-            (manage_pretty_scroll_region
+            manage_pretty_scroll_region
                 .in_set(ReplSet::Render)
-                .in_set(ReplSet::All)
-                .after(ReplSet::Buffer)
-                .before(super::display_prompt),),
+                .before(super::display_prompt),
         );
     }
 }
@@ -144,12 +142,12 @@ pub fn inner_rect(area: Rect, border_on: bool) -> Rect {
     }
 }
 
-/// Pretty renderer strategy using the helpers above
-pub struct PrettyRenderer;
+/// Alt-screen renderer prints to a new terminal screen using ratatui's default terminal context
+pub struct AltScreenRenderer;
 
-impl PromptRenderer for PrettyRenderer {
+impl PromptRenderer for AltScreenRenderer {
     fn render(&self, f: &mut ratatui::Frame<'_>, ctx: &RenderCtx) {
-        let visuals = ctx.visuals;
+        let visuals = ctx.cfg.clone();
 
         // Determine total height: 1 line content + optional borders
         let height = if visuals.block.is_some() { 3 } else { 1 };
@@ -170,15 +168,19 @@ impl PromptRenderer for PrettyRenderer {
 
         // Hint
         let hint_width: u16;
-        if let Some(hint) = ctx.visuals.hint.clone() {
-            hint_width = ratatui::text::Span::raw(hint).width() as u16;
+        if let Some(hint) = visuals.hint.as_ref() {
+            hint_width = ratatui::text::Span::raw(hint.text.clone()).width() as u16;
         } else {
             hint_width = 0;
         }
 
         // Left width and prompt symbol
         let left_width = inner.width.saturating_sub(hint_width);
-        let prompt_symbol = ctx.prompt.symbol.clone().unwrap_or_default();
+        let prompt_symbol = visuals
+            .symbol
+            .as_ref()
+            .map(|s| s.text.clone())
+            .unwrap_or_default();
         let prompt_width = ratatui::text::Span::raw(prompt_symbol.clone()).width() as u16;
         let visible_width = left_width.saturating_sub(prompt_width);
         if visible_width == 0 {
@@ -198,7 +200,9 @@ impl PromptRenderer for PrettyRenderer {
             height: 1,
         };
         let mut spans = Vec::with_capacity(2);
-        spans.push(Span::styled(prompt_symbol, ctx.visuals.style.unwrap_or_default()));
+        // style for symbol
+        let sym_style = visuals.symbol.as_ref().map(|s| s.style).unwrap_or_default();
+        spans.push(Span::styled(prompt_symbol, sym_style));
         spans.push(Span::raw(visible_buf));
         f.render_widget(Paragraph::new(Line::from(spans)), left_area);
 
@@ -210,15 +214,19 @@ impl PromptRenderer for PrettyRenderer {
                 width: inner.width - left_width,
                 height: 1,
             };
-            let hint_para = Paragraph::new(Line::from(vec![Span::styled(
-                ctx.visuals.hint.clone().unwrap_or_default(),
-                ctx.visuals.style.unwrap_or_default(),
-            )]));
-            f.render_widget(hint_para, hint_area);
+            if let Some(h) = visuals.hint.as_ref() {
+                let hint_para =
+                    Paragraph::new(Line::from(vec![Span::styled(h.text.clone(), h.style)]));
+                f.render_widget(hint_para, hint_area);
+            }
         }
 
         // Cursor
         let (cursor_x, cursor_y) = cursor_position(left_area, prompt_width, buffer, start, cursor);
         f.set_cursor_position((cursor_x, cursor_y));
+    }
+    fn configure_logging(&self, app: &mut App) {
+        // In alt-screen, render logs inside the ratatui frame via LogBuffer
+        app.add_plugins(crate::log_ecs::LogBufferPlugin::default());
     }
 }

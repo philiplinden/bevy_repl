@@ -126,7 +126,7 @@ fn main() {
             // Required so the REPL can handle keyboard input
             bevy::input::InputPlugin::default(),
             // Turnkey REPL with minimal prompt renderer and default commands
-            ReplPlugins.set(PromptPlugin::pretty()),
+            ReplPlugins,
         ))
         .add_repl_command::<TimeScaleCommand>()
         .add_observer(on_time_scale)
