@@ -4,13 +4,13 @@
 //! plugins manually and passing a custom `PromptPlugin` with a
 //! `ReplPromptConfig` preset.
 //!
-//! Run with: `cargo run --example pretty_manual --features pretty`
+//! Run with: `cargo run --example pretty_custom --features pretty`
 
 use bevy::{app::ScheduleRunnerPlugin, prelude::*};
 use bevy_repl::{
     prelude::*,
     prompt::{
-        PromptBorderConfig, PromptColorConfig, PromptHintConfig, PromptMode,
+        PromptMode,
         renderer::pretty::PrettyRenderer,
     },
 };
@@ -50,18 +50,13 @@ fn main() {
             ))),
             bevy::input::InputPlugin::default(),
             ReplPlugins.set(PromptPlugin {
-                config: ReplPromptConfig {
-                    symbol: Some("λ ".into()),
-                    border: Some(PromptBorderConfig::default()),
-                    color: Some(PromptColorConfig::default()),
-                    hint: Some(PromptHintConfig::default()),
-                },
+                config: ReplPromptConfig::pretty(),
                 renderer: Arc::new(PrettyRenderer),
                 mode: PromptMode::AlternateScreen,
             }),
         ))
         .add_repl_command::<PingCommand>()
         .add_observer(on_ping)
-        .add_systems(PostStartup, instructions.after(ScrollRegionReadySet))
+        .add_systems(PostStartup, instructions)
         .run();
 }

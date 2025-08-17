@@ -12,10 +12,6 @@ use crate::repl::{Repl, FallbackTerminalContext, ReplSet};
 use crate::prompt::{ReplPrompt, ReplPromptConfig};
 use crate::log_ecs::{LogBuffer, LogLine};
 
-/// Public label: "scroll region ready". Always available, even in minimal mode.
-#[derive(SystemSet, Debug, Hash, PartialEq, Eq, Clone)]
-pub struct ScrollRegionReadySet;
-
 pub struct PromptRenderPlugin {
     pub renderer: Arc<dyn PromptRenderer>,
 }
@@ -39,12 +35,9 @@ pub trait PromptRenderer: Send + Sync + 'static {
 #[derive(Resource, Clone)]
 pub struct ActiveRenderer(pub Arc<dyn PromptRenderer>);
 
-
 impl Plugin for PromptRenderPlugin {
     fn build(&self, app: &mut App) {
         app.insert_resource(ActiveRenderer(self.renderer.clone()));
-        // Expose the PostStartup ready set unconditionally so callers can order after it.
-        app.configure_sets(PostStartup, ScrollRegionReadySet);
         app.add_systems(
             Update,
             (

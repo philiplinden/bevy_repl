@@ -37,7 +37,6 @@ implementing a full TUI or rendering features.
     - [Routing Bevy logs to the REPL](#routing-bevy-logs-to-the-repl)
       - [Approach A: REPL-orchestrated capture (turnkey)](#approach-a-repl-orchestrated-capture-turnkey)
       - [Approach B: Bevy LogPlugin + custom\_layer (keep Bevy fmt/style)](#approach-b-bevy-logplugin--custom_layer-keep-bevy-fmtstyle)
-    - [Startup ordering (PostStartup)](#startup-ordering-poststartup)
   - [Usage](#usage)
     - [REPL lifecycle (v1)](#repl-lifecycle-v1)
     - [Builder pattern (default)](#builder-pattern-default)
@@ -99,7 +98,7 @@ colorful styles for title/prompt/hints, and a right-aligned hint text.
 - __Pretty (`--features pretty`)__
   - Appearance: border with title, colored styles, right-aligned usage hint.
   - Compilation: styling code compiled and enabled.
-  - Config: presets or explicit `ReplPromptConfig { symbol, border, color, hint }`.
+  - Config: presets or explicit `ReplPromptConfig { symbol, block, style, hint }`.
   - Use `ReplPlugins.set(PromptPlugin::pretty())` as shown below.
 
 #### Custom renderer (feature-gated: `pretty`)
@@ -199,7 +198,9 @@ if you want a minimal look.
     - Prefer sane defaults including built-in commands (`quit`, `help`, `clear`).
     - Don’t need to wire `RatatuiPlugins` manually.
 
-  By default `ReplPlugins` uses the minimal prompt renderer. To enable the pretty renderer when the `pretty` feature is on, use `ReplPlugins.set(PromptPlugin::pretty())`.
+  Default behavior: `ReplPlugins` now respects features via `PromptPlugin::default()`.
+  - Without `pretty`: minimal renderer.
+  - With `pretty`: simple preset by default. To force full pretty styling, use `ReplPlugins.set(PromptPlugin::pretty())`.
 
 ### Robust printing in raw/alternate screen terminals
 
@@ -230,72 +231,82 @@ If you truly need to emit raw `stdout` (e.g., piping to tools) while the REPL is
 
 ### Routing Bevy logs to the REPL
 
-You can route logs produced by Bevy's `tracing` pipeline to the REPL so they appear above the prompt and scroll correctly.
+You can route logs produced by Bevy's `tracing` pipeline either to stdout (Minimal mode) or into an in-frame buffer (Pretty/alternate-screen) so they appear in the right place relative to the prompt.
 
 A custom `tracing` Layer captures log events and forwards them through an `mpsc`
 channel to a Non-Send resource. A system transfers messages from the channel
 into an `Event<LogEvent>`. You can then read `Event<LogEvent>` yourself, print
 via `repl_println!`, or render in-frame via a `LogBuffer`.
 
-`LogCaptureConfig { level, capacity, init_subscriber }` configures in-frame logging when using `InFrameLogPlugin`:
+`LogCaptureConfig { level, capacity, init_subscriber }` configures in-frame logging when using `InFrameLogPlugin` (Pretty/alternate-screen use-case):
 
 - `level`: max level when installing our own subscriber
 - `capacity`: `LogBuffer` size for in-frame rendering
 - `init_subscriber`: if true, install a global subscriber with the capture layer; set false when using Bevy's `LogPlugin.custom_layer`.
 
-#### Approach A: REPL-orchestrated capture (turnkey)
+#### Approach A: Turnkey stdout printing (Minimal)
 
-This approach lets the REPL manage the entire logging pipeline from scratch. The REPL installs its own global `tracing` subscriber with a capture layer, bypassing Bevy's `LogPlugin` entirely. This is simpler to set up since you only need to configure `LogCaptureConfig` and add `InFrameLogPlugin`. However, you lose Bevy's default log formatting and any custom formatting you might have configured through `LogPlugin`. All log output will use the REPL's own formatting instead of Bevy's structured output style.
+Minimal mode prints logs to stdout above the prompt instead of rendering them in the TUI frame. The REPL installs a capture subscriber and a print system that forwards `LogEvent`s to `repl_println!`, which cooperates with the prompt. This preserves terminal-native scrollback and avoids TUI duplication.
 
 **Note:**
-- In minimal mode, in-frame logging is enabled automatically by the minimal renderer stack.
-- In pretty mode (alternate screen), logs are intended to appear above the
-  prompt via the ratatui-managed scroll region; in-frame logging is not enabled
-  by default.
-- You can force in-frame logging in any mode by adding
-  `bevy_repl::log_ecs::InFrameLogPlugin` yourself (not generally recommended for
-  pretty mode).
-  - Minimal mode or when you explicitly want logs inside the ratatui frame (no
-    scroll region). Not recommended with the pretty/alternate-screen prompt unless
-    you intentionally want to replace the scroll-region behavior with in-frame
-    rendering.
-  - If you plan to use pretty mode’s scroll region, don’t include `InFrameLogPlugin`
-    in `ReplPlugins` (or remove it), otherwise pretty will detect `LogBuffer` and skip
-    the scroll region.
+- Minimal mode (default) automatically captures tracing logs and prints them to stdout via the REPL printer; it does not render logs in-frame.
+- Pretty/alternate-screen mode renders logs in-frame using a `LogBuffer` and a ratatui scroll region; use this when you want integrated TUI log history instead of terminal scrollback.
+- You can force in-frame logging in other setups by adding `bevy_repl::log_ecs::InFrameLogPlugin`, but this is not recommended for Minimal mode.
 
 ```rust
 use bevy::{app::ScheduleRunnerPlugin, prelude::*};
-use bevy_repl::log_ecs::{LogCaptureConfig, InFrameLogPlugin};
+use bevy_repl::prelude::*;
 use std::time::Duration;
 
 fn main() {
     App::new()
-        .add_plugins(
-            MinimalPlugins.set(ScheduleRunnerPlugin::run_loop(Duration::from_secs_f64(1.0/60.0)))
-        )
-        .add_plugins(bevy::input::InputPlugin::default())
-        // Configure logging: REPL installs a global subscriber with the capture layer
-        .insert_resource(LogCaptureConfig { level: bevy::log::Level::INFO, capacity: 512, init_subscriber: true })
-        .add_plugins(InFrameLogPlugin) // capture -> ECS -> LogBuffer
-        .add_plugins(bevy_repl::plugin::ReplPlugins)
+        .add_plugins((
+            MinimalPlugins.set(ScheduleRunnerPlugin::run_loop(Duration::from_secs_f64(1.0/60.0))),
+            bevy::input::InputPlugin::default(),
+            // Either MinimalReplPlugins or ReplPlugins set up the minimal prompt and stdout printing
+            MinimalReplPlugins,
+        ))
         .run();
 }
 ```
 
 Note:
-- This configuration keeps Bevy’s formatted logs on stdout. The REPL’s in-frame
-  buffer shows minimal `level + message` lines.
-- To render formatted logs inside the REPL (instead of stdout), prefer the
-  fmt-to-REPL approach via `bevy_repl::log_ecs::tracing_to_repl_fmt()` and
-  disable `bevy::log::LogPlugin` to avoid duplicates.
+- Minimal mode’s stdout printing avoids in-frame duplication and preserves
+  terminal scrollback.
+- If you want the REPL to render formatted logs inside the TUI instead, use
+  Pretty mode with the in-frame buffer, or route `tracing` directly to the REPL
+  printer via `tracing_to_repl_fmt()` and disable Bevy's `LogPlugin` to avoid
+  duplicates.
 
-#### Approach B: Bevy LogPlugin + custom_layer (keep Bevy fmt/style)
+#### Approach B: In-frame buffer (Pretty)
 
-This pattern preserves Bevy's default logging format and style on stdout while
-also capturing messages for the REPL in-frame buffer (which displays minimal
-lines). Use this when you want to keep Bevy's structured output or you're
-already using `LogPlugin` in your app. Tradeoff: you may see duplicate output
-(stdout + in-frame). Set `init_subscriber: false` to avoid subscriber conflicts.
+Pretty mode renders a ratatui-managed scroll region with a `LogBuffer` for
+recent lines. Choose this when you want integrated TUI log history aligned with
+the prompt region (alternate screen).
+
+```rust
+use bevy::{app::ScheduleRunnerPlugin, prelude::*};
+use bevy_repl::prelude::*;
+use std::time::Duration;
+
+fn main() {
+    App::new()
+        .add_plugins((
+            MinimalPlugins.set(ScheduleRunnerPlugin::run_loop(Duration::from_secs_f64(1.0/60.0))),
+            bevy::input::InputPlugin::default(),
+            // Default REPL stack with alternate screen; enable pretty preset
+            ReplPlugins.set(PromptPlugin::pretty()),
+        ))
+        .run();
+}
+```
+
+#### Approach C: Bevy LogPlugin + custom_layer (keep Bevy fmt/style)
+
+Attach a custom capture layer to Bevy’s `LogPlugin` to populate the in-frame
+buffer while preserving Bevy’s stdout formatting. Tradeoff: you may see
+duplicate output (stdout + in-frame). Set `init_subscriber: false` to avoid
+subscriber conflicts.
 
 ```rust
 use bevy::{app::ScheduleRunnerPlugin, prelude::*};
@@ -317,27 +328,6 @@ fn main() {
         // 4) Use Bevy's LogPlugin and attach our capture Layer
         .add_plugins(bevy::log::LogPlugin { custom_layer: |app| custom_layer(app), ..Default::default() })
         .add_plugins(bevy_repl::plugin::ReplPlugins)
-        .run();
-}
-```
-
-### Startup ordering (PostStartup)
-
-- __Why__: In pretty mode, the prompt reserves the bottom lines with a terminal scroll region. Startup prints (like instructions) should run after this region is established to avoid overlapping the prompt.
-- __How__: Use the global `ScrollRegionReadySet` to order your startup prints. This label exists in all builds; in minimal mode it’s a no-op.
-
-```rust
-use bevy::prelude::*;
-use bevy_repl::prelude::*;
-
-fn instructions() {
-    bevy_repl::repl_println!("Welcome!");
-}
-
-fn main() {
-    App::new()
-        .add_plugins(ReplPlugins)
-        .add_systems(PostStartup, instructions.after(ScrollRegionReadySet))
         .run();
 }
 ```
@@ -489,19 +479,24 @@ struct CommandWithArgs {
   - In pretty builds, you can use presets or customize:
 
     ```rust
-    // ReplPlugins uses the minimal renderer by default.
-    // To enable the pretty renderer (with the `pretty` feature enabled), either:
-    //   - Set the plugin group: ReplPlugins.set(PromptPlugin::pretty())
-    //   - Or override visuals at runtime:
-    app.insert_resource(bevy_repl::prompt::ReplPromptConfig::pretty());
+    use bevy_repl::prompt::config::ReplPromptConfig;
+    use ratatui::style::{Style, Color, Modifier};
+    use ratatui::widgets::{Block, Borders};
+
+    // ReplPlugins respects features via PromptPlugin::default():
+    //   - No `pretty` feature => minimal renderer
+    //   - With `pretty` => simple preset by default
+    // To force full pretty styling, use: ReplPlugins.set(PromptPlugin::pretty())
+    // You can also override visuals at runtime:
+    app.insert_resource(ReplPromptConfig::pretty());
     // or
-    app.insert_resource(bevy_repl::prompt::ReplPromptConfig::minimal());
+    app.insert_resource(ReplPromptConfig::minimal());
     // or explicit fields (pretty build):
-    app.insert_resource(bevy_repl::prompt::ReplPromptConfig {
-        symbol: Some("> ".to_string()),
-        border: Some(bevy_repl::prompt::PromptBorderConfig::default()),
-        color: Some(bevy_repl::prompt::PromptColorConfig::default()),
-        hint: Some(bevy_repl::prompt::PromptHintConfig::default()),
+    app.insert_resource(ReplPromptConfig {
+        symbol: Some("λ ".to_string()),
+        block: Some(Block::default().borders(Borders::ALL)),
+        style: Some(Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)),
+        hint: Some("Enter to run • Esc to clear".to_string()),
     });
     ```
 
@@ -722,35 +717,10 @@ the REPL is disabled to preserve consistency in input handling behavior.
 
 ### Prompt styling
 
-The REPL prompt supports two visual modes controlled by a simple resource and optional feature flag:
+See the earlier "Prompt styling" section for full guidance. In short:
+- Minimal (no `pretty`): symbol only, no styling. Use `ReplPromptConfig::minimal()`.
+- Pretty (`--features pretty`): styling available. Default is simple preset; use `PromptPlugin::pretty()` or `ReplPromptConfig::pretty()` for full styling.
 
-- __Minimal__ (default baseline): 1-line bottom bar, no border/colors/hint.
-  - Opt-in at runtime with `PromptMinimalPlugin`:
-
-    ```rust
-    app.add_plugins(PromptMinimalPlugin);
-    ```
-
-- __Pretty__ (feature-gated): border, colorful title/prompt, right-aligned hint.
-  - Enable feature and run:
-
-    ```bash
-    cargo run --example pretty --features pretty
-    ```
-
-  - When the `pretty` feature is enabled, `ReplPlugins` uses the pretty preset automatically. You can still override visuals by inserting `ReplPromptConfig` at runtime.
-
-Advanced users can customize visuals via the `ReplPromptConfig` resource:
-
-```rust
-// Use presets
-app.insert_resource(ReplPromptConfig::pretty());
-// or
-app.insert_resource(ReplPromptConfig::minimal());
-
-// Or customize explicitly
-app.insert_resource(ReplPromptConfig { border: true, color: false, hint: true });
-```
 ## Known issues & limitations
 
 ### Built-in `help` and `clear` commands are not yet implemented

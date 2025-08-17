@@ -31,8 +31,7 @@ impl PluginGroup for MinimalReplPlugins {
 /// Default REPL plugin group: includes ratatui plugins and default commands.
 ///
 /// This is the turnkey setup most users want. It wires in bevy_ratatui's default
-/// alternate-screen terminal context, the REPL core, prompt plugin (minimal),
-/// parser, and the default commands.
+/// alternate-screen terminal context, the REPL core, prompt plugin, parser, and the default commands.
 pub struct ReplPlugins;
 
 impl PluginGroup for ReplPlugins {
@@ -44,6 +43,6 @@ impl PluginGroup for ReplPlugins {
             .add(crate::repl::ReplPlugin::default())
             .add(crate::command::ParserPlugin)
             .add(crate::built_ins::ReplDefaultCommandsPlugin)
-            .add(crate::prompt::PromptPlugin::minimal())
+            .add(crate::prompt::PromptPlugin::default())
     }
 }

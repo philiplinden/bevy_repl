@@ -2,11 +2,11 @@
 
 pub mod built_ins;
 pub mod command;
+pub mod log_ecs;
 pub mod plugin;
+pub mod print;
 pub mod prompt;
 pub mod repl;
-pub mod print;
-pub mod log_ecs;
 
 pub mod prelude {
     pub use crate::built_ins::ReplDefaultCommandsPlugin;
@@ -15,10 +15,9 @@ pub mod prelude {
     pub use crate::command::{ReplAppExt, ReplResult};
     pub use crate::plugin::{MinimalReplPlugins, ReplPlugins};
     pub use crate::prompt::{
-        PromptPlugin, ReplPrompt, ReplPromptConfig,
+        PromptPlugin, ReplPrompt, config::ReplPromptConfig,
         renderer::{ActiveRenderer, PromptRenderPlugin, PromptRenderer, minimal::MinimalRenderer},
     };
-    pub use crate::prompt::renderer::ScrollRegionReadySet;
     pub use crate::repl::{
         FallbackTerminalContext, Repl, ReplBufferEvent, ReplPlugin, ReplSet, ReplSubmitEvent,
         repl_is_enabled,
@@ -30,11 +29,8 @@ pub mod prelude {
     pub use crate::repl_println;
 
     pub use crate::log_ecs::{
-        custom_layer as repl_log_custom_layer,
-        tracing_to_repl_fmt,
-        tracing_to_repl_fmt_with_level,
-        LogEvent,
-        print_log_events_system,
+        LogEvent, custom_layer as repl_log_custom_layer, print_log_events_system,
+        tracing_to_repl_fmt, tracing_to_repl_fmt_with_level,
     };
 
     #[cfg(feature = "derive")]

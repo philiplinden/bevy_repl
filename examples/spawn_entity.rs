@@ -73,6 +73,6 @@ fn main() {
         ))
         .add_repl_command::<SpawnEntityCommand>()
         .add_observer(on_spawn)
-        .add_systems(PostStartup, instructions.after(ScrollRegionReadySet))
+        .add_systems(PostStartup, instructions)
         .run();
 }

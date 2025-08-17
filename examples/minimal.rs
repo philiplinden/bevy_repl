@@ -21,18 +21,18 @@ impl ReplCommand for PingCommand {
 }
 
 fn on_ping(_trigger: Trigger<PingCommand>) {
-    repl_println!("Pong");
+    bevy::log::info!("Pong");
 }
 
 fn instructions() {
-    repl_println!();
-    repl_println!("Welcome to the Bevy REPL minimal example!");
-    repl_println!();
-    repl_println!("Try typing a command:");
-    repl_println!("  `ping`    - Trigger the ping command. (it outputs Pong)");
-    repl_println!();
-    repl_println!("Press CTRL+C to exit any time.");
-    repl_println!();
+    bevy::log::info!("");
+    bevy::log::info!("Welcome to the Bevy REPL minimal example!");
+    bevy::log::info!("");
+    bevy::log::info!("Try typing a command:");
+    bevy::log::info!("  `ping`    - Trigger the ping command. (it outputs Pong)");
+    bevy::log::info!("");
+    bevy::log::info!("Press CTRL+C to exit any time.");
+    bevy::log::info!("");
 }
 
 fn main() {
@@ -51,6 +51,6 @@ fn main() {
         ))
         .add_repl_command::<PingCommand>()
         .add_observer(on_ping)
-        .add_systems(PostStartup, instructions.after(ScrollRegionReadySet))
+        .add_systems(PostStartup, instructions)
         .run();
 }

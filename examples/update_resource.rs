@@ -132,6 +132,6 @@ fn main() {
         .add_observer(on_time_scale)
         .add_systems(Startup, setup)
         .add_systems(Update, tick)
-        .add_systems(PostStartup, instructions.after(ScrollRegionReadySet))
+        .add_systems(PostStartup, instructions)
         .run();
 }

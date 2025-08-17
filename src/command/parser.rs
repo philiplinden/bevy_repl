@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use bevy_ratatui::event::InputSet;
 use crate::repl::{Repl, ReplSubmitEvent};
-use crate::repl_println;
+use bevy::log;
 use super::ReplCommand;
 pub struct ParserPlugin;
 
@@ -54,7 +54,7 @@ impl<C: ReplCommand> CommandParser for TypedCommandParser<C> {
                     Ok(event) => bevy_commands.trigger(event),
                     Err(clap_error) => {
                         for line in format!("{}", clap_error).lines() {
-                            repl_println!("{}", line);
+                            log::info!("{}", line);
                         }
                     }
                 }
@@ -65,17 +65,17 @@ impl<C: ReplCommand> CommandParser for TypedCommandParser<C> {
                 use clap::error::ErrorKind;
                 match clap_error.kind() {
                     ErrorKind::DisplayHelp | ErrorKind::DisplayVersion => {
-                        // Print help/version text via REPL so it appears above the prompt
+                        // Route help/version text through logging so it renders in-frame
                         for line in format!("{}", clap_error).lines() {
-                            repl_println!("{}", line);
+                            log::info!("{}", line);
                         }
                         true
                     }
                     ErrorKind::UnknownArgument | ErrorKind::InvalidSubcommand => false,
                     _ => {
-                        // Print the Clap error message with preserved formatting
+                        // Log the Clap error message with preserved formatting
                         for line in format!("{}", clap_error).lines() {
-                            repl_println!("{}", line);
+                            log::error!("{}", line);
                         }
                         true
                     }

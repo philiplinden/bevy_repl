@@ -1,15 +1,16 @@
 pub mod input;
-pub mod renderer;
 pub mod key_events;
+pub mod renderer;
+pub mod config;
 
 use bevy::prelude::*;
 use std::sync::Arc;
 
-use crate::repl::ReplSet;
-use crate::log_ecs::InFrameLogPlugin;
 use self::input::PromptInputPlugin;
 use self::key_events::block_keyboard_input_forwarding;
-use self::renderer::{PromptRenderer, PromptRenderPlugin};
+use self::renderer::{PromptRenderPlugin, PromptRenderer};
+use self::config::ReplPromptConfig;
+use crate::repl::ReplSet;
 
 #[derive(Clone)]
 pub enum PromptMode {
@@ -27,7 +28,11 @@ pub struct PromptPlugin {
 
 impl Default for PromptPlugin {
     fn default() -> Self {
-        Self::minimal()
+        #[cfg(feature = "pretty")]
+        return Self::simple();
+
+        #[cfg(not(feature = "pretty"))]
+        return Self::minimal();
     }
 }
 
@@ -37,7 +42,16 @@ impl PromptPlugin {
             config: ReplPromptConfig::minimal(),
             renderer: Arc::new(renderer::minimal::MinimalRenderer),
             mode: PromptMode::InFrame,
-        }   
+        }
+    }
+
+    #[cfg(feature = "pretty")]
+    pub fn simple() -> Self {
+        Self {
+            config: ReplPromptConfig::simple(),
+            renderer: Arc::new(renderer::pretty::PrettyRenderer),
+            mode: PromptMode::AlternateScreen,
+        }
     }
 
     #[cfg(feature = "pretty")]
@@ -53,47 +67,37 @@ impl PromptPlugin {
 impl Plugin for PromptPlugin {
     fn build(&self, app: &mut App) {
         app.insert_resource(ReplPrompt {
-            symbol: Some(self.config.symbol.clone().unwrap_or_else(|| "> ".to_string())),
+            symbol: self.config.symbol.clone(),
             buffer: String::new(),
         });
         app.insert_resource(self.config.clone());
         app.add_plugins(PromptInputPlugin);
-        app.add_plugins(PromptRenderPlugin { renderer: self.renderer.clone() });
-        // InFrame mode enables in-frame logging integration
-        if matches!(self.mode, PromptMode::InFrame) {
-            app.add_plugins(InFrameLogPlugin);
+        app.add_plugins(PromptRenderPlugin {
+            renderer: self.renderer.clone(),
+        });
+        // Logging behavior depends on mode:
+        // - In minimal mode, print logs to stdout via a system (no in-frame log buffer)
+        // - In pretty/alternate-screen mode, use in-frame log buffer for rendering
+        match self.mode {
+            PromptMode::InFrame => {
+                // Capture tracing -> ECS events and print them above the prompt via stdout
+                app.add_plugins(crate::log_ecs::CaptureSubscriberPlugin::default());
+                app.add_systems(Update, crate::log_ecs::print_log_events_system);
+            }
+            #[cfg(feature = "pretty")]
+            PromptMode::AlternateScreen => {
+                // Provide a buffer of recent logs for the renderer to draw
+                // in-frame on a dedicated ratatui screen
+                app.add_plugins(crate::log_ecs::LogBufferPlugin::default());
+            }
         }
         app.add_systems(
             Update,
-            (
-                block_keyboard_input_forwarding
-                    .in_set(ReplSet::Post)
-                    .in_set(ReplSet::All)
-                    .after(ReplSet::Render),
-            ),
+            (block_keyboard_input_forwarding
+                .in_set(ReplSet::Post)
+                .in_set(ReplSet::All)
+                .after(ReplSet::Render),),
         );
-    }
-}
-
-impl ReplPromptConfig {
-    /// Minimal preset: single-line bar, no border, no colors, no hint.
-    pub fn minimal() -> Self {
-        Self {
-            symbol: Some("> ".to_string()),
-            border: None,
-            color: None,
-            hint: None,
-        }
-    }
-
-    /// Pretty preset: border, colors, and right-aligned hint enabled.
-    pub fn pretty() -> Self {
-        Self {
-            symbol: Some("> ".to_string()),
-            border: Some(PromptBorderConfig::default()),
-            color: Some(PromptColorConfig::default()),
-            hint: Some(PromptHintConfig::default()),
-        }
     }
 }
 
@@ -102,39 +106,3 @@ pub struct ReplPrompt {
     pub symbol: Option<String>,
     pub buffer: String,
 }
-
-/// Visual configuration for the REPL prompt bar.
-#[derive(Resource, Clone)]
-pub struct ReplPromptConfig {
-    /// Prompt symbol to display before the buffer.
-    pub symbol: Option<String>,
-    /// Draw a border and title around the prompt bar.
-    pub border: Option<PromptBorderConfig>,
-    /// Enable colorful styles for title/prompt/hints.
-    pub color: Option<PromptColorConfig>,
-    /// Show a right-aligned hint text.
-    pub hint: Option<PromptHintConfig>,
-}
-
-impl Default for ReplPromptConfig {
-    fn default() -> Self {
-        Self {
-            symbol: Some("> ".to_string()),
-            border: Some(PromptBorderConfig::default()),
-            color: Some(PromptColorConfig::default()),
-            hint: Some(PromptHintConfig::default()),
-        }
-    }
-}
-
-/// Border styling configuration (placeholder for future fields)
-#[derive(Clone, Default)]
-pub struct PromptBorderConfig;
-
-/// Color styling configuration (placeholder for future fields)
-#[derive(Clone, Default)]
-pub struct PromptColorConfig;
-
-/// Hint styling/behavior configuration (placeholder for future fields)
-#[derive(Clone, Default)]
-pub struct PromptHintConfig;

@@ -1,5 +1,5 @@
 //! Simple, robust printing helpers suitable for raw/alternate screen.
-//! 
+//!
 //! Use the `repl_println!` macro to print a formatted line that:
 //! - moves the cursor to column 0
 //! - writes the formatted content
@@ -8,15 +8,15 @@
 //!
 //! This avoids newline/cursor issues that can happen in raw or alternate screen modes.
 
-use std::io::{stdout, Write};
-use std::sync::atomic::{AtomicU64, Ordering};
 #[cfg(feature = "pretty")]
 use once_cell::sync::OnceCell;
+use std::io::{Write, stdout};
 #[cfg(feature = "pretty")]
 use std::sync::RwLock;
+use std::sync::atomic::{AtomicU64, Ordering};
 
 use bevy_ratatui::crossterm::{
-    cursor::{MoveToColumn, MoveTo},
+    cursor::{MoveTo, MoveToColumn},
     queue,
 };
 
@@ -33,7 +33,11 @@ fn scroll_region_info() -> &'static RwLock<Option<(u16, u16)>> {
 #[cfg(feature = "pretty")]
 pub fn set_scroll_region_info(height: u16, reserved_bottom: u16) {
     if let Ok(mut guard) = scroll_region_info().write() {
-        if reserved_bottom == 0 { *guard = None; } else { *guard = Some((height, reserved_bottom)); }
+        if reserved_bottom == 0 {
+            *guard = None;
+        } else {
+            *guard = Some((height, reserved_bottom));
+        }
     }
 }
 
@@ -50,13 +54,17 @@ pub fn set_scroll_region_info(_: u16, _: u16) {}
 
 #[cfg(not(feature = "pretty"))]
 #[inline]
-pub fn get_scroll_region_info() -> Option<(u16, u16)> { None }
+pub fn get_scroll_region_info() -> Option<(u16, u16)> {
+    None
+}
 
 // Track how many lines have been printed
 static PRINT_COUNT: AtomicU64 = AtomicU64::new(0);
 
 #[inline]
-pub fn printed_lines() -> usize { PRINT_COUNT.load(Ordering::Relaxed).try_into().unwrap() }
+pub fn printed_lines() -> usize {
+    PRINT_COUNT.load(Ordering::Relaxed).try_into().unwrap()
+}
 
 /// Low-level function used by [`repl_println!`] to print a formatted line.
 ///
@@ -91,14 +99,19 @@ pub fn repl_print(args: std::fmt::Arguments) -> std::io::Result<()> {
             used_explicit_position = true;
         }
     }
-    if !used_explicit_position {
-        // Minimal/normal case: ensure we start at column 0 for robustness
+    if used_explicit_position {
+        // Pretty mode with explicit cursor positioning: avoid CR, use LF only
+        write!(out, "{}\n", args)?;
+    } else {
+        // Fallback normal case: ensure we start at column 0 and use CRLF
         queue!(out, MoveToColumn(0))?;
+        write!(out, "{}", args)?;
+        write!(out, "\r\n")?;
     }
-    write!(out, "{}", args)?;
-    write!(out, "\r\n")?;
-    out.flush()
-        .map(|_| { PRINT_COUNT.fetch_add(1, Ordering::Relaxed); () })
+    out.flush().map(|_| {
+        PRINT_COUNT.fetch_add(1, Ordering::Relaxed);
+        ()
+    })
 }
 
 /// Print a line that behaves well in raw/alternate screen contexts.

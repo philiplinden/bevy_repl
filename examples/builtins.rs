@@ -60,11 +60,12 @@ fn main() {
     App::new()
         .add_plugins((
             // Headless loop in the terminal
-            MinimalPlugins
-                .set(ScheduleRunnerPlugin::run_loop(Duration::from_secs_f64(1.0 / 60.0))),
+            MinimalPlugins.set(ScheduleRunnerPlugin::run_loop(Duration::from_secs_f64(
+                1.0 / 60.0,
+            ))),
             bevy::input::InputPlugin::default(),
             ReplPlugins,
         ))
-        .add_systems(PostStartup, instructions.after(ScrollRegionReadySet))
+        .add_systems(PostStartup, instructions)
         .run();
 }
