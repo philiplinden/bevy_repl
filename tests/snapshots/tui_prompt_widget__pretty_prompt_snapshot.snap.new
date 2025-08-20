@@ -1,0 +1,19 @@
+---
+source: tests/tui_prompt_widget.rs
+assertion_line: 41
+expression: buf
+---
+Buffer {
+    area: Rect { x: 0, y: 0, width: 40, height: 6 },
+    content: [
+        "┌──────────────────────────────────────┐",
+        "│>                                     │",
+        "│                                      │",
+        "│                                      │",
+        "│                                      │",
+        "└──────────────────────────────────────┘",
+    ],
+    styles: [
+        x: 0, y: 0, fg: Reset, bg: Reset, underline: Reset, modifier: NONE,
+    ]
+}

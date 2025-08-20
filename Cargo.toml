@@ -39,6 +39,7 @@ quit = []
 clear = []
 help = []
 derive = ["bevy_repl_derive", "clap/derive"]
+test = []
 
 [[example]]
 name = "demo"
@@ -89,10 +90,6 @@ path = "examples/log_pretty.rs"
 [[example]]
 name = "log_minimal"
 path = "examples/log_minimal.rs"
-
-[[example]]
-name = "key_events_suppressed"
-path = "examples/key_events_suppressed.rs"
 
 [[example]]
 name = "spawn_entity"
@@ -154,3 +151,7 @@ codegen-units = 1
 # Do a second optimization pass over the entire program, including dependencies.
 # Slows compile times, marginal improvements.
 lto = "thin"
+
+[dev-dependencies]
+insta = { version = "1", features = ["glob"] }
+expectrl = "0.7"

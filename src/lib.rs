@@ -8,6 +8,11 @@ pub mod print;
 pub mod prompt;
 pub mod repl;
 
+// Expose test utilities only during `cargo test` or when consumers
+// explicitly enable the `test` Cargo feature.
+#[cfg(any(test, feature = "test"))]
+pub mod test_support;
+
 pub mod prelude {
     pub use crate::built_ins::ReplDefaultCommandsPlugin;
     #[cfg(not(feature = "derive"))]

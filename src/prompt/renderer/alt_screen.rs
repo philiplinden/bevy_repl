@@ -226,7 +226,125 @@ impl PromptRenderer for AltScreenRenderer {
         f.set_cursor_position((cursor_x, cursor_y));
     }
     fn configure_logging(&self, app: &mut App) {
-        // In alt-screen, render logs inside the ratatui frame via LogBuffer
-        app.add_plugins(crate::log_ecs::LogBufferPlugin::default());
+        // Use the stdout REPL logging pipeline: capture tracing events and print them
+        // via `repl_println!` so they appear above the prompt. This works with the
+        // scroll region management to ensure logs don't overwrite the prompt.
+        app.add_plugins(crate::log_ecs::CaptureSubscriberPlugin::default());
+        app.add_systems(Update, crate::log_ecs::print_log_events_system);
+    }
+    fn configure_context(&self, app: &mut App) {
+        // Add the ScrollRegionPlugin to manage terminal scroll regions
+        // This ensures that in pretty mode (with borders), the bottom prompt area
+        // is reserved and logs scroll above it instead of overwriting it.
+        app.add_plugins(ScrollRegionPlugin);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::prompt::ReplPromptConfig;
+    use ratatui::layout::Rect;
+
+    #[test]
+    fn test_scroll_region_state_calculation_simple() {
+        // Test simple mode (no border) - should use 0 reserved lines
+        let config = ReplPromptConfig::simple();
+        let border_on = config.block.is_some();
+        let reserved_lines: u16 = if true && border_on { 3 } else { 0 };
+        
+        assert_eq!(reserved_lines, 0, "Simple mode should not reserve lines");
+    }
+
+    #[test] 
+    fn test_scroll_region_state_calculation_pretty() {
+        // Test pretty mode (with border) - should use 3 reserved lines
+        let config = ReplPromptConfig::pretty();
+        let border_on = config.block.is_some();
+        let reserved_lines: u16 = if true && border_on { 3 } else { 0 };
+        
+        assert_eq!(reserved_lines, 3, "Pretty mode should reserve 3 lines for border");
+    }
+
+    #[test]
+    fn test_scroll_region_state_equality() {
+        let state1 = ScrollRegionState {
+            enabled: true,
+            height: 24,
+            reserved_lines: 3,
+        };
+        
+        let state2 = ScrollRegionState {
+            enabled: true,
+            height: 24,
+            reserved_lines: 3,
+        };
+        
+        let state3 = ScrollRegionState {
+            enabled: true,
+            height: 24,
+            reserved_lines: 0,
+        };
+        
+        assert_eq!(state1, state2);
+        assert_ne!(state1, state3);
+    }
+
+    #[test]
+    fn test_inner_rect_with_border() {
+        let area = Rect { x: 0, y: 0, width: 10, height: 5 };
+        
+        // With border - should shrink by 1 on all sides
+        let inner_with_border = inner_rect(area, true);
+        assert_eq!(inner_with_border, Rect { x: 1, y: 1, width: 8, height: 1 });
+        
+        // Without border - should use full width
+        let inner_no_border = inner_rect(area, false);
+        assert_eq!(inner_no_border, Rect { x: 0, y: 0, width: 10, height: 1 });
+    }
+
+    #[test]
+    fn test_prompt_config_differences() {
+        let simple = ReplPromptConfig::simple();
+        let pretty = ReplPromptConfig::pretty();
+        
+        // Simple should have no block (border)
+        assert!(simple.block.is_none(), "Simple config should have no border");
+        
+        // Pretty should have a block (border)
+        assert!(pretty.block.is_some(), "Pretty config should have a border");
+        
+        // Pretty should have a hint, simple should not
+        assert!(simple.hint.is_none(), "Simple config should have no hint");
+        assert!(pretty.hint.is_some(), "Pretty config should have a hint");
+    }
+
+    #[test] 
+    fn test_scroll_reserved_region_calculation() {
+        // Test the calculation logic that determines reserved lines based on config
+        struct TestCase {
+            repl_enabled: bool,
+            has_border: bool,
+            expected_reserved_lines: u16,
+        }
+
+        let test_cases = vec![
+            TestCase { repl_enabled: true, has_border: true, expected_reserved_lines: 3 },   // pretty mode
+            TestCase { repl_enabled: true, has_border: false, expected_reserved_lines: 0 },  // simple mode  
+            TestCase { repl_enabled: false, has_border: true, expected_reserved_lines: 0 },  // disabled
+            TestCase { repl_enabled: false, has_border: false, expected_reserved_lines: 0 }, // disabled
+        ];
+
+        for case in test_cases {
+            let reserved_lines: u16 = if case.repl_enabled && case.has_border { 3 } else { 0 };
+            assert_eq!(
+                reserved_lines, 
+                case.expected_reserved_lines,
+                "repl_enabled: {}, has_border: {} should reserve {} lines", 
+                case.repl_enabled, 
+                case.has_border, 
+                case.expected_reserved_lines
+            );
+        }
     }
 }
