@@ -7,7 +7,8 @@ pub mod prompt;
 pub mod repl;
 pub mod print;
 pub mod log_ecs;
-pub mod context;
+#[cfg(feature = "stdout")]
+pub mod stdout;
 
 pub mod prelude {
     pub use crate::built_ins::ReplDefaultCommandsPlugin;
@@ -23,7 +24,6 @@ pub mod prelude {
     pub use crate::repl::{Repl, ReplBufferEvent, ReplPlugin, ReplSet, ReplSubmitEvent,
         repl_is_enabled,
     };
-    pub use crate::context::FallbackTerminalContext;
     // Bring the robust printing macro into the prelude for convenient use.
     // This allows: `use bevy_repl::prelude::*;` then `repl_println!(...)`.
     pub use crate::repl_println;
@@ -43,4 +43,4 @@ pub mod prelude {
 }
 
 #[cfg(feature = "stdout")]
-pub use crate::plugin::StdoutRatatuiPlugins;
+pub use crate::stdout::StdoutRatatuiPlugins;

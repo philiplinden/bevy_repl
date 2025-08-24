@@ -9,19 +9,31 @@
 //! This avoids newline/cursor issues that can happen in raw or alternate screen modes.
 
 use std::io::{stdout, Write};
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::atomic::{AtomicU64, AtomicU16, Ordering};
 
 use bevy_ratatui::crossterm::{
     cursor::{MoveToColumn, MoveTo},
     queue,
 };
 
-// No-op stubs when pretty is disabled
-#[inline]
-pub fn set_scroll_region_info(_: u16, _: u16) {}
+// Track scroll region info (terminal height and reserved bottom lines) so printers can
+// position output above the prompt area when using ratatui's alternate screen.
+static SCROLL_H: AtomicU16 = AtomicU16::new(0);
+static SCROLL_RESERVED: AtomicU16 = AtomicU16::new(0);
 
 #[inline]
-pub fn get_scroll_region_info() -> Option<(u16, u16)> { None }
+pub fn set_scroll_region_info(h: u16, reserved: u16) {
+    SCROLL_H.store(h, Ordering::Relaxed);
+    SCROLL_RESERVED.store(reserved, Ordering::Relaxed);
+}
+
+#[inline]
+pub fn get_scroll_region_info() -> Option<(u16, u16)> {
+    let h = SCROLL_H.load(Ordering::Relaxed);
+    if h == 0 { return None; }
+    let r = SCROLL_RESERVED.load(Ordering::Relaxed);
+    Some((h, r))
+}
 
 // Track how many lines have been printed
 static PRINT_COUNT: AtomicU64 = AtomicU64::new(0);

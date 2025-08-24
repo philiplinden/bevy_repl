@@ -5,7 +5,6 @@ pub mod scroll;
 use bevy::prelude::*;
 use bevy_ratatui::RatatuiContext;
 use crate::repl::{Repl, ReplSet};
-use crate::context::FallbackTerminalContext;
 
 use crate::prompt::{ReplPrompt, ReplPromptConfig};
 use ratatui::layout::Rect;
@@ -33,7 +32,6 @@ pub trait PromptRenderer: Send + Sync + 'static {
 #[derive(Resource, Clone)]
 pub struct ActiveRenderer(pub Arc<dyn PromptRenderer>);
 
-
 impl Plugin for PromptRenderPlugin {
     fn build(&self, app: &mut App) {
         app.insert_resource(ActiveRenderer(self.renderer.clone()));
@@ -56,9 +54,7 @@ impl Plugin for PromptRenderPlugin {
 /// Render entrypoint: delegates to the active renderer strategy
 pub(super) fn display_prompt(
     // Prefer ratatui's default terminal context when present (alternate screen)
-    term_ratatui: Option<ResMut<RatatuiContext>>, 
-    // Fallback to the crate's custom terminal context to preserve compatibility
-    term_fallback: Option<ResMut<FallbackTerminalContext>>, 
+    term_ratatui: Option<ResMut<RatatuiContext>>,
     repl: Res<Repl>,
     prompt: Res<ReplPrompt>,
     visuals: Option<Res<ReplPromptConfig>>,
@@ -72,13 +68,5 @@ pub(super) fn display_prompt(
             let ctx = RenderCtx { repl: &repl, prompt: &prompt, visuals: &visuals, area };
             active.0.render(f, &ctx);
         });
-        return;
-    }
-
-    let Some(mut term) = term_fallback else { return }; // No terminal context yet
-    let _ = term.draw(|f| {
-        let area = Rect { x: 0, y: 0, width: f.area().width, height: f.area().height };
-        let ctx = RenderCtx { repl: &repl, prompt: &prompt, visuals: &visuals, area };
-        active.0.render(f, &ctx);
-    });
+    } else { return }; // No terminal context yet
 }

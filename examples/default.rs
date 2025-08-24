@@ -76,6 +76,7 @@ fn instructions() {
     repl_println!("Try typing in the REPL:");
     repl_println!("  print <message>  - Print a message to the console");
     repl_println!("  log <message>    - Emit a log message (info level)");
+    repl_println!("  quit             - Exit the App");
     repl_println!("Press CTRL+C to exit any time.");
     repl_println!();
 }
@@ -85,9 +86,7 @@ fn main() {
         .add_plugins((
             DefaultPlugins
                 // Headless loop in the terminal
-                .set(ScheduleRunnerPlugin::run_loop(Duration::from_secs_f64(1.0 / 60.0)))
-                // Disable stdout logger to avoid duplicate output; our fmt layer prints
-                .disable::<bevy::log::LogPlugin>(),
+                .set(ScheduleRunnerPlugin::run_loop(Duration::from_secs_f64(1.0 / 60.0))),
             bevy_ratatui::RatatuiPlugins::default(),
             ReplPlugins,
         ))

@@ -55,7 +55,6 @@ pub struct ReplPrompt {
     pub buffer: String,
 }
 
-/// Visual configuration for the REPL prompt bar.
 #[derive(Resource, Clone)]
 pub struct ReplPromptConfig {
     pub symbol: Option<String>,
