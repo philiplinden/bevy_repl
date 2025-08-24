@@ -18,10 +18,9 @@ impl Plugin for ScrollRegionPlugin {
             Update,
             (
                 manage_scroll_region
-                    .in_set(ReplSet::Render)
                     .in_set(ReplSet::All)
                     .after(ReplSet::Buffer)
-                    .before(super::display_prompt),
+                    .before(ReplSet::Render),
             ),
         );
 

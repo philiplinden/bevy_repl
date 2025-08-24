@@ -1,6 +1,5 @@
 pub mod helpers;
-pub mod scroll;
-pub mod minimal;
+pub mod simple;
 
 use std::sync::Arc;
 
@@ -46,9 +45,6 @@ impl Plugin for PromptRenderPlugin {
                     .in_set(ReplSet::All)
                     .after(ReplSet::Buffer),
             ),
-        );
-        app.add_plugins(
-            scroll::ScrollRegionPlugin,
         );
     }
 }

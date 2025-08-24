@@ -5,9 +5,9 @@ use ratatui::Frame;
 use super::{RenderCtx, PromptRenderer};
 use super::helpers::{bottom_bar_area, buffer_window, cursor_position};
 
-/// Minimal renderer: single line, no borders, no colors, no hints
-pub struct MinimalRenderer;
-impl PromptRenderer for MinimalRenderer {
+/// Simple renderer: single line, no borders, no colors, no hints
+pub struct SimpleRenderer;
+impl PromptRenderer for SimpleRenderer {
     fn render(&self, f: &mut Frame<'_>, ctx: &RenderCtx) {
         // Always one line
         if ctx.area.height == 0 { return; }

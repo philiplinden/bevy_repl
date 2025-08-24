@@ -1,14 +1,16 @@
 pub mod input;
 pub mod renderer;
 pub mod key_events;
+pub mod scroll;
 
 use bevy::prelude::*;
 use std::sync::Arc;
 
-use crate::repl::{ReplSet};
+use super::repl::{ReplSet};
 use self::input::PromptInputPlugin;
 use self::key_events::block_keyboard_input_forwarding;
 use self::renderer::{PromptRenderer, PromptRenderPlugin};
+use self::scroll::ScrollRegionPlugin;
 
 /// Visual configuration for the REPL prompt bar.
 #[derive(Resource, Clone)]
@@ -21,7 +23,7 @@ impl Default for PromptPlugin {
     fn default() -> Self {
         Self {
             config: ReplPromptConfig::default(),
-            renderer: Arc::new(renderer::minimal::MinimalRenderer),
+            renderer: Arc::new(renderer::simple::SimpleRenderer),
         }
     }
 }
@@ -36,6 +38,7 @@ impl Plugin for PromptPlugin {
         app.add_plugins((
             PromptInputPlugin,
             PromptRenderPlugin { renderer: self.renderer.clone() },
+            ScrollRegionPlugin,
         ));
         app.add_systems(
             Update,
