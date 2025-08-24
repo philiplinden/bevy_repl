@@ -31,7 +31,6 @@ implementing a full TUI or rendering features.
     - [Derive](#derive)
     - [Built-in commands](#built-in-commands)
     - [Prompt styling](#prompt-styling)
-      - [Custom renderer (feature-gated: `pretty`)](#custom-renderer-feature-gated-pretty)
       - [Plugin groups and alternate screen](#plugin-groups-and-alternate-screen)
     - [Robust printing in raw/alternate screen terminals](#robust-printing-in-rawalternate-screen-terminals)
     - [Routing Bevy logs to the REPL](#routing-bevy-logs-to-the-repl)
@@ -54,7 +53,6 @@ implementing a full TUI or rendering features.
     - [Runtime toggle is not supported](#runtime-toggle-is-not-supported)
     - [Key events are not forwarded to Bevy](#key-events-are-not-forwarded-to-bevy)
     - [Minimal renderer prompt does not scroll with terminal output](#minimal-renderer-prompt-does-not-scroll-with-terminal-output)
-    - [Pretty renderer log history doesn't scroll at all](#pretty-renderer-log-history-doesnt-scroll-at-all)
     - [Shift+ aren't entered into the buffer](#shift-arent-entered-into-the-buffer)
   - [Aspirations](#aspirations)
   - [License](#license)
@@ -85,61 +83,13 @@ commands.
 
 ### Prompt styling
 
-The prompt can be styled with the `pretty` feature. The feature adds a border,
-colorful styles for title/prompt/hints, and a right-aligned hint text.
+The REPL uses a single, minimal prompt renderer.
 
 - __Minimal (default)__
   - Appearance: 1-line bottom prompt with symbol + input. No border/colors/hint.
-  - Compilation: no styling code compiled; lean terminal manipulation only.
+  - Compilation: lean terminal manipulation only.
   - Config: only `ReplPromptConfig.symbol` is honored.
   - Use: `cargo run` (no extra feature flags).
-
-- __Pretty (`--features pretty`)__
-  - Appearance: border with title, colored styles, right-aligned usage hint.
-  - Compilation: styling code compiled and enabled.
-  - Config: presets or explicit `ReplPromptConfig { symbol, border, color, hint }`.
-  - Use `ReplPlugins.set(PromptPlugin::pretty())` as shown below.
-
-#### Custom renderer (feature-gated: `pretty`)
-
-You can swap the prompt renderer at runtime by overriding the `ActiveRenderer` resource
-with your own implementation of the `PromptRenderer` trait. This is the recommended
-extension point for custom styles.
-
-- Build and run the demo custom renderer example:
-
-  ```bash
-  cargo run --example custom_renderer --features pretty
-  ```
-
-- Minimal usage (in your Bevy app):
-
-  ```rust
-  use bevy_repl::prompt::renderer::{PromptRenderer, RenderCtx};
-
-  struct MyRenderer;
-  impl PromptRenderer for MyRenderer {
-      fn render(&self, f: &mut ratatui::Frame<'_>, ctx: &RenderCtx) {
-          // draw a simple 1-line prompt in your own style
-          // (see examples/custom_renderer.rs for a complete reference)
-          let area = bevy_repl::prompt::renderer::helpers::bottom_bar_area(ctx.area, 1);
-          let prompt = ctx.prompt.symbol.clone().unwrap_or_default();
-          let spans = [ratatui::text::Span::raw(prompt), ratatui::text::Span::raw(&ctx.repl.buffer)];
-          f.render_widget(ratatui::widgets::Paragraph::new(ratatui::text::Line::from(spans)), area);
-      }
-  }
-
-  App::new()
-      .add_plugins(ReplPlugins.set(PromptPlugin {
-        renderer: MyRenderer,
-        ..default()
-      }))
-      .run();
-  ```
-
-The example and docs assume the `pretty` feature is enabled so the rendering
-infrastructure is available. Custom renderers can ignore colors/borders entirely
-if you want a minimal look.
 
 #### Plugin groups and alternate screen
 
@@ -197,15 +147,13 @@ if you want a minimal look.
     - Prefer sane defaults including built-in commands (`quit`, `help`, `clear`).
     - Don’t need to wire `RatatuiPlugins` manually.
 
-  By default `ReplPlugins` uses the minimal prompt renderer. To enable the pretty renderer when the `pretty` feature is on, use `ReplPlugins.set(PromptPlugin::pretty())`.
-
 ### Robust printing in raw/alternate screen terminals
 
 When the REPL is active, the terminal often runs in raw mode and may use the alternate screen. In these contexts, normal `println!` can leave the cursor in an odd position or produce inconsistent newlines. To ensure safe, consistent output, use the provided `bevy_repl::repl_println!` macro instead of `println!`.
 
 - __What it does__
   - Minimal renderer: moves the cursor to column 0 before printing, writes CRLF (`\r\n`), and flushes stdout.
-  - Pretty renderer: additionally cooperates with the terminal scroll region reserved for the prompt; before printing it moves to the last scrollable line so output scrolls above the prompt without overwriting it.
+  
 
 - __When to use__
   - Any time you print from systems/observers while the REPL is active
@@ -257,7 +205,7 @@ fn main() {
         .add_plugins((
             // 2) Disable Bevy's stdout logger to prevent duplicate/garbled output
             DefaultPlugins.build().disable::<bevy::log::LogPlugin>(),
-            ReplPlugins.set(PromptPlugin::pretty()),
+            ReplPlugins,
         ))
         .run();
 }
@@ -265,8 +213,8 @@ fn main() {
 
 ### Startup ordering (PostStartup)
 
-- __Why__: In pretty mode, the prompt reserves the bottom lines with a terminal scroll region. Startup prints (like instructions) should run after this region is established to avoid overlapping the prompt.
-- __How__: Use the global `ScrollRegionReadySet` to order your startup prints. This label exists in all builds; in minimal mode it’s a no-op.
+- __Why__: Startup prints (like instructions) should run after the REPL initializes to avoid interleaving with prompt setup.
+- __How__: Use the global `ScrollRegionReadySet` to order your startup prints.
 
 ```rust
 use bevy::prelude::*;
@@ -391,7 +339,7 @@ Enable the `derive` feature in your `Cargo.toml` to use the derive pattern.
 
 ```toml
 [dependencies]
-bevy_repl = { version = "0.3.0", features = ["derive"] }
+bevy_repl = { version = "0.3.1", features = ["derive"] }
 ```
 
 Then derive the `ReplCommand` trait on your command struct along with clap's
@@ -419,38 +367,11 @@ struct CommandWithArgs {
 ### Prompt styling
 
 - __Appearance__
-  - Without the `pretty` feature (default): minimal prompt. One-line bar fixed to the bottom, showing only the prompt symbol and input buffer. No border, colors, or hint.
-  - With the `pretty` feature: enhanced prompt. Optional border with title, colored styles for title/prompt/hints, and a right-aligned usage hint.
-
-- __Compilation__
-  - Minimal build (no `pretty`): styling code is not compiled. No extra terminal manipulation beyond positioning the single-line prompt.
-  - Pretty build (`--features pretty`): styling code is compiled in and used by the renderer.
+  - Minimal prompt (only mode): One-line bar fixed to the bottom, showing only the prompt symbol and input buffer. No border, colors, or hint.
 
 - __Configuration__
-  - The prompt is configured via `ReplPromptConfig`. In minimal builds, only the `symbol` is honored; styling options are ignored.
-  - In pretty builds, you can use presets or customize:
-
-    ```rust
-    // ReplPlugins uses the minimal renderer by default.
-    // To enable the pretty renderer (with the `pretty` feature enabled), either:
-    //   - Set the plugin group: ReplPlugins.set(PromptPlugin::pretty())
-    //   - Or override visuals at runtime:
-    app.insert_resource(bevy_repl::prompt::ReplPromptConfig::pretty());
-    // or
-    app.insert_resource(bevy_repl::prompt::ReplPromptConfig::minimal());
-    // or explicit fields (pretty build):
-    app.insert_resource(bevy_repl::prompt::ReplPromptConfig {
-        symbol: Some("> ".to_string()),
-        border: Some(bevy_repl::prompt::PromptBorderConfig::default()),
-        color: Some(bevy_repl::prompt::PromptColorConfig::default()),
-        hint: Some(bevy_repl::prompt::PromptHintConfig::default()),
-    });
-    ```
-
-  - To run the pretty example:
-    ```bash
-    cargo run --example pretty --features pretty
-    ```
+  - The prompt is configured via `ReplPromptConfig`.
+  - Only the `symbol` is honored.
 
 ### Default keybinds
 
@@ -522,11 +443,9 @@ is shifted up to make room for the input console, and everything else is
 printed to the terminal normally. The app is truly running headless, and the
 "partial-TUI" is directly modifying the terminal output with `crossterm`.
 
-Fancy REPL styling like a border and colors are available with the `pretty` feature.
-
 ```toml
 [dependencies]
-bevy_repl = { version = "0.3.0", features = ["default-commands"] }
+bevy_repl = { version = "0.3.1", features = ["default_commands"] }
 ```
 
 **REPL disabled (regular headless mode):**
@@ -673,25 +592,10 @@ The REPL prompt supports two visual modes controlled by a simple resource and op
     app.add_plugins(PromptMinimalPlugin);
     ```
 
-- __Pretty__ (feature-gated): border, colorful title/prompt, right-aligned hint.
-  - Enable feature and run:
-
-    ```bash
-    cargo run --example pretty --features pretty
-    ```
-
-  - When the `pretty` feature is enabled, `ReplPlugins` uses the pretty preset automatically. You can still override visuals by inserting `ReplPromptConfig` at runtime.
-
-Advanced users can customize visuals via the `ReplPromptConfig` resource:
+And you can configure the prompt symbol:
 
 ```rust
-// Use presets
-app.insert_resource(ReplPromptConfig::pretty());
-// or
-app.insert_resource(ReplPromptConfig::minimal());
-
-// Or customize explicitly
-app.insert_resource(ReplPromptConfig { border: true, color: false, hint: true });
+app.insert_resource(ReplPromptConfig { symbol: Some("> ".to_string()) });
 ```
 ## Known issues & limitations
 
@@ -742,25 +646,6 @@ terminal if there are other messages sent to stdout. The REPL works as expected
 (inputs are loaded to the buffer and commands are parsed and executed normally),
 but the prompt may be hidden by other output.
 
-Instead of fixing this, I am focusing on the pretty prompt renderer, which
-resolves these issues at the cost of complexity and overhead. The pretty renderer
-uses a full TUI stack to render the prompt, which means it can stay at the bottom
-of the terminal and be visible even when other messages are sent to stdout. This
-also means that it is an "alternate screen" from the main terminal, so it only
-shows text that is sent to the alternate screen.
-
-If you don't want the pretty renderer, try to minimize outputs sent to stdout
-that come from systems other than REPL command observers. This is pretty easy to
-do by disabling `bevy::input::InputPlugin` or setting the max level log messages
-to be `warn` or `error`.
-
-### Pretty renderer log history doesn't scroll at all
-You can't scroll up to see earlier logs in the history because the TUI doesn't
-have scrolling enabled (yet). This is possible, just not implemented yet.
-
-If you have a lot of logs or history is important, stick to the minimal
-renderer.
-
 ### Shift+<Char> aren't entered into the buffer
 `Shift + lowercase letter` is ignored by the prompt. This is because the prompt
 captures only characters, not chords. Since shift is a modifier, extra logic is
@@ -771,10 +656,6 @@ needed to support it. This is not implemented yet.
 - [ ] **Toggleable** - The REPL is disabled by default and can be toggled. When
   disabled, the app runs normally in the terminal, no REPL systems run, and the
   prompt is hidden.
-- [x] **Pretty prompt** - Show the prompt in the terminal below the normal
-  stdout, including the current buffer content.
-- [ ] **Scrolling pretty prompt** - The pretty renderer makes an alternate
-  screen but doesn't allow you to scroll up to see past input.
 - [x] **Support for games with rendering and windowing** - The REPL is designed to
   work from the terminal, but the terminal normally prints logs when there is a
   window too. The REPL still works from the terminal while using the window for

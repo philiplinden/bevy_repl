@@ -10,7 +10,7 @@ use self::input::PromptInputPlugin;
 use self::key_events::block_keyboard_input_forwarding;
 use self::renderer::{PromptRenderer, PromptRenderPlugin};
 
-
+/// Visual configuration for the REPL prompt bar.
 #[derive(Resource, Clone)]
 pub struct PromptPlugin {
     pub config: ReplPromptConfig,
@@ -30,14 +30,6 @@ impl PromptPlugin {
             renderer: Arc::new(renderer::minimal::MinimalRenderer),
         }
     }
-
-    #[cfg(feature = "pretty")]
-    pub fn pretty() -> Self {
-        Self {
-            config: ReplPromptConfig::pretty(),
-            renderer: Arc::new(renderer::pretty::PrettyRenderer),
-        }
-    }
 }
 
 impl Plugin for PromptPlugin {
@@ -47,8 +39,10 @@ impl Plugin for PromptPlugin {
             buffer: String::new(),
         });
         app.insert_resource(self.config.clone());
-        app.add_plugins(PromptInputPlugin);
-        app.add_plugins(PromptRenderPlugin { renderer: self.renderer.clone() });
+        app.add_plugins((
+            PromptInputPlugin,
+            PromptRenderPlugin { renderer: self.renderer.clone() },
+        ));
         app.add_systems(
             Update,
             (

@@ -18,7 +18,7 @@ pub mod prelude {
         PromptPlugin, ReplPrompt, ReplPromptConfig,
         renderer::{ActiveRenderer, PromptRenderPlugin, PromptRenderer, minimal::MinimalRenderer},
     };
-    pub use crate::prompt::renderer::ScrollRegionReadySet;
+    pub use crate::prompt::renderer::scroll::ScrollRegionReadySet;
     pub use crate::repl::{
         FallbackTerminalContext, Repl, ReplBufferEvent, ReplPlugin, ReplSet, ReplSubmitEvent,
         repl_is_enabled,

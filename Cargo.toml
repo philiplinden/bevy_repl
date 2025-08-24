@@ -3,7 +3,7 @@ members = [".", "bevy_repl_derive"]
 
 [package]
 name = "bevy_repl"
-version = "0.3.0"
+version = "0.3.1"
 edition = "2024"
 description = "Add a REPL to headless Bevy applications"
 license = "MIT"
@@ -19,7 +19,6 @@ clap = { version = "4.5.45" }
 shell-words = "1.1"
 bevy_repl_derive = { version = "0.1.0", path = "./bevy_repl_derive", optional = true }
 ctrlc = "3"
-once_cell = { version = "1", optional = true }
 
 # Error handling and logging
 anyhow = "1.0.99"
@@ -32,15 +31,13 @@ tracing = { version = "0.1", features = [
 default = [
     "dev",
     "default_commands",
-    "pretty",
 ]
 dev = ["bevy/dynamic_linking"]
-default_commands = ["quit", "clear", "help"]
+default_commands = ["quit"]
 quit = []
 clear = []
 help = []
 derive = ["bevy_repl_derive", "clap/derive"]
-pretty = ["once_cell"]
 
 [[example]]
 name = "demo"
@@ -49,10 +46,6 @@ path = "examples/demo.rs"
 [[example]]
 name = "minimal"
 path = "examples/minimal.rs"
-
-# [[example]]
-# name = "toggle"
-# path = "examples/toggle.rs"
 
 [[example]]
 name = "fixed_update"
@@ -85,11 +78,6 @@ name = "aliases"
 path = "examples/aliases.rs"
 
 [[example]]
-name = "log_pretty"
-path = "examples/log_pretty.rs"
-required-features = ["pretty"]
-
-[[example]]
 name = "log_minimal"
 path = "examples/log_minimal.rs"
 
@@ -106,19 +94,8 @@ name = "query"
 path = "examples/query.rs"
 
 [[example]]
-name = "pretty"
-path = "examples/pretty.rs"
-required-features = ["pretty"]
-
-[[example]]
-name = "pretty_custom"
-path = "examples/pretty_custom.rs"
-required-features = ["pretty"]
-
-[[example]]
 name = "custom_renderer"
 path = "examples/custom_renderer.rs"
-required-features = ["pretty"]
 
 # Idiomatic Bevy code often triggers these lints, and the CI workflow treats them as errors.
 # In some cases they may still signal poor code quality however, so consider commenting out these lines.

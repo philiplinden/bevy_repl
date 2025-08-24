@@ -9,7 +9,7 @@
 //! - `bevy_ratatui/crossterm` for the crossterm TUI backend
 
 use bevy::{app::ScheduleRunnerPlugin, prelude::*};
-use bevy_repl::{prelude::*, prompt::PromptPlugin};
+use bevy_repl::prelude::*;
 use std::time::Duration;
 
 fn repl_print_block(block: &str) {
@@ -550,7 +550,7 @@ fn main() {
                     1.0 / 60.0,
                 )))
                 .disable::<bevy::log::LogPlugin>(),
-            ReplPlugins.set(PromptPlugin::pretty()),
+            ReplPlugins,
             DemoPlugin,
         ))
         .run();
