@@ -40,10 +40,11 @@ fn main() {
                 }),
                 ..default()
             }),
+            bevy_ratatui::RatatuiPlugins::default(),
             ReplPlugins,
         ))
         .add_repl_command::<PingCommand>()
         .add_observer(on_ping)
-        .add_systems(PostStartup, instructions.after(ScrollRegionReadySet))
+        .add_systems(PostStartup, instructions)
         .run();
 }

@@ -94,6 +94,7 @@ fn main() {
                     1.0 / 60.0,
                 ))),
             bevy::input::InputPlugin::default(),
+            bevy_ratatui::RatatuiPlugins::default(),
             ReplPlugins,
         ))
         .add_repl_command::<SayCommand>()

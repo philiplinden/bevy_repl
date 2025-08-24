@@ -157,6 +157,7 @@ fn main() {
                 ))),
             bevy::input::InputPlugin::default(),
             bevy::log::LogPlugin::default(),
+            bevy_ratatui::RatatuiPlugins::default(),
             ReplPlugins,
         ))
         .init_resource::<TimerResource>()

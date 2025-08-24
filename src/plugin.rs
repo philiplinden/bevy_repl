@@ -6,7 +6,6 @@ use bevy_ratatui::{
     error::ErrorPlugin,
     translation::TranslationPlugin,
 };
-use crate::context::FallbackTerminalContextPlugin;
 
 /// Minimal Ratatui plugin group: replicates the default Ratatui plugin group
 /// but without the alternate screen.
@@ -19,7 +18,6 @@ impl PluginGroup for StdoutRatatuiPlugins {
             .add(CleanupPlugin)
             .add(ErrorPlugin)
             .add(TranslationPlugin)
-            .add(FallbackTerminalContextPlugin)
     }
 }
 

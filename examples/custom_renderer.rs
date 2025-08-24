@@ -75,6 +75,7 @@ fn main() {
                 60.0_f64.recip(),
             ))),
             bevy::input::InputPlugin::default(),
+            bevy_ratatui::RatatuiPlugins::default(),
             ReplPlugins.set(PromptPlugin {
                 renderer: Arc::new(CustomRenderer),
                 ..default()

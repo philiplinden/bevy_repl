@@ -40,7 +40,7 @@ pub mod prelude {
 
     #[cfg(feature = "derive")]
     pub use bevy_repl_derive::ReplCommand;
-
-    #[cfg(feature = "stdout")]
-    pub use crate::plugin::StdoutRatatuiPlugins;
 }
+
+#[cfg(feature = "stdout")]
+pub use crate::plugin::StdoutRatatuiPlugins;

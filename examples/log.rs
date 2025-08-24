@@ -32,6 +32,7 @@ fn main() {
         .add_plugins((
             // Disable stdout logger to avoid duplicate output; our fmt layer prints
             DefaultPlugins.build().disable::<bevy::log::LogPlugin>(),
+            bevy_ratatui::RatatuiPlugins::default(),
             ReplPlugins,
         ))
         .add_systems(Startup, setup)

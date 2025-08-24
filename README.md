@@ -24,7 +24,6 @@ implementing a full TUI or rendering features.
 > of it. **You have been warned.**
 
 ## Table of Contents
-
 - [bevy\_repl](#bevy_repl)
   - [Table of Contents](#table-of-contents)
   - [Versions](#versions)
@@ -32,12 +31,9 @@ implementing a full TUI or rendering features.
     - [Derive](#derive)
     - [Built-in commands](#built-in-commands)
     - [Prompt styling](#prompt-styling)
-      - [Plugin groups and alternate screen](#plugin-groups-and-alternate-screen)
-    - [Robust printing in raw/alternate screen terminals](#robust-printing-in-rawalternate-screen-terminals)
     - [Routing Bevy logs to the REPL](#routing-bevy-logs-to-the-repl)
     - [Startup ordering (PostStartup)](#startup-ordering-poststartup)
   - [Usage](#usage)
-    - [REPL lifecycle (v1)](#repl-lifecycle-v1)
     - [Builder pattern (default)](#builder-pattern-default)
     - [Derive pattern (requires `derive` feature)](#derive-pattern-requires-derive-feature)
     - [Default keybinds](#default-keybinds)
@@ -46,14 +42,16 @@ implementing a full TUI or rendering features.
     - [REPL Console](#repl-console)
     - [Command parsing](#command-parsing)
     - [Scheduling](#scheduling)
-    - [Directly modifying the terminal (to-do)](#directly-modifying-the-terminal-to-do)
-    - [Prompt styling](#prompt-styling)
+    - [Prompt styling](#prompt-styling-1)
+    - [Terminal Screens](#terminal-screens)
+      - [Printing to the terminal](#printing-to-the-terminal)
   - [Known issues \& limitations](#known-issues--limitations)
     - [Built-in `help` and `clear` commands are not yet implemented](#built-in-help-and-clear-commands-are-not-yet-implemented)
     - [Runtime toggle is not supported](#runtime-toggle-is-not-supported)
-    - [Key events are not forwarded to Bevy](#key-events-are-not-forwarded-to-bevy)
-    - [Minimal renderer prompt does not scroll with terminal output](#minimal-renderer-prompt-does-not-scroll-with-terminal-output)
+    - [Key events are not forwarded to Bevy while the REPL is enabled](#key-events-are-not-forwarded-to-bevy-while-the-repl-is-enabled)
+    - [Renderer prompt buffer does not scroll with terminal output](#renderer-prompt-buffer-does-not-scroll-with-terminal-output)
     - [Shift+ aren't entered into the buffer](#shift-arent-entered-into-the-buffer)
+    - [Directly modifying the terminal is buggy](#directly-modifying-the-terminal-is-buggy)
   - [Aspirations](#aspirations)
   - [License](#license)
 
@@ -97,10 +95,15 @@ commands.
 ### Prompt styling
 
 The REPL uses `bevy_ratatui` for rendering the prompt and input buffer. The
-prompt renderer is configured via `ReplPromptConfig`. The default renderer is
-`MinimalRenderer`, which is a simple 1-line bottom prompt with a symbol and
-input buffer. The alternate screen is active when `bevy_ratatui::RatatuiPlugins`
-is added to your app.
+prompt renderer is configured via `ReplPromptConfig`. The default renderer is a
+simple 1-line bottom prompt with a symbol and input buffer.
+
+When `bevy_ratatui::RatatuiPlugins` is added to your app, the REPL and terminal
+outputs are rendered to an alternate terminal screen. When
+`bevy_repl::StdoutRatatuiPlugins` is added to your app, the REPL and terminal
+outputs are rendered to the main terminal screen. Only use one or the other!
+
+Stdout rendering is experimental and may not work as expected.
 
 ### Routing Bevy logs to the REPL
 
@@ -167,13 +170,14 @@ fn main() {
 The REPL is designed to be used in headless mode, but it can be used in windowed
 mode too through the terminal while the app is running.
 
-### REPL lifecycle (v1)
+Add `bevy_ratatui::RatatuiPlugins` and `bevy_repl::ReplPlugins` to your app to
+enable the REPL and print logs to a TUI screen. The log history is lost when the
+app exits.
 
-For v1 there is no runtime toggle. The REPL is enabled when you add the plugin group and remains active for the run.
-
-Trigger commands by typing them in the REPL input buffer and pressing `Enter`.
-The REPL will parse the command and trigger an event with the command's arguments
-and options.
+There is an experimental `bevy_repl::StdoutRatatuiPlugins` that renders the REPL
+and logs to stdout by using a custom ratatui context. Enable the `stdout`
+feature flag and add this plugin **instead** of `bevy_ratatui::RatatuiPlugins`
+to render the REPL to stdout.
 
 ### Builder pattern (default)
 
@@ -250,6 +254,8 @@ fn main() {
             ),
             // Bevy input plugin is required to detect keyboard inputs
             bevy::input::InputPlugin::default(),
+            // Ratatui plugins are required to set up the terminal context
+            bevy_ratatui::RatatuiPlugins,
             // Default REPL stack (alternate screen, built-ins) with minimal renderer
             ReplPlugins,
         ))
@@ -306,7 +312,9 @@ When the REPL is enabled, the following keybinds are available:
 | `Delete` | Delete character at cursor |
 | `Esc` | Clear input buffer |
 
-Note: `Ctrl+C` behaves like a normal terminal interrupt and is not handled by the REPL.
+Note: `Ctrl+C` behaves like a normal terminal interrupt and terminates the Bevy
+app. The REPL plugin is set up with some safety net event handling to ensure
+that the terminal state is restored back to normal upon exiting the app
 
 ## Design
 
@@ -422,6 +430,7 @@ fn main() {
         ));
 
     app.add_plugins((
+        bevy_ratatui::RatatuiPlugins,
         ReplPlugin,
         ReplDefaultCommandsPlugin,
     ))
@@ -477,45 +486,19 @@ For headless command output, use the regular `info!` or `debug!` macros and the
 `RUST_LOG` environment variable to configure messages printed to the console or
 implement your own TUI panels with `bevy_ratatui`.
 
-### Directly modifying the terminal (to-do)
-
-The REPL uses `crossterm` events generated by `bevy_ratatui` to read input events
-from the keyboard. When the REPL is enabled, the terminal is in raw mode and the
-REPL has direct access to the terminal cursor. The crate uses observers to
-disable raw mode when the REPL is disabled or the app exits. If raw mode isn't
-handled correctly, the terminal cursor may be left in an unexpected state.
-
-Keycode forwarding from crossterm to Bevy is disabled (except for the
-REPL toggle key) to avoid passing events to Bevy when you are typing a command.
-Disabling the REPL returns the terminal to normal headless mode, and keycodes
-are propagated to Bevy as normal.
-
-We use Bevy keycode events for toggle behavior so that the REPL can be toggled
-when the terminal is NOT in raw mode. This is to avoid the need to place the
-terminal in raw mode even when the REPL is disabled. This is a tradeoff
-between simplicity and utility. It would be simpler to enable raw mode all the
-time and detect raw keycode commands for the toggle key, then forward the raw
-inputs to Bevy as normal keycode events. However, this means that the app input
-handling fundamentally changes, even when the REPL is disabled. For development,
-it is more useful to have the app behave exactly as a normal headless app when
-the REPL is disabled to preserve consistency in input handling behavior.
-
 ### Prompt styling
 
-The REPL prompt supports two visual modes controlled by a simple resource and optional feature flag:
+The REPL prompt supports basic configuration via the `ReplPromptConfig` resource.
 
-- __Minimal__ (default baseline): 1-line bottom bar, no border/colors/hint.
-  - Opt-in at runtime with `PromptMinimalPlugin`:
-
-    ```rust
-    app.add_plugins(PromptMinimalPlugin);
-    ```
-
-And you can configure the prompt symbol:
+You can configure the prompt symbol:
 
 ```rust
 app.insert_resource(ReplPromptConfig { symbol: Some("> ".to_string()) });
 ```
+
+More advanced prompt styling is not yet implemented for the default prompt
+renderer. It is possible to do advanced TUI styling with a custom renderer,
+though. See [examples/custom_renderer.rs](examples/custom_renderer.rs).
 
 ### Terminal Screens
 
@@ -555,7 +538,10 @@ fn instructions() {
 }
 ```
 
-If you truly need to emit raw `stdout` (e.g., piping to tools) while the REPL is active, consider temporarily suspending the TUI or buffering output and emitting it via `repl_println!`.
+If you truly need to emit raw `stdout` (e.g., piping to tools) while the REPL is
+active, consider temporarily suspending the TUI or buffering output and emitting
+it via `repl_println!`.
+
 ## Known issues & limitations
 
 ### Built-in `help` and `clear` commands are not yet implemented
@@ -571,7 +557,7 @@ This is not supported yet (believe me, I tried!) mostly because I was running
 into too many issues with raw mode, crossterm events, and bevy events all at the
 same time. It's definitely possible, but I haven't had the time to implement it.
 
-### Key events are not forwarded to Bevy
+### Key events are not forwarded to Bevy while the REPL is enabled
 All key events are cleared by the REPL when it is enabled, so they are not
 forwarded to Bevy and causing unexpected behavior when typing in the prompt.
 This is a tradeoff between simplicity and utility. It would be simpler to enable
@@ -598,36 +584,66 @@ App::new()
     .run();
 ```
 
-### Minimal renderer prompt does not scroll with terminal output
-This is a limitation of the minimal renderer. The prompt is rendered in the
-terminal below the normal stdout, but it does not stay at the bottom of the
-terminal if there are other messages sent to stdout. The REPL works as expected
-(inputs are loaded to the buffer and commands are parsed and executed normally),
-but the prompt may be hidden by other output.
+### Renderer prompt buffer does not scroll with terminal output
+The prompt is rendered in the terminal below the normal stdout, but the entire
+buffered input does not stay at the bottom of the terminal if there are other
+messages sent to stdout. The REPL works as expected (inputs are loaded to the
+buffer and commands are parsed and executed normally), but the prompt may be
+hidden by other output.
 
 ### Shift+<Char> aren't entered into the buffer
 `Shift + lowercase letter` is ignored by the prompt. This is because the prompt
 captures only characters, not chords. Since shift is a modifier, extra logic is
 needed to support it. This is not implemented yet.
 
+### Directly modifying the terminal is buggy
+The REPL uses `crossterm` events generated by `bevy_ratatui` to read input events
+from the keyboard. When the REPL is enabled, the terminal is in raw mode and the
+REPL has direct access to the terminal cursor. The crate uses observers to
+disable raw mode when the REPL is disabled or the app exits. If raw mode isn't
+handled correctly, the terminal cursor may be left in an unexpected state.
+
+Keycode forwarding from crossterm to Bevy is disabled (except for the
+REPL toggle key) to avoid passing events to Bevy when you are typing a command.
+Disabling the REPL returns the terminal to normal headless mode, and keycodes
+are propagated to Bevy as normal.
+
+We use Bevy keycode events for toggle behavior so that the REPL can be toggled
+when the terminal is NOT in raw mode. This is to avoid the need to place the
+terminal in raw mode even when the REPL is disabled. This is a tradeoff
+between simplicity and utility. It would be simpler to enable raw mode all the
+time and detect raw keycode commands for the toggle key, then forward the raw
+inputs to Bevy as normal keycode events. However, this means that the app input
+handling fundamentally changes, even when the REPL is disabled. For development,
+it is more useful to have the app behave exactly as a normal headless app when
+the REPL is disabled to preserve consistency in input handling behavior.
+
 ## Aspirations
-- [x] **Derive pattern** - Describe commands with clap's derive pattern.
-- [ ] **Toggleable** - The REPL is disabled by default and can be toggled. When
-  disabled, the app runs normally in the terminal, no REPL systems run, and the
-  prompt is hidden.
+- [x] **Derive pattern** - Describe commands with clap's derive pattern. 
 - [x] **Support for games with rendering and windowing** - The REPL is designed to
   work from the terminal, but the terminal normally prints logs when there is a
   window too. The REPL still works from the terminal while using the window for
   rendering if the console is enabled.
+- [ ] **Toggleable** - The REPL is disabled by default and can be toggled. When
+  disabled, the app runs normally in the terminal, no REPL systems run, and the
+  prompt is hidden.
+- [ ] **Scrollable terminal output** - The terminal output on the TUI screen
+  should scroll to show past messages like a normal terminal screen printing to
+  stdout.
+- [ ] **Printing to stdout** - The REPL should (optionally) print to stdout
+  instead of the TUI screen. This is partially implemented behind the `stdout`
+  feature flag but has some issues. Experimental!
 - [ ] **Support for games with TUIs** - The REPL is designed to work as a sort of
   sidecar to the normal terminal output, so _in theory_ it should be compatible
   with games that use an alternate TUI screen. I don't know if it actually
   works, probably only with the minimal renderer or perhaps a custom renderer.
 - [ ] **Customizable keybinds** - Allow the user to configure the REPL keybinds for
   all REPL controls, not just the toggle key.
-- [ ] **Command history** - Use keybindings to navigate past commands
+- [ ] **Command history** - Use keybindings to navigate past commands and insert
+  them in the prompt buffer.
 - [ ] **Help text and command completion** - Use `clap`'s help text and completion
   features to provide a better REPL experience and allow for command discovery.
+
 
 ## License
 

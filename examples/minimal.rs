@@ -1,5 +1,7 @@
 //! Minimal Bevy REPL example.
 //! 
+//! This example shows the minimum amount of dependencies needed to use the REPL.
+//! 
 //! Demonstrates:
 //! - Registering a simple `ReplCommand` (ping)
 //! - Running headless via `ScheduleRunnerPlugin`

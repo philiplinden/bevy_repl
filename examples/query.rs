@@ -83,11 +83,12 @@ fn main() {
         .add_plugins((
             MinimalPlugins.set(ScheduleRunnerPlugin::run_loop(Duration::from_secs_f64(1.0 / 60.0))),
             bevy::input::InputPlugin::default(),
+            bevy_ratatui::RatatuiPlugins::default(),
             ReplPlugins,
         ))
         .add_repl_command::<ListCommand>()
         .add_observer(on_list)
         .add_systems(Startup, spawn_entities)
-        .add_systems(PostStartup, instructions.after(ScrollRegionReadySet))
+        .add_systems(PostStartup, instructions)
         .run();
 }

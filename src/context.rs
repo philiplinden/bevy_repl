@@ -30,7 +30,6 @@ impl Drop for RawModeGuard {
     }
 }
 
-
 #[derive(Resource, Deref, DerefMut, Debug)]
 /// Terminal context used when `bevy_ratatui::RatatuiContext` is not available.
 ///
