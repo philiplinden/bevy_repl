@@ -1,14 +1,16 @@
-pub mod minimal;
 pub mod helpers;
 pub mod scroll;
+pub mod minimal;
+
+use std::sync::Arc;
 
 use bevy::prelude::*;
 use bevy_ratatui::RatatuiContext;
-use crate::repl::{Repl, ReplSet};
-
-use crate::prompt::{ReplPrompt, ReplPromptConfig};
 use ratatui::layout::Rect;
-use std::sync::Arc;
+
+use crate::repl::{Repl, ReplSet};
+use super::{ReplPrompt, ReplPromptConfig};
+
 
 /// Public label: "scroll region ready". Always available, even in minimal mode.
 pub struct PromptRenderPlugin {
