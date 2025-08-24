@@ -19,14 +19,8 @@ pub struct PromptPlugin {
 
 impl Default for PromptPlugin {
     fn default() -> Self {
-        Self::minimal()
-    }
-}
-
-impl PromptPlugin {
-    pub fn minimal() -> Self {
         Self {
-            config: ReplPromptConfig::minimal(),
+            config: ReplPromptConfig::default(),
             renderer: Arc::new(renderer::minimal::MinimalRenderer),
         }
     }
@@ -55,28 +49,6 @@ impl Plugin for PromptPlugin {
     }
 }
 
-impl ReplPromptConfig {
-    /// Minimal preset: single-line bar, no border, no colors, no hint.
-    pub fn minimal() -> Self {
-        Self {
-            symbol: Some("> ".to_string()),
-            border: None,
-            color: None,
-            hint: None,
-        }
-    }
-
-    /// Pretty preset: border, colors, and right-aligned hint enabled.
-    pub fn pretty() -> Self {
-        Self {
-            symbol: Some("> ".to_string()),
-            border: Some(PromptBorderConfig::default()),
-            color: Some(PromptColorConfig::default()),
-            hint: Some(PromptHintConfig::default()),
-        }
-    }
-}
-
 #[derive(Resource, Default, Clone)]
 pub struct ReplPrompt {
     pub symbol: Option<String>,
@@ -86,35 +58,13 @@ pub struct ReplPrompt {
 /// Visual configuration for the REPL prompt bar.
 #[derive(Resource, Clone)]
 pub struct ReplPromptConfig {
-    /// Prompt symbol to display before the buffer.
     pub symbol: Option<String>,
-    /// Draw a border and title around the prompt bar.
-    pub border: Option<PromptBorderConfig>,
-    /// Enable colorful styles for title/prompt/hints.
-    pub color: Option<PromptColorConfig>,
-    /// Show a right-aligned hint text.
-    pub hint: Option<PromptHintConfig>,
 }
 
 impl Default for ReplPromptConfig {
     fn default() -> Self {
         Self {
             symbol: Some("> ".to_string()),
-            border: Some(PromptBorderConfig::default()),
-            color: Some(PromptColorConfig::default()),
-            hint: Some(PromptHintConfig::default()),
         }
     }
 }
-
-/// Border styling configuration (placeholder for future fields)
-#[derive(Clone, Default)]
-pub struct PromptBorderConfig;
-
-/// Color styling configuration (placeholder for future fields)
-#[derive(Clone, Default)]
-pub struct PromptColorConfig;
-
-/// Hint styling/behavior configuration (placeholder for future fields)
-#[derive(Clone, Default)]
-pub struct PromptHintConfig;

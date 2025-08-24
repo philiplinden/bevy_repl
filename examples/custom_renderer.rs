@@ -1,5 +1,7 @@
-//! Minimal custom renderer example (feature-gated: `pretty`).
-//! Run with: `cargo run --example custom_renderer --features pretty`
+//! Minimal custom renderer example
+//!
+//! This example shows how you can create your own prompt renderer for the REPL
+//! and configure the plugin to use it instead of the built-in renderer.
 
 use std::sync::Arc;
 use std::time::Duration;
@@ -8,7 +10,7 @@ use bevy::{app::ScheduleRunnerPlugin, prelude::*};
 use bevy_repl::prelude::*;
 use bevy_repl::prompt::renderer::helpers::{bottom_bar_area, buffer_window, cursor_position};
 use bevy_repl::prompt::renderer::{PromptRenderer, RenderCtx};
-use ratatui::style::{Color, Style};
+use ratatui::style::Style;
 use ratatui::text::{Line, Span};
 use ratatui::widgets::Paragraph;
 
@@ -33,11 +35,7 @@ impl PromptRenderer for CustomRenderer {
         let (visible_buf, start) = buffer_window(buffer, cursor, visible_width);
 
         // Simple style: cyan prompt when visuals.color is Some, otherwise default
-        let prompt_style = if ctx.visuals.color.is_some() {
-            Style::default().fg(Color::Cyan)
-        } else {
-            Style::default()
-        };
+        let prompt_style = Style::default();
 
         let spans = vec![Span::styled(prompt, prompt_style), Span::raw(visible_buf)];
         f.render_widget(Paragraph::new(Line::from(spans)), area);

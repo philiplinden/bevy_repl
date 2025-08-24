@@ -2,7 +2,6 @@ use bevy::prelude::*;
 use std::io::{stdout, Write};
 use bevy_ratatui::crossterm::terminal;
 
-use crate::prompt::ReplPromptConfig;
 use crate::print::{set_scroll_region_info, printed_lines};
 use crate::repl::{Repl, ReplSet};
 
@@ -11,14 +10,14 @@ pub struct ScrollRegionPlugin;
 impl Plugin for ScrollRegionPlugin {
     fn build(&self, app: &mut App) {
         // Ensure region is set early (before any PostStartup prints)
-        app.add_systems(Startup, manage_pretty_scroll_region);
+        app.add_systems(Startup, manage_scroll_region);
         // Run once in PostStartup too, in the labeled set, to catch cases where
         // terminal size isn't ready at Startup and to provide ordering guarantees.
-        app.add_systems(PostStartup, manage_pretty_scroll_region.in_set(ScrollRegionReadySet));
+        app.add_systems(PostStartup, manage_scroll_region.in_set(ScrollRegionReadySet));
         app.add_systems(
             Update,
             (
-                manage_pretty_scroll_region
+                manage_scroll_region
                     .in_set(ReplSet::Render)
                     .in_set(ReplSet::All)
                     .after(ReplSet::Buffer)
@@ -43,15 +42,11 @@ pub struct ScrollRegionState {
 
 /// Ensure the terminal scroll region reserves the bottom prompt area so that
 /// stdout/logs scroll above the REPL prompt instead of overwriting it.
-fn manage_pretty_scroll_region(
+fn manage_scroll_region(
     repl: Res<Repl>,
-    visuals: Option<Res<ReplPromptConfig>>,
     mut last: Local<Option<ScrollRegionState>>,
 ) {
-    // Determine desired reserved lines for the prompt area: pretty uses a border (3 lines).
-    let vis = visuals.map(|v| v.clone()).unwrap_or_default();
-    let border_on = vis.border.is_some();
-    let reserved_lines: u16 = if repl.enabled && border_on { 3 } else { 0 };
+    let reserved_lines: u16 = if repl.enabled { 3 } else { 0 };
 
     // Read terminal size; if unavailable, do nothing
     let Ok((_w, h)) = terminal::size() else { return };

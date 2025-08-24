@@ -27,6 +27,7 @@ implementing a full TUI or rendering features.
 
 - [bevy\_repl](#bevy_repl)
   - [Table of Contents](#table-of-contents)
+  - [Versions](#versions)
   - [Features](#features)
     - [Derive](#derive)
     - [Built-in commands](#built-in-commands)
@@ -39,7 +40,6 @@ implementing a full TUI or rendering features.
     - [REPL lifecycle (v1)](#repl-lifecycle-v1)
     - [Builder pattern (default)](#builder-pattern-default)
     - [Derive pattern (requires `derive` feature)](#derive-pattern-requires-derive-feature)
-    - [Prompt styling](#prompt-styling-1)
     - [Default keybinds](#default-keybinds)
   - [Design](#design)
     - [Headless mode](#headless-mode)
@@ -47,7 +47,7 @@ implementing a full TUI or rendering features.
     - [Command parsing](#command-parsing)
     - [Scheduling](#scheduling)
     - [Directly modifying the terminal (to-do)](#directly-modifying-the-terminal-to-do)
-    - [Prompt styling](#prompt-styling-2)
+    - [Prompt styling](#prompt-styling)
   - [Known issues \& limitations](#known-issues--limitations)
     - [Built-in `help` and `clear` commands are not yet implemented](#built-in-help-and-clear-commands-are-not-yet-implemented)
     - [Runtime toggle is not supported](#runtime-toggle-is-not-supported)
@@ -57,11 +57,24 @@ implementing a full TUI or rendering features.
   - [Aspirations](#aspirations)
   - [License](#license)
 
+## Versions
+
+| Version | Bevy | Ratatui | Notes |
+| --- | --- | --- | --- |
+| 0.4.0 | 0.16.1 | 0.29 | Removed the "pretty" renderer in favor of getting simple prompt features working. Changed the interface slightly. This is a breaking change! See examples for help. |
+| 0.3.0 | 0.16.1 | 0.29 | First release. Supports `derive` feature. Only `quit` built-in command is implemented. Includes a "pretty" renderer for fancy prompt styling, but it doesn't work very well. |
+
 ## Features
 
 Theoretically all clap features are supported, but I have only tested `derive`.
 Override the `clap` features in your `Cargo.toml` to enable or disable
 additional features at your own risk.
+
+| Feature Flag | Description | Default |
+| --- | --- | --- |
+| `derive` | Support clap's derive pattern for REPL commands | `false` |
+| `stdout` | Enable raw stdout rendering (experimental) | `false` |
+| `default_commands` | Enable all built-in commands | `true` |
 
 ### Derive
 Use the `derive` feature to support clap's derive pattern for REPL commands.
@@ -79,100 +92,15 @@ commands.
 | `default_commands` | `quit`, `help`, `clear` | Enable all built-in commands |
 | `quit` | `quit`, `q`, `exit` | Gracefully terminate the application |
 | `help` | `help` | Show clap help text (not yet implemented) |
-| `clear` | `clear` | Clear the terminal output |
+| `clear` | `clear` | Clear the terminal output (not yet implemented) |
 
 ### Prompt styling
 
-The REPL uses a single, minimal prompt renderer.
-
-- __Minimal (default)__
-  - Appearance: 1-line bottom prompt with symbol + input. No border/colors/hint.
-  - Compilation: lean terminal manipulation only.
-  - Config: only `ReplPromptConfig.symbol` is honored.
-  - Use: `cargo run` (no extra feature flags).
-
-#### Plugin groups and alternate screen
-
-- __When is the alternate screen active?__
-  - The alternate screen is active when `bevy_ratatui::RatatuiPlugins` is added to your app.
-  - Using `ReplPlugins` (the default/turnkey group) automatically adds `RatatuiPlugins`, so the REPL renders in the alternate screen via `RatatuiContext`.
-  - Using `MinimalReplPlugins` adds some but not all Ratatui Plugins; the prompt renders on the main terminal screen using the fallback `FallbackTerminalContext`.
-
-- __Minimal (no alternate screen, no built-ins)__
-
-  ```rust
-  use bevy::{app::ScheduleRunnerPlugin, prelude::*};
-  use bevy_repl::plugin::MinimalReplPlugins;
-  use std::time::Duration;
-
-  fn main() {
-      App::new()
-          .add_plugins((
-              MinimalPlugins.set(ScheduleRunnerPlugin::run_loop(Duration::from_secs_f64(1.0/60.0))),
-              // Minimal REPL: core + prompt + parser; main-screen rendering
-              MinimalReplPlugins,
-          ))
-          // Add your own commands (no built-ins in minimal)
-          // .add_repl_command::<YourCommand>()
-          // .add_observer(on_your_command)
-          .run();
-  }
-  ```
-
-- __Default/turnkey (alternate screen + built-ins)__
-
-  ```rust
-  use bevy::{app::ScheduleRunnerPlugin, prelude::*};
-  use bevy_repl::plugin::ReplPlugins;
-  use std::time::Duration;
-
-  fn main() {
-      App::new()
-          .add_plugins((
-              MinimalPlugins.set(ScheduleRunnerPlugin::run_loop(Duration::from_secs_f64(1.0/60.0))),
-              // Default REPL: adds RatatuiPlugins + minimal stack + built-ins
-              ReplPlugins,
-          ))
-          .run();
-  }
-  ```
-
-- __How to choose__
-  - Choose `MinimalReplPlugins` if you:
-    - Want to stay on the main terminal screen (no full TUI/pane UX).
-    - Intend to manage `bevy_ratatui` or other input/render stacks yourself.
-    - Prefer to opt-in to commands individually (no built-ins by default).
-  - Choose `ReplPlugins` if you:
-    - Want a turnkey setup with reliable prompt rendering in the alternate screen.
-    - Prefer sane defaults including built-in commands (`quit`, `help`, `clear`).
-    - Don’t need to wire `RatatuiPlugins` manually.
-
-### Robust printing in raw/alternate screen terminals
-
-When the REPL is active, the terminal often runs in raw mode and may use the alternate screen. In these contexts, normal `println!` can leave the cursor in an odd position or produce inconsistent newlines. To ensure safe, consistent output, use the provided `bevy_repl::repl_println!` macro instead of `println!`.
-
-- __What it does__
-  - Minimal renderer: moves the cursor to column 0 before printing, writes CRLF (`\r\n`), and flushes stdout.
-  
-
-- __When to use__
-  - Any time you print from systems/observers while the REPL is active
-  - Especially in raw mode or when using the alternate screen (e.g., with `ReplPlugins`)
-
-- __Example__
-
-```rust
-fn on_ping(_trigger: Trigger<PingCommand>) {
-    bevy_repl::repl_println!("Pong");
-}
-
-fn instructions() {
-    bevy_repl::repl_println!();
-    bevy_repl::repl_println!("Welcome to the Bevy REPL!");
-}
-```
-
-If you truly need to emit raw `stdout` (e.g., piping to tools) while the REPL is active, consider temporarily suspending the TUI or buffering output and emitting it via `repl_println!`.
+The REPL uses `bevy_ratatui` for rendering the prompt and input buffer. The
+prompt renderer is configured via `ReplPromptConfig`. The default renderer is
+`MinimalRenderer`, which is a simple 1-line bottom prompt with a symbol and
+input buffer. The alternate screen is active when `bevy_ratatui::RatatuiPlugins`
+is added to your app.
 
 ### Routing Bevy logs to the REPL
 
@@ -363,15 +291,6 @@ struct CommandWithArgs {
     arg2: String,
 }
 ```
-
-### Prompt styling
-
-- __Appearance__
-  - Minimal prompt (only mode): One-line bar fixed to the bottom, showing only the prompt symbol and input buffer. No border, colors, or hint.
-
-- __Configuration__
-  - The prompt is configured via `ReplPromptConfig`.
-  - Only the `symbol` is honored.
 
 ### Default keybinds
 
@@ -597,6 +516,46 @@ And you can configure the prompt symbol:
 ```rust
 app.insert_resource(ReplPromptConfig { symbol: Some("> ".to_string()) });
 ```
+
+### Terminal Screens
+
+Ratatui TUIs create an "alternate screen" by default, which is a
+terminal canvas separate from stdout buffer. This means Ratatui TUIs have
+complete control over what is rendered to the entire terminal, but the displayed
+output does not persist after the app is closed.
+
+The REPL uses the alternate screen by default, but you can opt-in to the main
+screen by adding `bevy_repl::StdoutRatatuiPlugins` to your app instead of
+`bevy_ratatui::RatatuiPlugins`.
+
+- Using `bevy_ratatui::RatatuiPlugins` creates an alternate screen via the
+  default `RatatuiContext`.
+- Using `StdoutRatatuiPlugins` adds some but not all Ratatui Plugins; the
+  prompt renders on the main terminal screen using the fallback
+  `FallbackTerminalContext`.
+
+#### Printing to the terminal
+
+When the REPL is active, the terminal often runs in raw mode and may use the
+alternate screen. In these contexts, normal `println!` can leave the cursor in
+an odd position or produce inconsistent newlines. To ensure safe, consistent
+output, use the provided `bevy_repl::repl_println!` macro instead of `println!`.
+
+`repl_println!` moves the cursor to column 0 before printing, writes CRLF
+(`\r\n`), and flushes stdout.
+
+```rust
+fn on_ping(_trigger: Trigger<PingCommand>) {
+    bevy_repl::repl_println!("Pong");
+}
+
+fn instructions() {
+    bevy_repl::repl_println!();
+    bevy_repl::repl_println!("Welcome to the Bevy REPL!");
+}
+```
+
+If you truly need to emit raw `stdout` (e.g., piping to tools) while the REPL is active, consider temporarily suspending the TUI or buffering output and emitting it via `repl_println!`.
 ## Known issues & limitations
 
 ### Built-in `help` and `clear` commands are not yet implemented

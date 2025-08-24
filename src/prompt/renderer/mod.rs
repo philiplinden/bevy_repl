@@ -4,7 +4,8 @@ pub mod scroll;
 
 use bevy::prelude::*;
 use bevy_ratatui::RatatuiContext;
-use crate::repl::{Repl, FallbackTerminalContext, ReplSet};
+use crate::repl::{Repl, ReplSet};
+use crate::context::FallbackTerminalContext;
 
 use crate::prompt::{ReplPrompt, ReplPromptConfig};
 use ratatui::layout::Rect;

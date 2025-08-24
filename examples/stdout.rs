@@ -1,5 +1,7 @@
-//! Minimal Bevy REPL example.
+//! Stdout Bevy REPL example.
 //! 
+//! Prints to stdout instead of using a TUI screen.
+//!
 //! Demonstrates:
 //! - Registering a simple `ReplCommand` (ping)
 //! - Running headless via `ScheduleRunnerPlugin`
@@ -42,7 +44,9 @@ fn main() {
                 ))),
             // Input plugin is required so the REPL can handle keyboard input
             bevy::input::InputPlugin::default(),
-            // Runs the REPL headless in the terminal
+            // Use the minimal renderer with a custom ratatui context that
+            // operates in the main terminal instead of an alternate screen
+            StdoutRatatuiPlugins,
             ReplPlugins,
         ))
         .add_repl_command::<PingCommand>()
