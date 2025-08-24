@@ -1,3 +1,9 @@
+//! Bevy log routing example.
+//! 
+//! Demonstrates:
+//! - Routing Bevy/tracing logs to the REPL
+//! - Printing messages directly to the console with `repl_println!`
+
 use bevy::prelude::*;
 use bevy_repl::prelude::*;
 
@@ -6,7 +12,7 @@ struct SpamTimer(Timer);
 
 fn setup(mut commands: Commands) {
     commands.insert_resource(SpamTimer(Timer::from_seconds(0.5, TimerMode::Repeating)));
-    bevy_repl::repl_println!("\nBevy log routing example (MinimalRenderer)");
+    bevy_repl::repl_println!("\nBevy log routing example");
     bevy_repl::repl_println!(
         "Logs emitted by Bevy/tracing are printed above the prompt using the minimal renderer."
     );

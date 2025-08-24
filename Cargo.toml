@@ -41,6 +41,10 @@ clear = []
 help = []
 
 [[example]]
+name = "default"
+path = "examples/default.rs"
+
+[[example]]
 name = "demo"
 path = "examples/demo.rs"
 

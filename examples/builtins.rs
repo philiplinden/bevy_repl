@@ -66,6 +66,6 @@ fn main() {
             bevy_ratatui::RatatuiPlugins::default(),
             ReplPlugins,
         ))
-        .add_systems(PostStartup, instructions.after(ScrollRegionReadySet))
+        .add_systems(PostStartup, instructions)
         .run();
 }

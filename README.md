@@ -107,22 +107,16 @@ Stdout rendering is experimental and may not work as expected.
 
 ### Routing Bevy logs to the REPL
 
-You can route logs produced by Bevy's `tracing` pipeline to the REPL so they appear above the prompt and scroll correctly.
+You can route logs produced by Bevy's `tracing` pipeline to the REPL so they
+appear above the prompt and scroll correctly.
 
-- __How it works__
-  - A custom `tracing` Layer captures log events and forwards them through an `mpsc` channel to a Non-Send resource.
-  - A system transfers messages from the channel into an `Event<LogEvent>`.
-  - You can then read `Event<LogEvent>` yourself, or use the provided system that prints via `repl_println!` so lines render above the prompt.
+- A custom `tracing` Layer captures log events and forwards them through an `mpsc` channel to a Non-Send resource.
+- A system transfers messages from the channel into an `Event<LogEvent>`.
+- You can then read `Event<LogEvent>` yourself, or use the provided system that prints via `repl_println!` so lines render above the prompt.
 
-- __API__
-  - Module: `bevy_repl::log_ecs`
-  - Layer hook for Bevy's `LogPlugin`: `repl_log_custom_layer`
-  - Event type: `LogEvent`
-  - Optional print system: `print_log_events_system`
-
-- __Recommended setup (preserve colors/format & avoid duplicate stdout)__
-
-If you primarily want logs to print above the prompt with the usual colors/formatting, install the REPL-aware fmt layer and disable the native stdout logger. Importantly, call the installer BEFORE adding `DefaultPlugins`.
+If you primarily want logs to print above the prompt with the usual
+colors/formatting, install the REPL-aware fmt layer and disable the native
+stdout logger. Importantly, call the installer BEFORE adding `DefaultPlugins`.
 
 ```rust
 use bevy::prelude::*;
@@ -165,7 +159,11 @@ fn main() {
 
 ## Usage
 
-> Note: When routing logs to the REPL (to keep formatting/colors and avoid prompt corruption), we recommend disabling Bevy's native stdout logger: `DefaultPlugins.build().disable::<bevy::log::LogPlugin>()`. Use the provided REPL-aware formatter (see Routing Bevy logs to the REPL) or a custom layer instead.
+> Note: When routing logs to the REPL (to keep formatting/colors and avoid
+> prompt corruption), we recommend disabling Bevy's native stdout logger:
+> `DefaultPlugins.build().disable::<bevy::log::LogPlugin>()`. Use the provided
+> REPL-aware formatter (see Routing Bevy logs to the REPL) or a custom layer
+> instead.
 
 The REPL is designed to be used in headless mode, but it can be used in windowed
 mode too through the terminal while the app is running.
@@ -173,6 +171,22 @@ mode too through the terminal while the app is running.
 Add `bevy_ratatui::RatatuiPlugins` and `bevy_repl::ReplPlugins` to your app to
 enable the REPL and print logs to a TUI screen. The log history is lost when the
 app exits.
+
+```rust
+use bevy::prelude::*;
+use bevy_ratatui::prelude::*;
+use bevy_repl::prelude::*;
+
+fn main() {
+    App::new()
+        .add_plugins((
+            DefaultPlugins,
+            RatatuiPlugins::default(),
+            ReplPlugins,
+        ))
+        .run();
+}
+```
 
 There is an experimental `bevy_repl::StdoutRatatuiPlugins` that renders the REPL
 and logs to stdout by using a custom ratatui context. Enable the `stdout`
@@ -514,8 +528,7 @@ screen by adding `bevy_repl::StdoutRatatuiPlugins` to your app instead of
 - Using `bevy_ratatui::RatatuiPlugins` creates an alternate screen via the
   default `RatatuiContext`.
 - Using `StdoutRatatuiPlugins` adds some but not all Ratatui Plugins; the
-  prompt renders on the main terminal screen using the fallback
-  `FallbackTerminalContext`.
+  prompt renders on the main terminal screen using a custom ratatui context.
 
 #### Printing to the terminal
 

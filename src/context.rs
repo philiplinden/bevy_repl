@@ -1,12 +1,20 @@
 use bevy::prelude::*;
 use bevy_ratatui::context::TerminalContext;
-use ratatui::{Terminal, backend::CrosstermBackend};
+use ratatui::{Terminal, backend::{Backend, CrosstermBackend}};
 use std::io::{Stdout, stdout};
 
 use crate::repl::ReplLifecycleEvent;
 
-pub struct ReplContextPlugin{
-    backend: CrosstermBackend<Stdout>,
+pub struct ReplContextPlugin {
+    backend: ReplBackend,
+}
+
+impl Default for ReplContextPlugin {
+    fn default() -> Self {
+        Self {
+            backend: CrosstermBackend::new(stdout()),
+        }
+    }
 }
 
 impl Plugin for ReplContextPlugin {
@@ -30,16 +38,29 @@ impl Drop for RawModeGuard {
     }
 }
 
+#[derive(Debug, Deref, DerefMut)]
+pub struct ReplBackend;
+
+impl Backend for ReplBackend {
+    pub fn with_terminal(terminal: Terminal<T>) -> Result<Self> {
+        bevy_ratatui::crossterm::terminal::enable_raw_mode()?;
+        Ok(Self(terminal))
+    }
+}
+
 #[derive(Resource, Deref, DerefMut, Debug)]
 /// Terminal context used when `bevy_ratatui::RatatuiContext` is not available.
 ///
 /// This keeps rendering on the main terminal screen (no alternate screen) using
 /// `crossterm` via `ratatui`. It exists to provide a minimal, dependency-light
 /// fallback so the REPL can render without the full ratatui stack.
-pub struct FallbackTerminalContext(Terminal<CrosstermBackend<Stdout>>);
+pub struct ReplContext {
+    backend: Terminal<dyn Backend>,
+}
 
-impl FallbackTerminalContext {
-    /// Create a new `FallbackTerminalContext` with a terminal and enable raw mode.
+impl TerminalContext<ReplBackend> for ReplContext {
+    
+    /// Create a new `ReplContext` with a terminal and enable raw mode.
     ///
     /// This is a workaround to initialize a `bevy_ratatui` terminal context
     /// without spawning an alternate screen.
@@ -51,13 +72,7 @@ impl FallbackTerminalContext {
     ///
     /// This method is a simple change that sets up possible future
     /// functionality like using the REPL in a UI.
-    pub fn with_terminal(terminal: Terminal<CrosstermBackend<Stdout>>) -> Result<Self> {
-        bevy_ratatui::crossterm::terminal::enable_raw_mode()?;
-        Ok(Self(terminal))
-    }
-}
 
-impl TerminalContext<CrosstermBackend<Stdout>> for FallbackTerminalContext {
     fn init() -> Result<Self> {
         let stdout = stdout();
         // Enable raw mode but stay in main screen
@@ -79,16 +94,17 @@ impl TerminalContext<CrosstermBackend<Stdout>> for FallbackTerminalContext {
     }
 }
 
+
 /// Manage the terminal context on lifecycle events (startup/shutdown).
 fn manage_context(
     trigger: Trigger<ReplLifecycleEvent>,
-    existing: Option<Res<FallbackTerminalContext>>,
+    existing: Option<Res<ReplContext>>,
     mut commands: Commands,
 ) {
     match trigger.event() {
         ReplLifecycleEvent::Enable => {
             if existing.is_none() {
-                let Ok(terminal) = FallbackTerminalContext::init() else {
+                let Ok(terminal) = ReplContext::init() else {
                     error!("Failed to initialize terminal context");
                     return;
                 };
@@ -99,11 +115,11 @@ fn manage_context(
         }
         ReplLifecycleEvent::Disable => {
             if existing.is_some() {
-                let Ok(_) = FallbackTerminalContext::restore() else {
+                let Ok(_) = ReplContext::restore() else {
                     error!("Failed to remove terminal context");
                     return;
                 };
-                commands.remove_resource::<FallbackTerminalContext>();
+                commands.remove_resource::<ReplContext>();
                 // Dropping the guard will also best-effort disable raw mode.
                 commands.remove_resource::<RawModeGuard>();
             }
@@ -114,15 +130,15 @@ fn manage_context(
 fn cleanup_on_exit(
     _exit: Trigger<AppExit>,
     mut commands: Commands,
-    existing: Option<Res<FallbackTerminalContext>>,
+    existing: Option<Res<ReplContext>>,
 ) {
     // Ensure the resource is removed even if the lifecycle observer didn't run
     if existing.is_some() {
-        let Ok(_) = FallbackTerminalContext::restore() else {
+        let Ok(_) = ReplContext::restore() else {
             error!("Failed to remove terminal context");
             return;
         };
-        commands.remove_resource::<FallbackTerminalContext>();
+        commands.remove_resource::<ReplContext>();
         // Drop the guard on exit path as well.
         commands.remove_resource::<RawModeGuard>();
     }
