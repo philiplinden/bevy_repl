@@ -19,8 +19,8 @@ impl Plugin for ScrollRegionPlugin {
             (
                 manage_scroll_region
                     .in_set(ReplSet::All)
-                    .after(ReplSet::Buffer)
-                    .before(ReplSet::Render),
+                    .after(ReplSet::Render)
+                    .before(ReplSet::Post),
             ),
         );
 
@@ -45,7 +45,7 @@ fn manage_scroll_region(
     repl: Res<Repl>,
     mut last: Local<Option<ScrollRegionState>>,
 ) {
-    let reserved_lines: u16 = if repl.enabled { 3 } else { 0 };
+    let reserved_lines: u16 = if repl.enabled { 1 } else { 0 };
 
     // Read terminal size; if unavailable, do nothing
     let Ok((_w, h)) = terminal::size() else { return };

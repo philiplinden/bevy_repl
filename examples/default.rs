@@ -1,9 +1,8 @@
-
 //! Default Bevy REPL example.
-//! 
+//!
 //! This is the minimal code required to use the REPL with example commands that
 //! generate logs or print directly to the console using the builder pattern.
-//! 
+//!
 //! Demonstrates:
 //! - Registering a simple `ReplCommand` (ping)
 //! - Running headless via `ScheduleRunnerPlugin`
@@ -22,23 +21,27 @@ struct PrintCommand {
 impl ReplCommand for PrintCommand {
     // Define the clap command for this event
     fn clap_command() -> clap::Command {
-        clap::Command::new("print").about("Print a message to the console")
+        clap::Command::new("print")
+            .about("Print a message to the console")
+            .arg(
+                clap::Arg::new("message")
+                    .help("Message to say")
+                    .required(true),
+            )
     }
 
     // Convert clap argument matches to event fields
     fn to_event(matches: &clap::ArgMatches) -> ReplResult<Self> {
-        Ok(PrintCommand {
-            message: matches.get_one::<String>("message").unwrap().clone(),
-        })
+        let message = matches.get_one::<String>("message").unwrap().clone();
+        Ok(PrintCommand { message })
     }
 }
 
 // System that handles the command with access to Bevy ECS
 fn on_print(trigger: Trigger<PrintCommand>) {
     let command = trigger.event();
-
-    // Print the main message
-    repl_println!("{}", command.message);
+    let message = command.message.clone();
+    repl_println!("printing: {}", message);
 }
 
 // Define a simple command struct
@@ -50,23 +53,27 @@ struct LogCommand {
 impl ReplCommand for LogCommand {
     // Define the clap command for this event
     fn clap_command() -> clap::Command {
-        clap::Command::new("log").about("Emit an info level log message")
+        clap::Command::new("log")
+            .about("Emit an info level log message")
+            .arg(
+                clap::Arg::new("message")
+                    .help("Message to say")
+                    .required(true),
+            )
     }
 
     // Convert clap argument matches to event fields
     fn to_event(matches: &clap::ArgMatches) -> ReplResult<Self> {
-        Ok(LogCommand {
-            message: matches.get_one::<String>("message").unwrap().clone(),
-        })
+        let message = matches.get_one::<String>("message").unwrap().clone();
+        Ok(LogCommand { message })
     }
 }
 
 // System that handles the command with access to Bevy ECS
 fn on_log(trigger: Trigger<LogCommand>) {
     let command = trigger.event();
-
-    // Print the main message
-    tracing::info!("{}", command.message);
+    let message = command.message.clone();
+    tracing::info!("logging: {}", message);
 }
 
 fn instructions() {
@@ -86,7 +93,9 @@ fn main() {
         .add_plugins((
             DefaultPlugins
                 // Headless loop in the terminal
-                .set(ScheduleRunnerPlugin::run_loop(Duration::from_secs_f64(1.0 / 60.0))),
+                .set(ScheduleRunnerPlugin::run_loop(Duration::from_secs_f64(
+                    1.0 / 60.0,
+                ))),
             bevy_ratatui::RatatuiPlugins::default(),
             ReplPlugins,
         ))

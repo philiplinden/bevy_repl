@@ -12,6 +12,8 @@ impl PluginGroup for ReplPlugins {
             .add(crate::repl::ReplPlugin::default())
             .add(crate::command::ParserPlugin)
             .add(crate::prompt::PromptPlugin::default())
+            .add(crate::log_ecs::ReplLogPrintPlugin)
+            .add(crate::log_ecs::ReplLogRecoveryPlugin)
             .add(crate::built_ins::ReplDefaultCommandsPlugin)
     }
 }

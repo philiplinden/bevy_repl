@@ -36,6 +36,7 @@ pub mod prelude {
         tracing_to_repl_fmt_with_level,
         LogEvent,
         print_log_events_system,
+        ReplLogRecoveryPlugin,
     };
 
     #[cfg(feature = "derive")]
