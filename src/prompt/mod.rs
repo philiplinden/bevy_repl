@@ -1,14 +1,11 @@
 pub mod input;
 pub mod renderer;
-pub mod key_events;
 pub mod scroll;
 
 use bevy::prelude::*;
 use std::sync::Arc;
 
-use super::repl::{ReplSet};
 use self::input::PromptInputPlugin;
-use self::key_events::block_keyboard_input_forwarding;
 use self::renderer::{PromptRenderer, PromptRenderPlugin};
 use self::scroll::ScrollRegionPlugin;
 
@@ -40,15 +37,6 @@ impl Plugin for PromptPlugin {
             PromptRenderPlugin { renderer: self.renderer.clone() },
             ScrollRegionPlugin,
         ));
-        app.add_systems(
-            Update,
-            (
-                block_keyboard_input_forwarding
-                    .in_set(ReplSet::Post)
-                    .in_set(ReplSet::All)
-                    .after(ReplSet::Render),
-            ),
-        );
     }
 }
 

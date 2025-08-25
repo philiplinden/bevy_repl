@@ -7,26 +7,30 @@
 use bevy::prelude::*;
 use bevy_repl::prelude::*;
 
-#[derive(Resource)]
-struct SpamTimer(Timer);
-
-fn setup(mut commands: Commands) {
-    commands.insert_resource(SpamTimer(Timer::from_seconds(0.5, TimerMode::Repeating)));
+fn instructions() {
     bevy_repl::repl_println!("\nBevy log routing example");
-    bevy_repl::repl_println!(
-        "Logs emitted by Bevy/tracing are printed above the prompt using the minimal renderer."
-    );
+    bevy_repl::repl_println!("Tracing logs are printed in the terminal above the prompt");
+    bevy_repl::repl_println!("just like a message that was printed directly.");
+    bevy_repl::repl_println!("\nType `ping` to emit some logs.");
     bevy_repl::repl_println!("Type `quit` to exit.");
 }
 
-fn spam_logs(mut timer: ResMut<SpamTimer>, time: Res<Time>) {
-    if timer.0.tick(time.delta()).just_finished() {
-        tracing::error!("Example error log");
-        tracing::warn!("Example warn log");
-        tracing::info!("Example info log");
-        tracing::debug!(delta = ?time.delta(), "Example debug log");
-        tracing::trace!("Example trace log");
+#[derive(Debug, Clone, Event, Default)]
+struct PingCommand;
+
+impl ReplCommand for PingCommand {
+    fn clap_command() -> clap::Command {
+        clap::Command::new("ping").about("Test command")
     }
+}
+
+fn on_ping(_trigger: Trigger<PingCommand>) {
+    tracing::error!("Pong");
+    tracing::warn!("Pong");
+    tracing::info!("Pong");
+    tracing::debug!("Pong");
+    tracing::trace!("Pong");
+    repl_println!("(direct print via repl_println!) Pong");
 }
 
 fn main() {
@@ -41,7 +45,8 @@ fn main() {
             bevy_ratatui::RatatuiPlugins::default(),
             ReplPlugins,
         ))
-        .add_systems(Startup, setup)
-        .add_systems(Update, spam_logs)
+        .add_repl_command::<PingCommand>()
+        .add_observer(on_ping)
+        .add_systems(PostStartup, instructions)
         .run();
 }
