@@ -7,6 +7,8 @@ pub mod prompt;
 pub mod repl;
 pub mod print;
 pub mod log_ecs;
+pub mod context;
+
 #[cfg(feature = "stdout")]
 pub mod stdout;
 
@@ -15,12 +17,10 @@ pub mod prelude {
     #[cfg(not(feature = "derive"))]
     pub use crate::command::ReplCommand;
     pub use crate::command::{ReplAppExt, ReplResult};
-    pub use crate::plugin::ReplPlugins;
     pub use crate::prompt::{
         PromptPlugin, ReplPrompt, ReplPromptConfig,
         renderer::{ActiveRenderer, PromptRenderPlugin, PromptRenderer, simple::SimpleRenderer},
     };
-    pub use crate::prompt::scroll::ScrollRegionReadySet;
     pub use crate::repl::{Repl, ReplBufferEvent, ReplPlugin, ReplSet, ReplSubmitEvent,
         repl_is_enabled,
     };
@@ -36,12 +36,14 @@ pub mod prelude {
         tracing_to_repl_fmt_with_level,
         LogEvent,
         print_log_events_system,
-        ReplLogRecoveryPlugin,
     };
+    pub use crate::context::ReplContextPlugin;
+    pub use crate::plugin::{ReplPlugins, StdoutRatatuiPlugins};
 
     #[cfg(feature = "derive")]
     pub use bevy_repl_derive::ReplCommand;
 }
 
-#[cfg(feature = "stdout")]
-pub use crate::stdout::StdoutRatatuiPlugins;
+// re-export at the root for convenience
+pub use crate::prelude::ReplPlugins; 
+pub use crate::prelude::StdoutRatatuiPlugins;

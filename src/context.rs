@@ -1,39 +1,14 @@
 use bevy::prelude::*;
-use bevy_ratatui::{
-    context::DefaultContext,
-};
+use bevy_ratatui::context::{DefaultContext, TerminalContext};
 
 use crate::repl::ReplLifecycleEvent;
 
-use bevy_ratatui::{
-    event::EventPlugin,
-    cleanup::CleanupPlugin,
-    error::ErrorPlugin,
-    translation::TranslationPlugin,
-};
-
-/// Minimal Ratatui plugin group: replicates the default Ratatui plugin group
-/// but without the alternate screen.
-pub struct StdoutRatatuiPlugins;
-
-impl PluginGroup for StdoutRatatuiPlugins {
-    fn build(self) -> PluginGroupBuilder {
-        PluginGroupBuilder::start::<Self>()
-            .add(EventPlugin::default())
-            .add(CleanupPlugin)
-            .add(ErrorPlugin)
-            .add(TranslationPlugin)
-    }
-}
-
 pub struct ReplContextPlugin;
-
 impl Default for ReplContextPlugin {
     fn default() -> Self {
         Self
     }
 }
-
 impl Plugin for ReplContextPlugin {
     fn build(&self, app: &mut App) {
         app.add_observer(manage_context);
@@ -47,7 +22,6 @@ impl Plugin for ReplContextPlugin {
 /// a final line of defense during unwinding or unexpected teardown.
 #[derive(Resource, Debug)]
 struct RawModeGuard;
-
 impl Drop for RawModeGuard {
     fn drop(&mut self) {
         // Idempotent, ignore errors; we just want to best-effort restore.

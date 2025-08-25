@@ -550,7 +550,6 @@ fn main() {
                     1.0 / 60.0,
                 )))
                 .disable::<bevy::log::LogPlugin>(),
-            bevy_ratatui::RatatuiPlugins::default(),
             ReplPlugins,
             DemoPlugin,
         ))

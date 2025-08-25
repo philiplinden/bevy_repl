@@ -1,16 +1,15 @@
-//! Bevy log routing example.
-//!
+//! Bevy alternate screen example.
+//! 
 //! Demonstrates:
+//! - Using RatatuiPlugins in conjunction with ReplPlugins
 //! - Routing Bevy/tracing logs to the REPL
 //! - Printing messages directly to the console with `repl_println!`
 
 use bevy::prelude::*;
 use bevy_repl::prelude::*;
 
-use std::time::Duration;
-
 fn instructions() {
-    bevy_repl::repl_println!("\nBevy log routing example");
+    bevy_repl::repl_println!("\nBevy alternate screen example");
     bevy_repl::repl_println!("Tracing logs are printed in the terminal above the prompt");
     bevy_repl::repl_println!("just like a message that was printed directly.");
     bevy_repl::repl_println!("\nType `ping` to emit some logs.");
@@ -51,12 +50,15 @@ fn print_on_ping(_trigger: Trigger<PingCommand>) {
 }
 
 fn main() {
+    // Install a global fmt layer that writes logs directly to the REPL printer,
+    // preserving colors/formatting. Do this BEFORE adding DefaultPlugins.
+    tracing_to_repl_fmt();
+
     App::new()
         .add_plugins((
             // Disable stdout logger to avoid duplicate output; our fmt layer prints
-            DefaultPlugins.set(bevy::app::ScheduleRunnerPlugin::run_loop(
-                Duration::from_secs_f64(1.0 / 60.0),
-            )),
+            DefaultPlugins.build().disable::<bevy::log::LogPlugin>(),
+            bevy_ratatui::RatatuiPlugins::default(),
             ReplPlugins,
         ))
         .add_repl_command::<PingCommand>()

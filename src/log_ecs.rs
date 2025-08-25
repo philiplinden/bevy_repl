@@ -12,6 +12,23 @@ use bevy::log::{
 
 use crate::repl::ReplSet;
 
+/// Plugin that prints captured tracing `LogEvent`s via the REPL printer after the prompt render,
+/// so output scrolls above the reserved prompt area.
+pub struct ReplLogPrintPlugin;
+
+impl Plugin for ReplLogPrintPlugin {
+    fn build(&self, app: &mut App) {
+        app.add_event::<LogEvent>();
+        app.add_systems(
+            Update,
+            print_log_events_system
+                .in_set(ReplSet::All)
+                .after(ReplSet::Render)
+                .before(ReplSet::Post),
+        );
+    }
+}
+
 /// Event emitted into the ECS for each tracing log event captured by the layer.
 #[derive(Event, Clone)]
 pub struct LogEvent {
@@ -80,22 +97,6 @@ pub fn print_log_events_system(mut events: EventReader<LogEvent>) {
     }
 }
 
-/// Plugin that prints captured tracing `LogEvent`s via the REPL printer after the prompt render,
-/// so output scrolls above the reserved prompt area.
-pub struct ReplLogPrintPlugin;
-
-impl Plugin for ReplLogPrintPlugin {
-    fn build(&self, app: &mut App) {
-        app.add_systems(
-            Update,
-            print_log_events_system
-                .in_set(ReplSet::All)
-                .after(ReplSet::Render)
-                .before(ReplSet::Post),
-        );
-    }
-}
-
 // --- Direct REPL formatting path: install a fmt layer that writes to REPL ---
 
 /// A MakeWriter that produces writers which forward bytes to `repl_print` line-by-line,
@@ -159,39 +160,4 @@ pub fn tracing_to_repl_fmt_with_level(level: bevy::log::Level) {
         .with_filter(lf);
 
     let _ = Registry::default().with(layer).try_init();
-}
-
-// --- Recovery on exit: dump any remaining captured logs to stdout ---
-
-/// Plugin that, on `AppExit`, restores the terminal and prints any remaining
-/// captured log events to stdout so logs aren't lost when the alternate screen
-/// is cleared.
-pub struct ReplLogRecoveryPlugin;
-
-impl Plugin for ReplLogRecoveryPlugin {
-    fn build(&self, app: &mut App) {
-        app.add_observer(dump_logs_on_exit);
-    }
-}
-
-/// Observer that runs on exit; best-effort restore of terminal then drain the
-/// mpsc receiver to stdout.
-fn dump_logs_on_exit(
-    _exit: Trigger<AppExit>,
-    captured: Option<NonSend<CapturedLogEvents>>,
-) {
-    // Best-effort: restore terminal (leave alternate screen, disable raw mode)
-    // so stdout is visible after exit.
-    // Ignore errors; we just want to avoid losing logs.
-    #[allow(unused_must_use)]
-    {
-        use bevy_ratatui::context::DefaultContext;
-        let _ = DefaultContext::restore();
-    }
-
-    if let Some(captured) = captured {
-        for ev in captured.0.try_iter() {
-            println!("{:5} {}", ev.level, ev.message);
-        }
-    }
 }

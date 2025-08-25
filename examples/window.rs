@@ -40,7 +40,6 @@ fn main() {
                 }),
                 ..default()
             }),
-            bevy_ratatui::RatatuiPlugins::default(),
             ReplPlugins,
         ))
         .add_repl_command::<PingCommand>()

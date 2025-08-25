@@ -6,8 +6,8 @@ An interactive REPL for headless Bevy apps powered by `clap` for command parsing
 and `bevy_ratatui` for terminal input and output. The plugin adds a text input
 area below the terminal output for interaction even in headless mode.
 
-- Unobtrusive TUI console below normal terminal output
-- Command parsing and CLI features from `clap`  
+- Unobtrusive TUI console below normal terminal output to stdout
+- Command parsing and CLI features from `clap`
 - Observer-based command execution system with full Bevy ECS access for both
   read and write operations
 - Logging integration with `bevy_log` and `tracing` for unified output display
@@ -71,7 +71,6 @@ additional features at your own risk.
 | Feature Flag | Description | Default |
 | --- | --- | --- |
 | `derive` | Support clap's derive pattern for REPL commands | `false` |
-| `stdout` | Enable raw stdout rendering (experimental) | `false` |
 | `default_commands` | Enable all built-in commands | `true` |
 
 ### Derive
@@ -98,34 +97,46 @@ The REPL uses `bevy_ratatui` for rendering the prompt and input buffer. The
 prompt renderer is configured via `ReplPromptConfig`. The default renderer is a
 simple 1-line bottom prompt with a symbol and input buffer.
 
-When `bevy_ratatui::RatatuiPlugins` is added to your app, the REPL and terminal
-outputs are rendered to an alternate terminal screen. When
-`bevy_repl::StdoutRatatuiPlugins` is added to your app, the REPL and terminal
-outputs are rendered to the main terminal screen. Only use one or the other!
+For now, we only support a "partial-TUI" approach where the REPL and terminal
+outputs are rendered to the main terminal screen. Ratatui alternate screens are 
+available if you add `bevy_ratatui::RatatuiPlugins` to your app before
+`ReplPlugins`. Support for Ratatui alternate screens is experimental.
 
-Stdout rendering is experimental and may not work as expected.
+```rust
+use bevy::prelude::*;
+
+fn main() {
+    App::new()
+        .add_plugins((
+            DefaultPlugins,
+            bevy_ratatui::RatatuiPlugins::default(),
+            bevy_repl::ReplPlugins,
+        ))
+        .run();
+}
+```
 
 ### Routing Bevy logs to the REPL
 
-You can route logs produced by Bevy's `tracing` pipeline to the REPL so they
-appear above the prompt and scroll correctly.
+You can optionally route logs produced by Bevy's `tracing` pipeline to the REPL
+so they are formatted in the REPL's renderer. Otherwise, `bevy::log::LogPlugin`
+will print logs directly to stdout. This means that if you are using an
+alternate TUI screen (like with the default `RatatuiPlugins`), Bevy log messages
+will not be visible in the REPL unless you disable Bevy's `LogPlugin`.
 
-- A custom `tracing` Layer captures log events and forwards them through an `mpsc` channel to a Non-Send resource.
+When the default `LogPlugin` is disabled, the REPL handles log routing like so:
+
+- A custom `tracing` Layer captures log events and forwards them through an
+  `mpsc` channel to a Non-Send resource.
 - A system transfers messages from the channel into an `Event<LogEvent>`.
-- You can then read `Event<LogEvent>` yourself, or use the provided system that prints via `repl_println!` so lines render above the prompt.
-
-If you primarily want logs to print above the prompt with the usual
-colors/formatting, install the REPL-aware fmt layer and disable the native
-stdout logger. Importantly, call the installer BEFORE adding `DefaultPlugins`.
+- You can then read `Event<LogEvent>` yourself, or use the provided system that
+  prints via `repl_println!` so lines render above the prompt.
 
 ```rust
 use bevy::prelude::*;
 use bevy_repl::prelude::*;
 
 fn main() {
-    // 1) Install REPL-aware fmt layer before plugins
-    tracing_to_repl_fmt();
-
     App::new()
         .add_plugins((
             // 2) Disable Bevy's stdout logger to prevent duplicate/garbled output
@@ -136,10 +147,11 @@ fn main() {
 }
 ```
 
-### Startup ordering (PostStartup)
+### Startup ordering
 
-- __Why__: Startup prints (like instructions) should run after the REPL initializes to avoid interleaving with prompt setup.
-- __How__: Use the global `ScrollRegionReadySet` to order your startup prints.
+Startup prints (like instructions) should run after the REPL initializes to
+avoid interleaving with prompt setup. Use the global `ScrollRegionReadySet` to
+order your startup prints if you need explicit control.
 
 ```rust
 use bevy::prelude::*;
@@ -637,15 +649,15 @@ the REPL is disabled to preserve consistency in input handling behavior.
   work from the terminal, but the terminal normally prints logs when there is a
   window too. The REPL still works from the terminal while using the window for
   rendering if the console is enabled.
+- [x] **Printing to stdout** - The REPL should print to stdout instead of the
+  TUI screen unless the user explicitly enables a TUI context that uses the
+  alternate screen.
 - [ ] **Toggleable** - The REPL is disabled by default and can be toggled. When
   disabled, the app runs normally in the terminal, no REPL systems run, and the
   prompt is hidden.
 - [ ] **Scrollable terminal output** - The terminal output on the TUI screen
   should scroll to show past messages like a normal terminal screen printing to
   stdout.
-- [ ] **Printing to stdout** - The REPL should (optionally) print to stdout
-  instead of the TUI screen. This is partially implemented behind the `stdout`
-  feature flag but has some issues. Experimental!
 - [ ] **Support for games with TUIs** - The REPL is designed to work as a sort of
   sidecar to the normal terminal output, so _in theory_ it should be compatible
   with games that use an alternate TUI screen. I don't know if it actually

@@ -13,9 +13,8 @@ impl Plugin for ScrollRegionPlugin {
         app.add_systems(Startup, manage_scroll_region);
         // Run once in PostStartup too, in the labeled set, to catch cases where
         // terminal size isn't ready at Startup and to provide ordering guarantees.
-        app.add_systems(PostStartup, manage_scroll_region.in_set(ScrollRegionReadySet));
         app.add_systems(
-            Update,
+            PostStartup,
             (
                 manage_scroll_region
                     .in_set(ReplSet::All)
@@ -23,14 +22,8 @@ impl Plugin for ScrollRegionPlugin {
                     .before(ReplSet::Post),
             ),
         );
-
-        // Expose the PostStartup ready set unconditionally so callers can order after it.
-        app.configure_sets(PostStartup, ScrollRegionReadySet);
     }
 }
-
-#[derive(SystemSet, Debug, Hash, PartialEq, Eq, Clone)]
-pub struct ScrollRegionReadySet;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ScrollRegionState {
