@@ -147,28 +147,6 @@ fn main() {
 }
 ```
 
-### Startup ordering
-
-Startup prints (like instructions) should run after the REPL initializes to
-avoid interleaving with prompt setup. Use the global `ScrollRegionReadySet` to
-order your startup prints if you need explicit control.
-
-```rust
-use bevy::prelude::*;
-use bevy_repl::prelude::*;
-
-fn instructions() {
-    bevy_repl::repl_println!("Welcome!");
-}
-
-fn main() {
-    App::new()
-        .add_plugins(ReplPlugins)
-        .add_systems(PostStartup, instructions.after(ScrollRegionReadySet))
-        .run();
-}
-```
-
 ## Usage
 
 > Note: When routing logs to the REPL (to keep formatting/colors and avoid
@@ -456,7 +434,6 @@ fn main() {
         ));
 
     app.add_plugins((
-        bevy_ratatui::RatatuiPlugins,
         ReplPlugin,
         ReplDefaultCommandsPlugin,
     ))
@@ -602,8 +579,7 @@ inputs can be read before the REPL clears them.
 App::new()
     .add_plugins((
         MinimalPlugins.set(ScheduleRunnerPlugin::run_loop(Duration::from_secs_f64(1.0/60.0))),
-        // Minimal REPL: core + prompt + parser; main-screen rendering
-        MinimalReplPlugins,
+        ReplPlugins,
     ))
     .add_systems(Update, your_event_reader_system.before(bevy_repl::ReplSet::Pre))
     .run();
