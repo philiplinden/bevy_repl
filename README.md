@@ -36,8 +36,15 @@ implementing a full TUI or rendering features.
 > This is my first public Bevy plugin, and I vibe-coded a large part
 > of it. **You have been warned.**
 
+## Documentation
+
+- Full guide (mdBook): https://philiplinden.github.io/bevy_repl/
+- API reference: https://docs.rs/bevy_repl
+- GitHub: https://github.com/philiplinden/bevy_repl
+
 ## Table of Contents
 - [bevy\_repl](#bevy_repl)
+  - [Documentation](#documentation)
   - [Table of Contents](#table-of-contents)
   - [Versions](#versions)
   - [Features](#features)

@@ -1,0 +1,606 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>bevy_repl Book</title>
+        <meta name="robots" content="noindex">
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="favicon.svg">
+        <link rel="shortcut icon" href="favicon.png">
+        <link rel="stylesheet" href="css/variables.css">
+        <link rel="stylesheet" href="css/general.css">
+        <link rel="stylesheet" href="css/chrome.css">
+        <link rel="stylesheet" href="css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="highlight-css" href="highlight.css">
+        <link rel="stylesheet" id="tomorrow-night-css" href="tomorrow-night.css">
+        <link rel="stylesheet" id="ayu-highlight-css" href="ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "searchindex.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="toc.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="toc.html"></iframe>
+            </noscript>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">bevy_repl Book</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        <a href="https://github.com/philiplinden/bevy_repl" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <i class="fa fa-spinner fa-spin"></i>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="bevy_repl"><a class="header" href="#bevy_repl">bevy_repl</a></h1>
+<p>A REPL for Bevy apps, with a terminal UI powered by ratatui.</p>
+<ul>
+<li>API reference: https://docs.rs/bevy_repl</li>
+<li>Source: https://github.com/philiplinden/bevy_repl</li>
+</ul>
+<p>This book contains:</p>
+<ul>
+<li>Quickstart for adding the REPL to your Bevy app</li>
+<li>Guides: parsing, scheduling, prompt styling, terminal screens, logging</li>
+<li>Reference: built-ins, configuration, known issues</li>
+<li>Project: architecture, changelog, license</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="getting-started"><a class="header" href="#getting-started">Getting Started</a></h1>
+<p>This section collects quickstart and examples to help you begin using bevy_repl.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="getting-started-1"><a class="header" href="#getting-started-1">Getting Started</a></h1>
+<p>This guide shows how to add bevy_repl to a Bevy app and run it.</p>
+<ul>
+<li>See the Examples chapter for runnable samples.</li>
+<li>API reference: https://docs.rs/bevy_repl</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="examples"><a class="header" href="#examples">Examples</a></h1>
+<p>See the repository examples directory for runnable samples:</p>
+<ul>
+<li>https://github.com/philiplinden/bevy_repl/tree/main/examples</li>
+</ul>
+<p>Run an example locally:</p>
+<pre><code class="language-bash">cargo run --example builder
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="guides"><a class="header" href="#guides">Guides</a></h1>
+<p>In-depth guides covering common tasks and concepts for bevy_repl.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="command-parsing"><a class="header" href="#command-parsing">Command Parsing</a></h1>
+<p>Overview of how commands are defined, parsed, and executed.</p>
+<ul>
+<li>See <code>src/command/</code> for implementation details.</li>
+<li>Examples in the Examples chapter.</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="scheduling"><a class="header" href="#scheduling">Scheduling</a></h1>
+<p>How the REPL integrates with Bevy schedules and systems.</p>
+<ul>
+<li>See <code>src/command/parser.rs</code> and <code>src/command/mod.rs</code>.</li>
+<li>Example schedules are demonstrated in the examples.</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="prompt-styling"><a class="header" href="#prompt-styling">Prompt Styling</a></h1>
+<p>Notes on customizing the prompt appearance and behavior.</p>
+<ul>
+<li>Colors, borders, and layout are handled by the renderer.</li>
+<li>See <code>src/prompt/</code> for implementation details.</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="terminal-screens"><a class="header" href="#terminal-screens">Terminal Screens</a></h1>
+<p>Details about the renderer modes and screen behavior.</p>
+<ul>
+<li>The TUI runs in an alternate screen (ratatui) to keep the prompt visible.</li>
+<li>See <code>src/prompt/renderer/</code> for implementation.</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="logging"><a class="header" href="#logging">Logging</a></h1>
+<p>This crate supports two complementary logging display strategies. Choose one per app to avoid duplicates.</p>
+<ul>
+<li>
+<p>Stdout strategy (terminal scrollback)</p>
+<ul>
+<li>Capture tracing/log events and print to the terminal output area.</li>
+<li>Works best when not using an alternate screen (plain stdout renderer).</li>
+<li>Components referenced: <code>CaptureSubscriber</code>, <code>print_log_events_system</code>.</li>
+</ul>
+</li>
+<li>
+<p>In-frame strategy (TUI frame)</p>
+<ul>
+<li>Captures events into an in-memory buffer and renders logs inside the ratatui frame above the prompt.</li>
+<li>Works best with an alternate-screen TUI.</li>
+<li>Components referenced: <code>LogBufferPlugin</code>, <code>LogBuffer</code>.</li>
+</ul>
+</li>
+</ul>
+<p>Guideline:</p>
+<ul>
+<li>Do not enable both simultaneously.</li>
+<li>Select based on the active renderer (e.g., via <code>PromptRenderer::strategy()</code>), and wire only one path into your app.</li>
+</ul>
+<p>Notes:</p>
+<ul>
+<li>API surface and specific types may evolve; consult the examples and source code for current wiring.</li>
+<li>Consider adding structured spans around REPL commands to improve trace readability.</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="reference"><a class="header" href="#reference">Reference</a></h1>
+<p>Reference material for built-ins, configuration, and known issues.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="built-ins"><a class="header" href="#built-ins">Built-ins</a></h1>
+<p>Built-in commands provided by the REPL.</p>
+<ul>
+<li><code>help</code> — list commands and usage</li>
+<li><code>clear</code> — clear the screen</li>
+</ul>
+<p>See <code>src/built_ins/</code> for implementation details.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="configuration"><a class="header" href="#configuration">Configuration</a></h1>
+<p>Feature flags, plugins, and runtime options.</p>
+<ul>
+<li>See crate features in <code>Cargo.toml</code>.</li>
+<li>Configure plugins and renderers in your app's setup code.</li>
+<li>Check examples for common configurations.</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="known-issues--limitations"><a class="header" href="#known-issues--limitations">Known Issues &amp; Limitations</a></h1>
+<p>Known rough edges and limitations. See README for the latest details.</p>
+<ul>
+<li>Built-in <code>help</code> and <code>clear</code> may be incomplete.</li>
+<li>Runtime toggle not supported.</li>
+<li>Key events not forwarded while REPL is enabled.</li>
+<li>Renderer prompt buffer may not scroll with terminal output.</li>
+<li>Shift+ combinations not entered into the buffer.</li>
+<li>Direct terminal manipulation can be fragile.</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="project"><a class="header" href="#project">Project</a></h1>
+<p>Project information including architecture, changelog, and license.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="architecture"><a class="header" href="#architecture">Architecture</a></h1>
+<p>High-level overview of systems, resources, and plugins involved in the REPL.</p>
+<ul>
+<li>Core modules live under <code>src/</code>.</li>
+<li>Commands: <code>src/command/</code></li>
+<li>Prompt &amp; renderer: <code>src/prompt/</code></li>
+<li>Built-ins: <code>src/built_ins/</code></li>
+</ul>
+<p>See the Logging chapter for the display strategies and how they integrate.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="changelog"><a class="header" href="#changelog">Changelog</a></h1>
+<p>The changelog from the repository is embedded below.</p>
+<h1 id="changelog-1"><a class="header" href="#changelog-1">Changelog</a></h1>
+<p>Notable changes to this project will be documented in this file.</p>
+<h2 id="unreleased"><a class="header" href="#unreleased">[unreleased]</a></h2>
+<h3 id="-documentation"><a class="header" href="#-documentation">📚 Documentation</a></h3>
+<ul>
+<li>Add known issues to readme (<a href="https://github.com/philiplinden/bevy_repl/commit/3a7dbe1c7eb931a82a4b755f797e2d92aaea7bef"><code>3a7dbe1</code></a>)</li>
+<li>Update readme (<a href="https://github.com/philiplinden/bevy_repl/commit/2c677eaccfe6626643f34878005a44c9e3c387ed"><code>2c677ea</code></a>)</li>
+</ul>
+<h3 id="-bug-fixes"><a class="header" href="#-bug-fixes">🐛 Bug Fixes</a></h3>
+<ul>
+<li>Clean up examples (<a href="https://github.com/philiplinden/bevy_repl/commit/3f6f23478cb7fbd01e5b454cc2b9fa93857ff8d5"><code>3f6f234</code></a>)</li>
+<li>Bad plugin setup (<a href="https://github.com/philiplinden/bevy_repl/commit/a1ebbe262f5e09933b2085c6acf93c0ff20bbb93"><code>a1ebbe2</code></a>)</li>
+<li>Close and quit were misconfigured (<a href="https://github.com/philiplinden/bevy_repl/commit/df104b1c2d681092473b18b247078bd3cd033c64"><code>df104b1</code></a>)</li>
+<li>Remove broken cmds that need world access (<a href="https://github.com/philiplinden/bevy_repl/commit/19aca254c1bdd550ea37cc8e835d5ae61730bad3"><code>19aca25</code></a>)</li>
+</ul>
+<h3 id="-experimental"><a class="header" href="#-experimental">🧪 Experimental</a></h3>
+<ul>
+<li>Even more examples (<a href="https://github.com/philiplinden/bevy_repl/commit/e70cf9878b71bdbe277cfddfa1c6b983c0b28bf5"><code>e70cf98</code></a>)</li>
+<li>Overhaul (<a href="https://github.com/philiplinden/bevy_repl/commit/d0bbea2136678e53368615042bd024a6e4b8e075"><code>d0bbea2</code></a>)</li>
+<li>Works with windowed apps too! (<a href="https://github.com/philiplinden/bevy_repl/commit/955262b2e3b1df9d111bc8fc3851bc3f19fb2c06"><code>955262b</code></a>)</li>
+<li>Built-in commands, derive, and examples (<a href="https://github.com/philiplinden/bevy_repl/commit/a781f21f1222fb4c32c9b9307cff1b6074fd6329"><code>a781f21</code></a>)</li>
+<li>Add more examples (<a href="https://github.com/philiplinden/bevy_repl/commit/d4556793a22b81c1774cdc0cc951ae582520fe45"><code>d455679</code></a>)</li>
+<li>Command parsing works!!!! (<a href="https://github.com/philiplinden/bevy_repl/commit/a7edc347aa086fe86df68ca95545277dce122ed3"><code>a7edc34</code></a>)</li>
+<li>Buffer text input and backspace (<a href="https://github.com/philiplinden/bevy_repl/commit/d9df188f28192f5d195f49c51f1842040da0e066"><code>d9df188</code></a>)</li>
+<li>Custom ratatui context (<a href="https://github.com/philiplinden/bevy_repl/commit/fc6bba4f7a055d17baa655232bd9ce259dae3703"><code>fc6bba4</code></a>)</li>
+<li>Drop bevy_crossterm and use bevy_ratatui (<a href="https://github.com/philiplinden/bevy_repl/commit/60231d1eaec85576ec8de5e6b330f41dba88506a"><code>60231d1</code></a>)</li>
+<li>Bevy_crossterm and simplify (<a href="https://github.com/philiplinden/bevy_repl/commit/2c8295ea553e6e66f28716d33e740b86c78fbfbc"><code>2c8295e</code></a>)</li>
+<li>Switch from rustyline to crossterm (<a href="https://github.com/philiplinden/bevy_repl/commit/3bda18256f6c90c34547ae6345172d4d95a8ffa5"><code>3bda182</code></a>)</li>
+<li>Tweaking the derive macros (<a href="https://github.com/philiplinden/bevy_repl/commit/ad8421ba2191beb8d994fe792e465b2474aa66c1"><code>ad8421b</code></a>)</li>
+<li>Cleanup (<a href="https://github.com/philiplinden/bevy_repl/commit/b331b52685b0ccca1616ce20cb255c5ce6576266"><code>b331b52</code></a>)</li>
+<li>Derive (<a href="https://github.com/philiplinden/bevy_repl/commit/2ed17bc2fe412cf78d565dd24f38d7281d4ac138"><code>2ed17bc</code></a>)</li>
+<li>More advanced patterns (<a href="https://github.com/philiplinden/bevy_repl/commit/4df61ee8a5455010b1d589bc1fd4d6b258406748"><code>4df61ee</code></a>)</li>
+<li>More designing through the readme (<a href="https://github.com/philiplinden/bevy_repl/commit/0f7432be047520eb1b16e599df585c0cf9ba9994"><code>0f7432b</code></a>)</li>
+<li>Add rustyline, write out design docs (<a href="https://github.com/philiplinden/bevy_repl/commit/fd4ea0f9ed8be49b0333468f540dbebf32a5fa49"><code>fd4ea0f</code></a>)</li>
+</ul>
+<h2 id="new-contributors-"><a class="header" href="#new-contributors-">New Contributors ❤️</a></h2>
+<ul>
+<li>@philiplinden made their first contribution in <a href="https://github.com/philiplinden/bevy_repl/pull/5">#5</a></li>
+</ul>
+<!-- generated by git-cliff -->
+<div style="break-before: page; page-break-before: always;"></div><h1 id="license"><a class="header" href="#license">License</a></h1>
+<p>This project is dual-licensed under Apache-2.0 or MIT, at your option.</p>
+<ul>
+<li>
+<p>Apache-2.0:                                  Apache License
+Version 2.0, January 2004
+http://www.apache.org/licenses/</p>
+<p>TERMS AND CONDITIONS FOR USE, REPRODUCTION, AND DISTRIBUTION</p>
+<ol>
+<li>
+<p>Definitions.</p>
+<p>"License" shall mean the terms and conditions for use, reproduction,
+and distribution as defined by Sections 1 through 9 of this document.</p>
+<p>"Licensor" shall mean the copyright owner or entity authorized by
+the copyright owner that is granting the License.</p>
+<p>"Legal Entity" shall mean the union of the acting entity and all
+other entities that control, are controlled by, or are under common
+control with that entity. For the purposes of this definition,
+"control" means (i) the power, direct or indirect, to cause the
+direction or management of such entity, whether by contract or
+otherwise, or (ii) ownership of fifty percent (50%) or more of the
+outstanding shares, or (iii) beneficial ownership of such entity.</p>
+<p>"You" (or "Your") shall mean an individual or Legal Entity
+exercising permissions granted by this License.</p>
+<p>"Source" form shall mean the preferred form for making modifications,
+including but not limited to software source code, documentation
+source, and configuration files.</p>
+<p>"Object" form shall mean any form resulting from mechanical
+transformation or translation of a Source form, including but
+not limited to compiled object code, generated documentation,
+and conversions to other media types.</p>
+<p>"Work" shall mean the work of authorship, whether in Source or
+Object form, made available under the License, as indicated by a
+copyright notice that is included in or attached to the work
+(an example is provided in the Appendix below).</p>
+<p>"Derivative Works" shall mean any work, whether in Source or Object
+form, that is based on (or derived from) the Work and for which the
+editorial revisions, annotations, elaborations, or other modifications
+represent, as a whole, an original work of authorship. For the purposes
+of this License, Derivative Works shall not include works that remain
+separable from, or merely link (or bind by name) to the interfaces of,
+the Work and Derivative Works thereof.</p>
+<p>"Contribution" shall mean any work of authorship, including
+the original version of the Work and any modifications or additions
+to that Work or Derivative Works thereof, that is intentionally
+submitted to Licensor for inclusion in the Work by the copyright owner
+or by an individual or Legal Entity authorized to submit on behalf of
+the copyright owner. For the purposes of this definition, "submitted"
+means any form of electronic, verbal, or written communication sent
+to the Licensor or its representatives, including but not limited to
+communication on electronic mailing lists, source code control systems,
+and issue tracking systems that are managed by, or on behalf of, the
+Licensor for the purpose of discussing and improving the Work, but
+excluding communication that is conspicuously marked or otherwise
+designated in writing by the copyright owner as "Not a Contribution."</p>
+<p>"Contributor" shall mean Licensor and any individual or Legal Entity
+on behalf of whom a Contribution has been received by Licensor and
+subsequently incorporated within the Work.</p>
+</li>
+<li>
+<p>Grant of Copyright License. Subject to the terms and conditions of
+this License, each Contributor hereby grants to You a perpetual,
+worldwide, non-exclusive, no-charge, royalty-free, irrevocable
+copyright license to reproduce, prepare Derivative Works of,
+publicly display, publicly perform, sublicense, and distribute the
+Work and such Derivative Works in Source or Object form.</p>
+</li>
+<li>
+<p>Grant of Patent License. Subject to the terms and conditions of
+this License, each Contributor hereby grants to You a perpetual,
+worldwide, non-exclusive, no-charge, royalty-free, irrevocable
+(except as stated in this section) patent license to make, have made,
+use, offer to sell, sell, import, and otherwise transfer the Work,
+where such license applies only to those patent claims licensable
+by such Contributor that are necessarily infringed by their
+Contribution(s) alone or by combination of their Contribution(s)
+with the Work to which such Contribution(s) was submitted. If You
+institute patent litigation against any entity (including a
+cross-claim or counterclaim in a lawsuit) alleging that the Work
+or a Contribution incorporated within the Work constitutes direct
+or contributory patent infringement, then any patent licenses
+granted to You under this License for that Work shall terminate
+as of the date such litigation is filed.</p>
+</li>
+<li>
+<p>Redistribution. You may reproduce and distribute copies of the
+Work or Derivative Works thereof in any medium, with or without
+modifications, and in Source or Object form, provided that You
+meet the following conditions:</p>
+<p>(a) You must give any other recipients of the Work or
+Derivative Works a copy of this License; and</p>
+<p>(b) You must cause any modified files to carry prominent notices
+stating that You changed the files; and</p>
+<p>(c) You must retain, in the Source form of any Derivative Works
+that You distribute, all copyright, patent, trademark, and
+attribution notices from the Source form of the Work,
+excluding those notices that do not pertain to any part of
+the Derivative Works; and</p>
+<p>(d) If the Work includes a "NOTICE" text file as part of its
+distribution, then any Derivative Works that You distribute must
+include a readable copy of the attribution notices contained
+within such NOTICE file, excluding those notices that do not
+pertain to any part of the Derivative Works, in at least one
+of the following places: within a NOTICE text file distributed
+as part of the Derivative Works; within the Source form or
+documentation, if provided along with the Derivative Works; or,
+within a display generated by the Derivative Works, if and
+wherever such third-party notices normally appear. The contents
+of the NOTICE file are for informational purposes only and
+do not modify the License. You may add Your own attribution
+notices within Derivative Works that You distribute, alongside
+or as an addendum to the NOTICE text from the Work, provided
+that such additional attribution notices cannot be construed
+as modifying the License.</p>
+<p>You may add Your own copyright statement to Your modifications and
+may provide additional or different license terms and conditions
+for use, reproduction, or distribution of Your modifications, or
+for any such Derivative Works as a whole, provided Your use,
+reproduction, and distribution of the Work otherwise complies with
+the conditions stated in this License.</p>
+</li>
+<li>
+<p>Submission of Contributions. Unless You explicitly state otherwise,
+any Contribution intentionally submitted for inclusion in the Work
+by You to the Licensor shall be under the terms and conditions of
+this License, without any additional terms or conditions.
+Notwithstanding the above, nothing herein shall supersede or modify
+the terms of any separate license agreement you may have executed
+with Licensor regarding such Contributions.</p>
+</li>
+<li>
+<p>Trademarks. This License does not grant permission to use the trade
+names, trademarks, service marks, or product names of the Licensor,
+except as required for reasonable and customary use in describing the
+origin of the Work and reproducing the content of the NOTICE file.</p>
+</li>
+<li>
+<p>Disclaimer of Warranty. Unless required by applicable law or
+agreed to in writing, Licensor provides the Work (and each
+Contributor provides its Contributions) on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+implied, including, without limitation, any warranties or conditions
+of TITLE, NON-INFRINGEMENT, MERCHANTABILITY, or FITNESS FOR A
+PARTICULAR PURPOSE. You are solely responsible for determining the
+appropriateness of using or redistributing the Work and assume any
+risks associated with Your exercise of permissions under this License.</p>
+</li>
+<li>
+<p>Limitation of Liability. In no event and under no legal theory,
+whether in tort (including negligence), contract, or otherwise,
+unless required by applicable law (such as deliberate and grossly
+negligent acts) or agreed to in writing, shall any Contributor be
+liable to You for damages, including any direct, indirect, special,
+incidental, or consequential damages of any character arising as a
+result of this License or out of the use or inability to use the
+Work (including but not limited to damages for loss of goodwill,
+work stoppage, computer failure or malfunction, or any and all
+other commercial damages or losses), even if such Contributor
+has been advised of the possibility of such damages.</p>
+</li>
+<li>
+<p>Accepting Warranty or Additional Liability. While redistributing
+the Work or Derivative Works thereof, You may choose to offer,
+and charge a fee for, acceptance of support, warranty, indemnity,
+or other liability obligations and/or rights consistent with this
+License. However, in accepting such obligations, You may act only
+on Your own behalf and on Your sole responsibility, not on behalf
+of any other Contributor, and only if You agree to indemnify,
+defend, and hold each Contributor harmless for any liability
+incurred by, or claims asserted against, such Contributor by reason
+of your accepting any such warranty or additional liability.</p>
+</li>
+</ol>
+<p>END OF TERMS AND CONDITIONS</p>
+<p>APPENDIX: How to apply the Apache License to your work.</p>
+<pre><code>To apply the Apache License to your work, attach the following
+boilerplate notice, with the fields enclosed by brackets "[]"
+replaced with your own identifying information. (Don't include
+the brackets!)  The text should be enclosed in the appropriate
+comment syntax for the file format. We also recommend that a
+file or class name and description of purpose be included on the
+same "printed page" as the copyright notice for easier
+identification within third-party archives.
+</code></pre>
+<p>Copyright [yyyy] [name of copyright owner]</p>
+<p>Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at</p>
+<pre><code> http://www.apache.org/licenses/LICENSE-2.0
+</code></pre>
+<p>Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.</p>
+</li>
+<li>
+<p>MIT: MIT License</p>
+</li>
+</ul>
+<p>Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:</p>
+<p>The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.</p>
+<p>THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="elasticlunr.min.js"></script>
+        <script src="mark.min.js"></script>
+        <script src="searcher.js"></script>
+
+        <script src="clipboard.min.js"></script>
+        <script src="highlight.js"></script>
+        <script src="book.js"></script>
+
+        <!-- Custom JS scripts -->
+
+        <script>
+        window.addEventListener('load', function() {
+            window.setTimeout(window.print, 100);
+        });
+        </script>
+
+
+    </div>
+    </body>
+</html>
