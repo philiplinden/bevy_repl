@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 use crate::repl::Repl;
 use super::{ReplCommand, TypedCommandParser, CommandParser};
+
 /// Extension trait for App to add REPL commands
 pub trait ReplAppExt {
     /// Add a REPL command with its observer function

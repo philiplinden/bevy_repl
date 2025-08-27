@@ -1,5 +1,6 @@
 use bevy::prelude::*;
 use crate::prelude::*;
+use crate::repl_println;
 
 pub fn plugin(app: &mut App) {
     app.add_repl_command::<HelpCommand>();
@@ -16,5 +17,5 @@ impl crate::command::ReplCommand for HelpCommand {
 }
 
 fn on_help(_t: Trigger<HelpCommand>) {
-    error!("Help command not yet implemented.");
+    repl_println!("not implemented, sorry");
 }

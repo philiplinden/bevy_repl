@@ -35,22 +35,16 @@ fn instructions() {
     repl_println!("This example shows how built-in commands are compiled via features.");
     repl_println!("Available built-ins at compile-time:");
 
-    // Report which built-ins were compiled in
-    repl_println!("  help : {}", yes_no(cfg!(feature = "help")));
-    repl_println!("  clear: {}", yes_no(cfg!(feature = "clear")));
-    repl_println!("  quit : {}", yes_no(cfg!(feature = "quit")));
-
     repl_println!();
     repl_println!("Try these commands in the REPL:");
-    repl_println!("  help   - Show available commands (if enabled)");
-    repl_println!("  clear  - Clear the REPL screen (if enabled)");
-    repl_println!("  quit   - Exit the app (if enabled)");
+    repl_println!("  quit   - Exit the app ({})", yes_no(cfg!(feature = "quit")));
+    repl_println!("  help   - Show available commands ({})", yes_no(cfg!(feature = "help")));
+    repl_println!("  clear  - Clear the screen ({})", yes_no(cfg!(feature = "clear")));
     repl_println!();
     repl_println!("To control which are enabled, run with Cargo feature flags.");
     repl_println!("Examples:");
     repl_println!("  cargo run --example builtins");
     repl_println!("  cargo run --example builtins --no-default-features --features \"help\"");
-    repl_println!("  cargo run --example builtins --no-default-features --features \"quit,clear\"");
     repl_println!();
     repl_println!("Press CTRL+C to exit any time.");
     repl_println!();
