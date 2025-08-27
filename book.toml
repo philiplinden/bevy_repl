@@ -1,0 +1,20 @@
+[book]
+title = "bevy_repl Book"
+authors = ["Philip Linden"]
+language = "en"
+multilingual = false
+src = "book/src"
+
+[output.html]
+# Link back to the repository
+git-repository-url = "https://github.com/philiplinden/bevy_repl"
+# Needed so relative links work when hosted at https://<user>.github.io/bevy_repl/
+site-url = "/bevy_repl/"
+
+[output.html.fold]
+# Enable code block folding UI
+enable = true
+
+[build]
+# Keep default build dir (book/book) because CI deploys that to gh-pages
+create-missing = true
