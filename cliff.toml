@@ -1,21 +1,12 @@
 # git-cliff ~ configuration file
 # https://git-cliff.org/docs/configuration
 
-# [remote.github]
-# owner = "philiplinden"
-# repo = "buoy"
+[remote.github]
+owner = "philiplinden"
+repo = "bevy_repl"
 
 [workspace]
-# Path to your workspace Cargo.toml
 manifest_path = "Cargo.toml"
-
-[bump]
-# Bump minor version for new features
-features_always_bump_minor = true
-# Bump major version for breaking changes
-breaking_always_bump_major = true
-# Initial version for new repositories
-initial_tag = "0.1.0"
 
 [changelog]
 # A Tera template to be rendered as the changelog's footer.
@@ -65,7 +56,7 @@ body = """
 {%- if github -%}
 {% if github.contributors | filter(attribute="is_first_time", value=true) | length != 0 %}
 
-## New Contributors ❤️
+### New Contributors ❤️
 {% endif %}\
 {% for contributor in github.contributors | filter(attribute="is_first_time", value=true) %}
   * @{{ contributor.username }} made their first contribution
