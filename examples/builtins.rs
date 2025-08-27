@@ -65,6 +65,6 @@ fn main() {
             bevy::input::InputPlugin::default(),
             ReplPlugins,
         ))
-        .add_systems(PostStartup, instructions.after(ScrollRegionReadySet))
+        .add_systems(PostStartup, instructions)
         .run();
 }

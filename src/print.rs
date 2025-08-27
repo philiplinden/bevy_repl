@@ -9,48 +9,31 @@
 //! This avoids newline/cursor issues that can happen in raw or alternate screen modes.
 
 use std::io::{stdout, Write};
-use std::sync::atomic::{AtomicU64, Ordering};
-#[cfg(feature = "pretty")]
-use once_cell::sync::OnceCell;
-#[cfg(feature = "pretty")]
-use std::sync::RwLock;
+use std::sync::atomic::{AtomicU64, AtomicU16, Ordering};
 
 use bevy_ratatui::crossterm::{
     cursor::{MoveToColumn, MoveTo},
     queue,
 };
 
-// Shared scroll-region info: (terminal_height, reserved_bottom_lines)
-#[cfg(feature = "pretty")]
-static SCROLL_REGION_INFO: OnceCell<RwLock<Option<(u16, u16)>>> = OnceCell::new();
+// Track scroll region info (terminal height and reserved bottom lines) so printers can
+// position output above the prompt area when using ratatui's alternate screen.
+static SCROLL_H: AtomicU16 = AtomicU16::new(0);
+static SCROLL_RESERVED: AtomicU16 = AtomicU16::new(0);
 
-#[cfg(feature = "pretty")]
-fn scroll_region_info() -> &'static RwLock<Option<(u16, u16)>> {
-    SCROLL_REGION_INFO.get_or_init(|| RwLock::new(None))
+#[inline]
+pub fn set_scroll_region_info(h: u16, reserved: u16) {
+    SCROLL_H.store(h, Ordering::Relaxed);
+    SCROLL_RESERVED.store(reserved, Ordering::Relaxed);
 }
 
-/// Set current scroll-region info; pretty renderer calls this when it updates the region.
-#[cfg(feature = "pretty")]
-pub fn set_scroll_region_info(height: u16, reserved_bottom: u16) {
-    if let Ok(mut guard) = scroll_region_info().write() {
-        if reserved_bottom == 0 { *guard = None; } else { *guard = Some((height, reserved_bottom)); }
-    }
-}
-
-/// Read current scroll-region info.
-#[cfg(feature = "pretty")]
+#[inline]
 pub fn get_scroll_region_info() -> Option<(u16, u16)> {
-    scroll_region_info().read().ok().and_then(|g| *g)
+    let h = SCROLL_H.load(Ordering::Relaxed);
+    if h == 0 { return None; }
+    let r = SCROLL_RESERVED.load(Ordering::Relaxed);
+    Some((h, r))
 }
-
-// No-op stubs when pretty is disabled
-#[cfg(not(feature = "pretty"))]
-#[inline]
-pub fn set_scroll_region_info(_: u16, _: u16) {}
-
-#[cfg(not(feature = "pretty"))]
-#[inline]
-pub fn get_scroll_region_info() -> Option<(u16, u16)> { None }
 
 // Track how many lines have been printed
 static PRINT_COUNT: AtomicU64 = AtomicU64::new(0);

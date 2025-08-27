@@ -168,6 +168,6 @@ fn main() {
         .add_observer(on_reset_timer)
         .add_systems(Update, display_timer_status.run_if(timer_is_running))
         .add_systems(FixedUpdate, update_timer)
-        .add_systems(PostStartup, instructions.after(ScrollRegionReadySet))
+        .add_systems(PostStartup, instructions)
         .run();
 }

@@ -125,13 +125,12 @@ fn main() {
             MinimalPlugins.set(ScheduleRunnerPlugin::run_loop(Duration::from_secs_f64(1.0 / 60.0))),
             // Required so the REPL can handle keyboard input
             bevy::input::InputPlugin::default(),
-            // Turnkey REPL with minimal prompt renderer and default commands
-            ReplPlugins.set(PromptPlugin::pretty()),
+            ReplPlugins,
         ))
         .add_repl_command::<TimeScaleCommand>()
         .add_observer(on_time_scale)
         .add_systems(Startup, setup)
         .add_systems(Update, tick)
-        .add_systems(PostStartup, instructions.after(ScrollRegionReadySet))
+        .add_systems(PostStartup, instructions)
         .run();
 }

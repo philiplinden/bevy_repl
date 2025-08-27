@@ -1,11 +1,10 @@
 //! Minimal Bevy REPL example.
 //! 
-//! It's minimal in the sense that it has the minimum features enabled and the least dependencies.
-//!
+//! This example shows the minimum amount of dependencies needed to use the REPL.
+//! 
 //! Demonstrates:
 //! - Registering a simple `ReplCommand` (ping)
 //! - Running headless via `ScheduleRunnerPlugin`
-//! - Toggling the REPL with a key (`Repl::toggle_key`)
 //! - Typing commands in the terminal and quitting with `quit`
 use bevy::{app::ScheduleRunnerPlugin, prelude::*};
 use bevy_repl::prelude::*;
@@ -26,7 +25,7 @@ fn on_ping(_trigger: Trigger<PingCommand>) {
 
 fn instructions() {
     repl_println!();
-    repl_println!("Welcome to the Bevy REPL minimal example!");
+    repl_println!("Welcome to the Bevy REPL stdout example!");
     repl_println!();
     repl_println!("Try typing a command:");
     repl_println!("  `ping`    - Trigger the ping command. (it outputs Pong)");
@@ -45,12 +44,11 @@ fn main() {
                 ))),
             // Input plugin is required so the REPL can handle keyboard input
             bevy::input::InputPlugin::default(),
-            // Use the minimal renderer with a custom ratatui context that
-            // operates in the main terminal instead of an alternate screen
-            MinimalReplPlugins,
+            // Runs the REPL headless in the terminal
+            ReplPlugins,
         ))
         .add_repl_command::<PingCommand>()
         .add_observer(on_ping)
-        .add_systems(PostStartup, instructions.after(ScrollRegionReadySet))
+        .add_systems(PostStartup, instructions)
         .run();
 }

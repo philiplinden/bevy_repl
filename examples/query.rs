@@ -88,6 +88,6 @@ fn main() {
         .add_repl_command::<ListCommand>()
         .add_observer(on_list)
         .add_systems(Startup, spawn_entities)
-        .add_systems(PostStartup, instructions.after(ScrollRegionReadySet))
+        .add_systems(PostStartup, instructions)
         .run();
 }

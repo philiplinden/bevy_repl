@@ -1,7 +1,9 @@
 use bevy::prelude::*;
+use bevy::input::keyboard::KeyboardInput;
 use bevy_ratatui::crossterm::event::{KeyCode as CrosstermKeyCode, KeyEventKind as CrosstermKeyEventKind};
 use bevy_ratatui::event::KeyEvent;
 use std::io::{stdout, Write};
+
 use crate::repl::{Repl, ReplBufferEvent, ReplSubmitEvent, ReplSet};
 
 pub struct PromptInputPlugin;
@@ -20,9 +22,26 @@ impl Plugin for PromptInputPlugin {
                     .in_set(ReplSet::Buffer)
                     .in_set(ReplSet::All)
                     .after(ReplSet::Capture),
+                // Block keyboard input from being forwarded to Bevy when REPL is enabled to
+                // prevent key events from reaching game systems while typing into the prompt.
+                block_keyboard_input_forwarding
+                    .in_set(ReplSet::Post)
+                    .in_set(ReplSet::All)
+                    .after(ReplSet::Render),
             ),
         );
     }
+}
+
+/// System that blocks keyboard input from being forwarded to Bevy when REPL is enabled to
+/// prevent key events from reaching game systems while typing into the prompt.
+pub(super) fn block_keyboard_input_forwarding(
+    mut key_events: ResMut<Events<KeyboardInput>>,
+    mut keyboard_input: ResMut<ButtonInput<KeyCode>>,
+) {
+    // Clear all keyboard events
+    key_events.clear();
+    keyboard_input.reset_all();
 }
 
 fn capture_repl_input(

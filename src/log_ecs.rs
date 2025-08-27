@@ -10,6 +10,25 @@ use bevy::log::{
     BoxedLayer,
 };
 
+use crate::repl::ReplSet;
+
+/// Plugin that prints captured tracing `LogEvent`s via the REPL printer after the prompt render,
+/// so output scrolls above the reserved prompt area.
+pub struct ReplLogPrintPlugin;
+
+impl Plugin for ReplLogPrintPlugin {
+    fn build(&self, app: &mut App) {
+        app.add_event::<LogEvent>();
+        app.add_systems(
+            Update,
+            print_log_events_system
+                .in_set(ReplSet::All)
+                .after(ReplSet::Render)
+                .before(ReplSet::Post),
+        );
+    }
+}
+
 /// Event emitted into the ECS for each tracing log event captured by the layer.
 #[derive(Event, Clone)]
 pub struct LogEvent {
@@ -63,7 +82,7 @@ pub fn custom_layer(app: &mut App) -> Option<BoxedLayer> {
 
     app.insert_non_send_resource(CapturedLogEvents(receiver));
     app.add_event::<LogEvent>();
-    app.add_systems(Update, transfer_log_events);
+    app.add_systems(Update, transfer_log_events.in_set(ReplSet::Pre));
 
     Some(layer.boxed())
 }
@@ -74,6 +93,7 @@ pub fn print_log_events_system(mut events: EventReader<LogEvent>) {
     use crate::repl_println;
     for ev in events.read() {
         repl_println!("{:5} {}", ev.level, ev.message);
+        repl_println!("{}", ev.message);
     }
 }
 

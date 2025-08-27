@@ -1,20 +1,17 @@
-pub mod minimal;
 pub mod helpers;
-#[cfg(feature = "pretty")]
-pub mod pretty;
+pub mod simple;
+
+use std::sync::Arc;
 
 use bevy::prelude::*;
 use bevy_ratatui::RatatuiContext;
-use crate::repl::{Repl, FallbackTerminalContext, ReplSet};
-
-use crate::prompt::{ReplPrompt, ReplPromptConfig};
 use ratatui::layout::Rect;
-use std::sync::Arc;
+
+use crate::repl::{Repl, ReplSet};
+use super::{ReplPrompt, ReplPromptConfig};
+
 
 /// Public label: "scroll region ready". Always available, even in minimal mode.
-#[derive(SystemSet, Debug, Hash, PartialEq, Eq, Clone)]
-pub struct ScrollRegionReadySet;
-
 pub struct PromptRenderPlugin {
     pub renderer: Arc<dyn PromptRenderer>,
 }
@@ -36,12 +33,9 @@ pub trait PromptRenderer: Send + Sync + 'static {
 #[derive(Resource, Clone)]
 pub struct ActiveRenderer(pub Arc<dyn PromptRenderer>);
 
-
 impl Plugin for PromptRenderPlugin {
     fn build(&self, app: &mut App) {
         app.insert_resource(ActiveRenderer(self.renderer.clone()));
-        // Expose the PostStartup ready set unconditionally so callers can order after it.
-        app.configure_sets(PostStartup, ScrollRegionReadySet);
         app.add_systems(
             Update,
             (
@@ -52,17 +46,13 @@ impl Plugin for PromptRenderPlugin {
                     .after(ReplSet::Buffer),
             ),
         );
-        #[cfg(feature = "pretty")]
-        app.add_plugins(pretty::ScrollRegionPlugin);
     }
 }
 
 /// Render entrypoint: delegates to the active renderer strategy
 pub(super) fn display_prompt(
     // Prefer ratatui's default terminal context when present (alternate screen)
-    term_ratatui: Option<ResMut<RatatuiContext>>, 
-    // Fallback to the crate's custom terminal context to preserve compatibility
-    term_fallback: Option<ResMut<FallbackTerminalContext>>, 
+    term_ratatui: Option<ResMut<RatatuiContext>>,
     repl: Res<Repl>,
     prompt: Res<ReplPrompt>,
     visuals: Option<Res<ReplPromptConfig>>,
@@ -76,13 +66,5 @@ pub(super) fn display_prompt(
             let ctx = RenderCtx { repl: &repl, prompt: &prompt, visuals: &visuals, area };
             active.0.render(f, &ctx);
         });
-        return;
-    }
-
-    let Some(mut term) = term_fallback else { return }; // No terminal context yet
-    let _ = term.draw(|f| {
-        let area = Rect { x: 0, y: 0, width: f.area().width, height: f.area().height };
-        let ctx = RenderCtx { repl: &repl, prompt: &prompt, visuals: &visuals, area };
-        active.0.render(f, &ctx);
-    });
+    } else { return }; // No terminal context yet
 }
