@@ -4,3 +4,8 @@
 .cargo/config.toml
 .editorconfig
 Cargo.lock
+
+# Ignore mdBook build output but keep sources
+book/*
+!book/src/
+!book/src/**
