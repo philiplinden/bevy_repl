@@ -1,8 +1,8 @@
 name: Deploy mdBook
 
 on:
+  pull_request:
   push:
-    branches: [ main ]
     tags: [ "v*" ]
   workflow_dispatch: {}
 
@@ -16,17 +16,17 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install mdBook
-        run: |
-          curl -sSL https://github.com/rust-lang/mdBook/releases/latest/download/mdbook-v0.4.40-x86_64-unknown-linux-gnu.tar.gz \
-            | tar -xz -C /usr/local/bin mdbook
-          mdbook --version
+      - name: Setup mdBook
+        uses: peaceiris/actions-mdbook@v1
+        with:
+          mdbook-version: 'latest'
 
       - name: Build book
         run: mdbook build
 
       - name: Deploy to gh-pages
         uses: peaceiris/actions-gh-pages@v4
+        if: startsWith(github.ref, 'refs/tags/')
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_branch: gh-pages
