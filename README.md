@@ -45,19 +45,19 @@ implementing a full TUI or rendering features.
     - [Built-in commands](#built-in-commands)
     - [Prompt styling](#prompt-styling)
     - [Routing Bevy logs to the REPL](#routing-bevy-logs-to-the-repl)
-    - [Startup ordering (PostStartup)](#startup-ordering-poststartup)
   - [Usage](#usage)
     - [Builder pattern (default)](#builder-pattern-default)
     - [Derive pattern (requires `derive` feature)](#derive-pattern-requires-derive-feature)
     - [Default keybinds](#default-keybinds)
-  - [Design](#design)
+  - [Intro to Bevy REPL](#intro-to-bevy-repl)
     - [Headless mode](#headless-mode)
-    - [REPL Console](#repl-console)
+      - [Headless app with default features except windowing](#headless-app-with-default-features-except-windowing)
+      - [Minimal headless app (no default features)](#minimal-headless-app-no-default-features)
+      - [Headless app with default features and windowing disabled](#headless-app-with-default-features-and-windowing-disabled)
     - [Command parsing](#command-parsing)
     - [Scheduling](#scheduling)
     - [Prompt styling](#prompt-styling-1)
     - [Terminal Screens](#terminal-screens)
-      - [Printing to the terminal](#printing-to-the-terminal)
   - [Known issues \& limitations](#known-issues--limitations)
     - [Built-in `help` and `clear` commands are not yet implemented](#built-in-help-and-clear-commands-are-not-yet-implemented)
     - [Runtime toggle is not supported](#runtime-toggle-is-not-supported)
@@ -571,19 +571,8 @@ terminal canvas separate from stdout buffer. This means Ratatui TUIs have
 complete control over what is rendered to the entire terminal, but the displayed
 output does not persist after the app is closed.
 
-The REPL uses the alternate screen by default, but you can opt-in to the main
-screen by adding `bevy_repl::StdoutRatatuiPlugins` to your app instead of
-`bevy_ratatui::RatatuiPlugins`.
-
-- Using `bevy_ratatui::RatatuiPlugins` creates an alternate screen via the
-  default `RatatuiContext`.
-- Using `StdoutRatatuiPlugins` adds some but not all Ratatui Plugins; the
-  prompt renders on the main terminal screen using a custom ratatui context.
-
-#### Printing to the terminal
-
-When the REPL is active, the terminal often runs in raw mode and may use the
-alternate screen. In these contexts, normal `println!` can leave the cursor in
+When the REPL is active, the terminal runs in raw mode by default, so the output
+is printed to stdout. In these contexts, normal `println!` can leave the cursor in
 an odd position or produce inconsistent newlines. To ensure safe, consistent
 output, use the provided `bevy_repl::repl_println!` macro instead of `println!`.
 
