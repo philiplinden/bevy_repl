@@ -1,19 +1,32 @@
 # bevy_repl
 
+A Bevy plugin that provides a Read-Eval-Print Loop (REPL) interface for
+interactive command input.
+
+The `ReplPlugins` plugin group enables a REPL within the terminal while your
+Bevy application runs, allowing users to enter commands and interact with the
+ECS at runtime.
+
+```rust
+use bevy_repl::ReplPlugins;
+App::new().add_plugins(ReplPlugins);
+```
+
 ![Made with VHS](https://vhs.charm.sh/vhs-6kUt4mnyvUcmbpVfWzHx4s.gif)
 
-An interactive REPL for headless Bevy apps powered by `clap` for command parsing
-and `bevy_ratatui` for terminal input and output. The plugin adds a text input
-area below the terminal output for interaction even in headless mode.
+Bevy REPL is powered by `clap` for command parsing and `bevy_ratatui` for
+terminal input and output. The plugin adds a text input area below the terminal
+output for interaction even in headless mode.
 
 - Unobtrusive TUI console below normal terminal output to stdout
 - Command parsing and CLI features from `clap`
 - Observer-based command execution system with full Bevy ECS access for both
   read and write operations
-- Logging integration with `bevy_log` and `tracing` for unified output display
-- Support for custom prompt rendering and minimal prompt mode
-- Works in tandem with windowed apps from the terminal
+- Integration with `bevy_log` and `tracing` that shows Bevy logs with rich
+  formatting in the REPL (if you disable Bevy's `LogPlugin`)
+- Works in terminal with headless and windowed apps
 - Built-in commands for common tasks (just `quit` for now)
+- Support for custom prompt rendering
 
 The REPL is designed as an alternative to
 [makspll/bevy-console](https://github.com/makspll/bevy-console) for Bevy apps
@@ -59,7 +72,7 @@ implementing a full TUI or rendering features.
 
 | Version | Bevy | Ratatui | Notes |
 | --- | --- | --- | --- |
-| 0.4.0 | 0.16.1 | 0.29 | Removed the "pretty" renderer in favor of getting simple prompt features working. Changed the interface slightly. This is a breaking change! See examples for help. |
+| 0.4.0 | 0.16.1 | 0.29 | Removed the "pretty" renderer in favor of getting simple prompt features working. Changed the interface slightly. This is a breaking change! See [examples](https://github.com/philiplinden/bevy_repl/tree/main/examples) for help. |
 | 0.3.0 | 0.16.1 | 0.29 | First release. Supports `derive` feature. Only `quit` built-in command is implemented. Includes a "pretty" renderer for fancy prompt styling, but it doesn't work very well. |
 
 ## Features
@@ -84,12 +97,9 @@ Enable built-in commands with feature flags. Each command is enabled separately
 by a feature flag. Use the `default_commands` feature to enable all built-in
 commands.
 
-| Feature Flag | Command | Description |
-| --- | --- | --- |
-| `default_commands` | `quit`, `help`, `clear` | Enable all built-in commands |
-| `quit` | `quit`, `q`, `exit` | Gracefully terminate the application |
-| `help` | `help` | Show clap help text (not yet implemented) |
-| `clear` | `clear` | Clear the terminal output (not yet implemented) |
+| Feature Flag | Command | Description | Default |
+| --- | --- | --- | --- |
+| `quit` | `quit`, `q`, `exit` | Gracefully terminate the application | `true` |
 
 ### Prompt styling
 
@@ -109,7 +119,6 @@ fn main() {
     App::new()
         .add_plugins((
             DefaultPlugins,
-            bevy_ratatui::RatatuiPlugins::default(),
             bevy_repl::ReplPlugins,
         ))
         .run();
@@ -149,39 +158,13 @@ fn main() {
 
 ## Usage
 
-> Note: When routing logs to the REPL (to keep formatting/colors and avoid
-> prompt corruption), we recommend disabling Bevy's native stdout logger:
-> `DefaultPlugins.build().disable::<bevy::log::LogPlugin>()`. Use the provided
-> REPL-aware formatter (see Routing Bevy logs to the REPL) or a custom layer
-> instead.
-
 The REPL is designed to be used in headless mode, but it can be used in windowed
 mode too through the terminal while the app is running.
 
-Add `bevy_ratatui::RatatuiPlugins` and `bevy_repl::ReplPlugins` to your app to
-enable the REPL and print logs to a TUI screen. The log history is lost when the
-app exits.
+Add `bevy_repl::ReplPlugins` to your app to enable the REPL and print logs to
+stdout. By default, the REPL includes a `quit` command to terminate the app.
 
-```rust
-use bevy::prelude::*;
-use bevy_ratatui::prelude::*;
-use bevy_repl::prelude::*;
-
-fn main() {
-    App::new()
-        .add_plugins((
-            DefaultPlugins,
-            RatatuiPlugins::default(),
-            ReplPlugins,
-        ))
-        .run();
-}
-```
-
-There is an experimental `bevy_repl::StdoutRatatuiPlugins` that renders the REPL
-and logs to stdout by using a custom ratatui context. Enable the `stdout`
-feature flag and add this plugin **instead** of `bevy_ratatui::RatatuiPlugins`
-to render the REPL to stdout.
+It is not possible to toggle the REPL on and off at runtime (yet!).
 
 ### Builder pattern (default)
 
@@ -208,19 +191,20 @@ use bevy::prelude::*;
 use bevy_repl::prelude::*;
 
 #[derive(Debug, Clone, Event, Default)]
-struct SimpleCommandWithoutArgs;
+struct CommandWithoutArgs;
 
-impl ReplCommand for SimpleCommandWithoutArgs {
+impl ReplCommand for CommandWithoutArgs {
     fn clap_command() -> clap::Command {
-        clap::Command::new("simple")
-            .about("A simple command")
+        clap::Command::new("command")
+            .about("A command without args")
     }
 }
 
-fn on_simple(_trigger: Trigger<SimpleCommandWithoutArgs>) {
-    println!("You triggered a simple command without args");
+fn on_command_without_args(_trigger: Trigger<CommandWithoutArgs>) {
+    println!("You triggered a command without args");
 }
 
+#[derive(Debug, Clone, Event, Default)]
 struct CommandWithArgs {
     arg1: String,
     arg2: String,
@@ -258,13 +242,11 @@ fn main() {
             ),
             // Bevy input plugin is required to detect keyboard inputs
             bevy::input::InputPlugin::default(),
-            // Ratatui plugins are required to set up the terminal context
-            bevy_ratatui::RatatuiPlugins,
-            // Default REPL stack (alternate screen, built-ins) with minimal renderer
+            // Default REPL stack (ratatui, prompt, and built-in commands)
             ReplPlugins,
         ))
-        .add_repl_command::<SimpleCommandWithoutArgs>()
-        .add_observer(on_simple)
+        .add_repl_command::<CommandWithoutArgs>()
+        .add_observer(on_command_without_args)
         .add_repl_command::<CommandWithArgs>()
         .add_observer(on_command_with_args)
         .run();
@@ -281,8 +263,7 @@ bevy_repl = { version = "0.3.1", features = ["derive"] }
 ```
 
 Then derive the `ReplCommand` trait on your command struct along with clap's
-`Parser` trait. Add the command to the app with `.add_repl_command<YourReplCommand>()`
-and add an observer for the command with `.add_observer(your_observer)` as usual.
+`Parser` trait. Add the command and its observer to the app as usual.
 
 ```rust
 use bevy::prelude::*;
@@ -290,7 +271,11 @@ use bevy_repl::prelude::*;
 use clap::Parser;
 
 #[derive(ReplCommand, Parser, Default, Event)]
-struct SimpleCommandWithoutArgs;
+struct CommandWithoutArgs;
+
+fn on_command_without_args(_trigger: Trigger<CommandWithoutArgs>) {
+    println!("You triggered a command without args");
+}
 
 #[derive(ReplCommand, Parser, Event, Default)]
 #[clap(about = "A command with args")]
@@ -299,6 +284,31 @@ struct CommandWithArgs {
     arg1: String,
     #[clap(short, long)]
     arg2: String,
+}
+
+fn on_command_with_args(trigger: Trigger<CommandWithArgs>) {
+    println!("You triggered a command with args: {} {}", trigger.arg1, trigger.arg2);
+}
+
+fn main() {
+    App::new()
+        .add_plugins((
+            // Run headless in the terminal
+            MinimalPlugins.set(
+                bevy::app::ScheduleRunnerPlugin::run_loop(
+                    Duration::from_secs_f32(1. / 60.)
+                )
+            ),
+            // Bevy input plugin is required to detect keyboard inputs
+            bevy::input::InputPlugin::default(),
+            // Default REPL stack (ratatui, prompt, and built-in commands)
+            ReplPlugins,
+        ))
+        .add_repl_command::<CommandWithoutArgs>()
+        .add_observer(on_command_without_args)
+        .add_repl_command::<CommandWithArgs>()
+        .add_observer(on_command_with_args)
+        .run();
 }
 ```
 
@@ -315,42 +325,60 @@ When the REPL is enabled, the following keybinds are available:
 | `Backspace` | Delete character before cursor |
 | `Delete` | Delete character at cursor |
 | `Esc` | Clear input buffer |
+| `Ctrl+C` | Terminate app |
 
-Note: `Ctrl+C` behaves like a normal terminal interrupt and terminates the Bevy
-app. The REPL plugin is set up with some safety net event handling to ensure
-that the terminal state is restored back to normal upon exiting the app
+**Note:** `Ctrl+C` behaves like a normal terminal interrupt and terminates the
+Bevy app. The REPL plugin is set up with some safety net event handling to
+ensure that the terminal state is restored back to normal upon exiting the app,
+but it is possible that the terminal state is not restored if the app is
+terminated abnormally. When this happens, restart your terminal to restore the
+terminal state back to normal.
 
-## Design
+## Intro to Bevy REPL
 
 ### Headless mode
 
-["Headless" mode] is when a Bevy app runs in the terminal without a renderer. To
-run Bevy in headless mode, disable all windowing features for Bevy in
-`Cargo.toml`. Then configure the schedule runner to loop forever instead of
-exiting the app after one frame. Running the app from the terminal only displays
-log messages from the engine to the terminal and cannot accept input.
+"Headless" mode is when a Bevy app runs in the terminal without a window. All
+systems run as normal, such as input detection and asset loading, but the app
+exits after one loop iteration unless it is configured to run indefinitely. The
+app runs headless if the `bevy_window` feature is disabled or the `WindowPlugin`
+is disabled.
 
-Normally the open window keeps the app running, and the exit event happens when
-closing the window. In headless mode there isn't a window to close, so the app
-runs until we kill the process or another system triggers the `AppExit` event
-with a keycode event reader (like press Q to quit).
+**Bevy headless examples:**
+- https://github.com/bevyengine/bevy/blob/main/examples/app/headless.rs
+- https://github.com/bevyengine/bevy/blob/main/examples/app/headless_renderer.rs
 
-["Headless" mode]:
-    https://github.com/bevyengine/bevy/blob/main/examples/app/headless.rs
+#### Headless app with default features except windowing
+
+The preferred way to run a Bevy app headless is to disable default bevy features
+and explicitly add the desire features, leaving out `bevy_winit` and
+`bevy_window`. (Note that Bevy Repl requires `bevy_log` and `trace` features.)
 
 ```toml
 [dependencies]
-bevy = { version = "*", default-features = false }
-# replace "*" with the most recent version of bevy
+
+bevy = { 
+  version = "*", # replace "*" with the most recent version of bevy
+  default-features = false,
+  features = [
+    "bevy_log", "trace", # Bevy REPL needs `bevy_log` and `trace`.
+    # include all the other feature flags you need here.
+    # see: https://docs.rs/bevy/latest/bevy/#features
+  ]
+}
 ```
 
 ```rust
+use bevy::prelude::*;
+
 fn main() {
     let mut app = App::new();
 
-    // Run in headless mode at 60 fps
     app.add_plugins((
-        MinimalPlugins,
+        // with bevy_window and bevy_winit disabled, those plugins aren't in
+        // DefaultPlugins. All we have to do is tell the runner to run at 60 fps
+        // so it doesn't consume the whole CPU core.
+        DefaultPlugins,
         bevy::app::ScheduleRunnerPlugin::run_loop(
             std::time::Duration::from_secs_f64(1.0 / 60.0),
         )
@@ -361,47 +389,78 @@ fn main() {
 }
 ```
 
-### REPL Console
+#### Minimal headless app (no default features)
 
-`bevy_repl` takes the idea of a Half-Life 2 debug console and brings it to
-headless mode, so an app can retain command style interaction without depending
-on windowing, rendering, or UI features.
+Even with all the default features, Bevy ships `MinimalPlugins` with the minimum
+set of plugins required to run a Bevy app. Be sure to also enable `InputPlugin`
+so the app can handle keyboard inputs, like for the REPL or Ctrl+C interrupts.
 
-Instead of rendering a fullscreen text user interface (TUI), which would kinda
-defeat the purpose of headless mode, we render a small "partial-TUI" at the
-bottom of the terminal that supports keyboard input. The normal headless output
-is shifted up to make room for the input console, and everything else is
-printed to the terminal normally. The app is truly running headless, and the
-"partial-TUI" is directly modifying the terminal output with `crossterm`.
+```rust
+use bevy::prelude::*;
 
-```toml
-[dependencies]
-bevy_repl = { version = "0.3.1", features = ["default_commands"] }
+fn main() {
+    let mut app = App::new();
+
+    // Run in headless mode at 60 fps
+    app.add_plugins((
+        MinimalPlugins,
+        bevy::input::InputPlugin::default(),
+        // The ScheduleRunnerPlugin handles the app run loop. In a headless Bevy
+        // app (no window) using the schedule runner with no frame wait
+        // configured, the loop runs as fast as possible (busy-loop on native),
+        // consuming a core. Run at 60 fps so it doesn't melt your CPU.
+        bevy::app::ScheduleRunnerPlugin::run_loop(
+            std::time::Duration::from_secs_f64(1.0 / 60.0),
+        )
+    ));
+
+    // Exit with Ctrl+C
+    app.run();
+}
 ```
 
-**REPL disabled (regular headless mode):**
+#### Headless app with default features and windowing disabled
 
-```text
-┌───your terminal──────────────────────────────────────────────────────────────┐
-│ INFO: 2025-07-28T12:00:00.000Z: bevy_repl: Starting REPL                     │
-│ INFO: 2025-07-28T12:00:00.000Z: bevy_repl: Type 'help' for commands          │
-│                                                                              │
-│ [Game logs and command output appear here...]                                │
-└──────────────────────────────────────────────────────────────────────────────┘
-```
+If you need to keep the windowing features, you can disable the `WindowPlugin`
+and `WinitPlugin` to run the app in headless mode.
 
-**REPL enabled:**
+**Tip:** Bevy REPL still runs in the terminal even if you spawn windows, so this
+is probably only useful if you are running the app in CI or some other headless
+environment.
 
-```text
-┌───your terminal──────────────────────────────────────────────────────────────┐
-│ INFO: 2025-07-28T12:00:00.000Z: bevy_repl: Starting REPL                     │
-│ INFO: 2025-07-28T12:00:00.000Z: bevy_repl: Type 'help' for commands          │
-│                                                                              │
-│ [Game logs and command output appear here...]                                │
-│                                                                              │
-┌───REPL───────────────────────────────────────────────────────────────────────┐
-│ > spawn-player Bob                                                           │
-└──────────────────────────────────────────────────────────────────────────────┘
+```rust
+use bevy::{
+    prelude::*, // WindowPlugin is in the prelude
+    window::ExitCondition,
+    winit::WinitPlugin,
+};
+
+fn main() {
+    let mut app = App::new();
+
+    app.add_plugins((
+        DefaultPlugins
+            .set(WindowPlugin {
+                // Don't make a new window at startup
+                primary_window: None,
+                // Don’t automatically exit due to having no windows.
+                // Instead, run until an `AppExit` event is produced.
+                exit_condition: ExitCondition::DontExit,
+                ..default()
+            })
+            // WinitPlugin will panic in environments without a display server.
+            .disable::<WinitPlugin>(),
+        // We still want to set the FPS so the app doesn't melt the CPU.
+        // ScheduleRunnerPlugin replaces the bevy_winit app runner, though, so
+        // disabling the windowing plugins is redundant.
+        bevy::app::ScheduleRunnerPlugin::run_loop(
+            std::time::Duration::from_secs_f64(1.0 / 60.0),
+        ),
+    ));
+
+    // Exit with Ctrl+C
+    app.run();
+}
 ```
 
 ### Command parsing
@@ -411,8 +470,10 @@ execute when triggered by the command.
 
 Use clap's [builder pattern] to describe the command and its arguments or
 options. Then add the command to the app with
-`.add_repl_command<YourReplCommand>()`. The REPL fires an event (e.g.
-`YourReplCommand`) when the command is parsed from the prompt.
+`.add_repl_command<YourReplCommand>()`. The REPL fires an event when the command
+is parsed from the prompt. The REPL command struct is also the event. When it is
+read by an observer or event reader, you can treat the command as an ordinary
+event where its fields are the parsed arguments and options.
 
 Make an observer for the command with `.add_observer(your_observer)`. The
 observer is a one-shot system that receives a trigger event with the command's

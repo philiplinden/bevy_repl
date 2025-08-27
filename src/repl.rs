@@ -224,6 +224,7 @@ pub enum ReplLifecycleEvent {
     Disable,
 }
 
+// TODO: someday this could be a system triggered by state transitions
 fn emit_enable_if_enabled(repl: Res<Repl>, mut writer: EventWriter<ReplLifecycleEvent>) {
     if repl.enabled {
         writer.write(ReplLifecycleEvent::Enable);
