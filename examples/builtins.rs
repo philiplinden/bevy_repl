@@ -20,9 +20,8 @@
 //!   clear
 //!   quit
 
-use bevy::{app::ScheduleRunnerPlugin, prelude::*};
+use bevy::prelude::*;
 use bevy_repl::prelude::*;
-use std::time::Duration;
 
 fn yes_no(v: bool) -> &'static str {
     if v { "ENABLED" } else { "disabled" }
@@ -53,10 +52,9 @@ fn instructions() {
 fn main() {
     App::new()
         .add_plugins((
-            // Headless loop in the terminal
-            MinimalPlugins
-                .set(ScheduleRunnerPlugin::run_loop(Duration::from_secs_f64(1.0 / 60.0))),
-            bevy::input::InputPlugin::default(),
+            DefaultPlugins.set(bevy::app::ScheduleRunnerPlugin::run_loop(
+                std::time::Duration::from_secs_f64(1.0 / 60.0),
+            )),
             ReplPlugins,
         ))
         .add_systems(PostStartup, instructions)

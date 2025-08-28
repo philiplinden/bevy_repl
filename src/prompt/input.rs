@@ -1,10 +1,11 @@
 use bevy::prelude::*;
 use bevy::input::keyboard::KeyboardInput;
-use bevy_ratatui::crossterm::event::{KeyCode as CrosstermKeyCode, KeyEventKind as CrosstermKeyEventKind};
+use bevy_ratatui::crossterm::event::KeyEventKind as CrosstermKeyEventKind;
 use bevy_ratatui::event::KeyEvent;
 use std::io::{stdout, Write};
 
 use crate::repl::{Repl, ReplBufferEvent, ReplSubmitEvent, ReplSet};
+use crate::prompt::keymap::PromptKeymap;
 
 pub struct PromptInputPlugin;
 
@@ -13,82 +14,23 @@ impl Plugin for PromptInputPlugin {
         app.add_systems(
             Update,
             (
-                // When enabled, capture terminal input
-                capture_repl_input
+                // Capture key events from the terminal
+                parse_terminal_input
                     .in_set(ReplSet::Capture)
                     .in_set(ReplSet::All),
                 // Then update the REPL buffer explicitly after capture
                 update_repl_buffer
                     .in_set(ReplSet::Buffer)
-                    .in_set(ReplSet::All)
-                    .after(ReplSet::Capture),
+                    .in_set(ReplSet::All),
                 // Block keyboard input from being forwarded to Bevy when REPL is enabled to
                 // prevent key events from reaching game systems while typing into the prompt.
                 block_keyboard_input_forwarding
                     .in_set(ReplSet::Post)
                     .in_set(ReplSet::All)
-                    .after(ReplSet::Render),
             ),
         );
     }
 }
-
-/// System that blocks keyboard input from being forwarded to Bevy when REPL is enabled to
-/// prevent key events from reaching game systems while typing into the prompt.
-pub(super) fn block_keyboard_input_forwarding(
-    mut key_events: ResMut<Events<KeyboardInput>>,
-    mut keyboard_input: ResMut<ButtonInput<KeyCode>>,
-) {
-    // Clear all keyboard events
-    key_events.clear();
-    keyboard_input.reset_all();
-}
-
-fn capture_repl_input(
-    mut crossterm_key_events: EventReader<KeyEvent>,
-    mut buffer_events: EventWriter<ReplBufferEvent>,
-) {
-    for event in crossterm_key_events.read() {
-        if event.kind == CrosstermKeyEventKind::Press {
-            match event.code {
-                CrosstermKeyCode::Char(c) => {
-                    // Optional: treat control-altered chars differently
-                    // use bevy_ratatui::crossterm::event::KeyModifiers;
-                    if event.modifiers.is_empty() {
-                        // Only emit Insert event if no modifiers are pressed
-                        buffer_events.write(ReplBufferEvent::Insert(c));
-                    }
-                }
-                CrosstermKeyCode::Enter => {
-                    buffer_events.write(ReplBufferEvent::Submit);
-                }
-                CrosstermKeyCode::Backspace => {
-                    buffer_events.write(ReplBufferEvent::Backspace);
-                }
-                CrosstermKeyCode::Left => {
-                    buffer_events.write(ReplBufferEvent::MoveLeft);
-                }
-                CrosstermKeyCode::Right => {
-                    buffer_events.write(ReplBufferEvent::MoveRight);
-                }
-                CrosstermKeyCode::Home => {
-                    buffer_events.write(ReplBufferEvent::JumpToStart);
-                }
-                CrosstermKeyCode::End => {
-                    buffer_events.write(ReplBufferEvent::JumpToEnd);
-                }
-                CrosstermKeyCode::Delete => {
-                    buffer_events.write(ReplBufferEvent::Delete);
-                }
-                CrosstermKeyCode::Esc => {
-                    buffer_events.write(ReplBufferEvent::Clear);
-                }
-                _ => { /* ignore other non-character keys */ }
-            }
-        }
-    }
-}
-
 
 /// System that updates the REPL buffer with events from the prompt. This is
 /// separate from the system that directly handles key events to allow for
@@ -130,6 +72,43 @@ fn update_repl_buffer(
                 let _ = stdout().write_all(b"\r");
                 parse_events.write(ReplSubmitEvent(input));
             }
+        }
+    }
+}
+
+/// System that blocks keyboard input from being forwarded to Bevy when REPL is enabled to
+/// prevent key events from reaching game systems while typing into the prompt.
+pub(super) fn block_keyboard_input_forwarding(
+    mut key_events: ResMut<Events<KeyboardInput>>,
+    mut keyboard_input: ResMut<ButtonInput<KeyCode>>,
+) {
+    // Clear all keyboard events
+    key_events.clear();
+    keyboard_input.reset_all();
+}
+
+/// System that captures keyboard input from the terminal and emits events to
+/// the REPL buffer. This is separate from the system that directly handles key
+/// events to allow for custom keybinds for REPL cursor controls someday.
+///
+/// FIXME: This system does NOT honor modifier keys or chords, so shift-altered
+/// keys don't show up as capitals. Only the alphanumeric character is processed
+/// and stored to the REPL buffer. Ctrl+C is an exception because it is
+/// explicitly handled with the `ctrlc` crate in
+/// [`crate::repl::install_terminal_safety_nets`].
+pub(super) fn parse_terminal_input(
+    mut crossterm_key_events: EventReader<KeyEvent>,
+    mut buffer_events: EventWriter<ReplBufferEvent>,
+    keymap: Res<PromptKeymap>,
+) {
+    for event in crossterm_key_events.read() {
+        if event.kind == CrosstermKeyEventKind::Press {
+            // Parse REPL keybinds
+            if let Some(buf_ev) = keymap.map(event) {
+                buffer_events.write(buf_ev);
+                continue;
+            }
+            // No binding matched and fallback insert not allowed -> ignore
         }
     }
 }

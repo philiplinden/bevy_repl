@@ -7,8 +7,6 @@
 use bevy::prelude::*;
 use bevy_repl::prelude::*;
 
-use std::time::Duration;
-
 fn instructions() {
     bevy_repl::repl_println!("\nBevy log routing example");
     bevy_repl::repl_println!("Tracing logs are printed in the terminal above the prompt");
@@ -53,9 +51,8 @@ fn print_on_ping(_trigger: Trigger<PingCommand>) {
 fn main() {
     App::new()
         .add_plugins((
-            // Disable stdout logger to avoid duplicate output; our fmt layer prints
             DefaultPlugins.set(bevy::app::ScheduleRunnerPlugin::run_loop(
-                Duration::from_secs_f64(1.0 / 60.0),
+                std::time::Duration::from_secs_f64(1.0 / 60.0),
             )),
             ReplPlugins,
         ))

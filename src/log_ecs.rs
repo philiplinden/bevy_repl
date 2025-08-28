@@ -18,6 +18,13 @@ pub struct ReplLogPrintPlugin;
 
 impl Plugin for ReplLogPrintPlugin {
     fn build(&self, app: &mut App) {
+        if !app.is_plugin_added::<bevy_ratatui::context::ContextPlugin>() {
+            // Install a global fmt layer that writes logs directly to the REPL printer,
+            // preserving colors/formatting. This is only added if using the
+            // Ratatui context. Otherwise logs won't be printed on the alternate
+            // screen.
+            tracing_to_repl_fmt();
+        }
         app.add_event::<LogEvent>();
         app.add_systems(
             Update,

@@ -31,6 +31,7 @@ output for interaction even in headless mode.
 - Works in terminal with headless and windowed apps
 - Built-in commands for common tasks (just `quit` for now)
 - Support for custom prompt rendering
+- Custom keybind support for REPL cursor controls
 
 The REPL is designed as an alternative to
 [makspll/bevy-console](https://github.com/makspll/bevy-console) for Bevy apps
@@ -89,8 +90,6 @@ fn main() {
                 .set(bevy::app::ScheduleRunnerPlugin::run_loop(
                     std::time::Duration::from_secs_f32(1.0/60.0)
                 ))
-                // disable `LogPlugin` to route Bevy logs into the REPL renderer
-                .build().disable::<bevy::log::LogPlugin>(),
             ReplPlugins,
         ))
         .run();

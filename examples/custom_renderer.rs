@@ -4,9 +4,8 @@
 //! and configure the plugin to use it instead of the built-in renderer.
 
 use std::sync::Arc;
-use std::time::Duration;
 
-use bevy::{app::ScheduleRunnerPlugin, prelude::*};
+use bevy::prelude::*;
 use bevy_repl::prelude::*;
 use bevy_repl::prompt::renderer::helpers::{bottom_bar_area, buffer_window, cursor_position};
 use bevy_repl::prompt::renderer::{PromptRenderer, RenderCtx};
@@ -60,7 +59,7 @@ fn on_ping(_: Trigger<PingCommand>) {
 
 fn instructions() {
     repl_println!();
-    repl_println!("Bevy REPL custom renderer example (pretty)");
+    repl_println!("Bevy REPL custom renderer example");
     repl_println!();
     repl_println!("Try typing in the REPL:");
     repl_println!("  ping");
@@ -71,10 +70,9 @@ fn instructions() {
 fn main() {
     App::new()
         .add_plugins((
-            MinimalPlugins.set(ScheduleRunnerPlugin::run_loop(Duration::from_secs_f64(
-                60.0_f64.recip(),
-            ))),
-            bevy::input::InputPlugin::default(),
+            DefaultPlugins.set(bevy::app::ScheduleRunnerPlugin::run_loop(
+                std::time::Duration::from_secs_f64(1.0 / 60.0),
+            )),
             ReplPlugins.set(PromptPlugin {
                 renderer: Arc::new(CustomRenderer),
                 ..default()

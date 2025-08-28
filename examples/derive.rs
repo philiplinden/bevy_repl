@@ -4,9 +4,8 @@
 //! - Defining a command with clap's derive macros
 //! - Automatic `ReplCommand` via `#[derive(ReplCommand)]`
 //! - Parsing args/flags into a typed struct
-use std::time::Duration;
 
-use bevy::{app::ScheduleRunnerPlugin, prelude::*};
+use bevy::prelude::*;
 use bevy_repl::prelude::*;
 use clap::Parser;
 
@@ -60,10 +59,9 @@ fn instructions() {
 fn main() {
     App::new()
         .add_plugins((
-            MinimalPlugins
-                .set(ScheduleRunnerPlugin::run_loop(Duration::from_secs_f64(
-                    1.0 / 60.0,
-                ))),
+            DefaultPlugins.set(bevy::app::ScheduleRunnerPlugin::run_loop(std::time::Duration::from_secs_f64(
+                1.0 / 60.0,
+            ))),
             ReplPlugins,
         ))
         .add_repl_command::<SayCommand>()

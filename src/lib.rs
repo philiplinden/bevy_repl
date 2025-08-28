@@ -32,6 +32,7 @@ pub mod prelude {
     pub use crate::prompt::{
         PromptPlugin, ReplPrompt, ReplPromptConfig,
         renderer::{ActiveRenderer, PromptRenderPlugin, PromptRenderer, simple::SimpleRenderer},
+        keymap::{Binding as ReplKeybind, PromptKeymap},
     };
     pub use crate::repl::{
         Repl, ReplBufferEvent, ReplPlugin, ReplSet, ReplSubmitEvent, repl_is_enabled,
@@ -47,12 +48,14 @@ pub mod prelude {
         LogEvent, custom_layer as repl_log_custom_layer, print_log_events_system,
         tracing_to_repl_fmt, tracing_to_repl_fmt_with_level,
     };
-    pub use crate::plugin::{ReplPlugins, StdoutRatatuiPlugins};
+    pub use crate::plugin::{ReplPlugins, StdoutRatatuiPlugin};
 
     #[cfg(feature = "derive")]
     pub use bevy_repl_derive::ReplCommand;
+
+    // re-exports for convenience
+    pub use bevy_ratatui::crossterm::event::{KeyCode as CrosstermKey, KeyModifiers as CrosstermMods};
 }
 
 // re-export at the root for convenience
 pub use crate::prelude::ReplPlugins;
-pub use crate::prelude::StdoutRatatuiPlugins;

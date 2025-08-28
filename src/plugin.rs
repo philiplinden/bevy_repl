@@ -1,35 +1,31 @@
-use bevy::{app::{PluginGroup, PluginGroupBuilder}};
+use bevy::app::{App, Plugin, PluginGroup, PluginGroupBuilder};
 use bevy_ratatui::{
-    event::EventPlugin,
-    cleanup::CleanupPlugin,
-    error::ErrorPlugin,
-    translation::TranslationPlugin,
+    cleanup::CleanupPlugin, error::ErrorPlugin, event::EventPlugin, translation::TranslationPlugin,
 };
 
 /// Minimal Ratatui plugin group that replicates the default Ratatui plugin
 /// group but without the alternate screen because for some reason all of the
 /// built-in Ratatui plugin groups want to create an alternate screen.
 ///
-/// Use this plugin group OR [`bevy_ratatui::RatatuiPlugins`] but NOT BOTH. If you
-/// want to use the alternate screen, use [`bevy_ratatui::RatatuiPlugins`] and
-/// disable [`StdoutRatatuiPlugins`] in the [`ReplPlugins`] group.
-///
-/// ```rust
-/// app.add_plugins(
-///     bevy_repl::ReplPlugins.build()
-///         .disable::<bevy_repl::StdoutRatatuiPlugins>(),
-///     bevy_ratatui::RatatuiPlugins::default(),
-/// );
-/// ```
-pub struct StdoutRatatuiPlugins;
+/// This plugin is configured to be added to the [`ReplPlugins`] group by
+/// default. If the base Ratatui Plugins are already added to the app, this
+/// plugin will not add them.
+pub struct StdoutRatatuiPlugin;
 
-impl PluginGroup for StdoutRatatuiPlugins {
-    fn build(self) -> PluginGroupBuilder {
-        PluginGroupBuilder::start::<Self>()
-            .add(EventPlugin::default())
-            .add(CleanupPlugin)
-            .add(ErrorPlugin)
-            .add(TranslationPlugin)
+impl Plugin for StdoutRatatuiPlugin {
+    fn build(&self, app: &mut App) {
+        if !app.is_plugin_added::<EventPlugin>() {
+            app.add_plugins(EventPlugin::default());
+        }
+        if !app.is_plugin_added::<CleanupPlugin>() {
+            app.add_plugins(CleanupPlugin);
+        }
+        if !app.is_plugin_added::<ErrorPlugin>() {
+            app.add_plugins(ErrorPlugin);
+        }
+        if !app.is_plugin_added::<TranslationPlugin>() {
+            app.add_plugins(TranslationPlugin);
+        }
     }
 }
 
@@ -42,7 +38,7 @@ pub struct ReplPlugins;
 impl PluginGroup for ReplPlugins {
     fn build(self) -> PluginGroupBuilder {
         PluginGroupBuilder::start::<Self>()
-            .add_group(StdoutRatatuiPlugins)
+            .add(StdoutRatatuiPlugin)
             .add(crate::context::ReplContextPlugin)
             .add(crate::repl::ReplPlugin::default())
             .add(crate::command::ParserPlugin)

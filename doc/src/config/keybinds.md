@@ -1,23 +1,72 @@
 # Keybinds
 
-The following keybinds control the REPL's input buffer cursor.
+This page explains the default keybinds and how to customize them via
+`PromptKeymap`.
 
-| Key | Action |
-| --- | --- |
-| Enter | Submit command |
-| Esc | Clear input buffer |
-| Left/Right | Move cursor |
-| Home/End | Jump to start/end |
-| Backspace | Delete before cursor |
-| Delete | Delete at cursor |
-| Ctrl+C | Terminate app |
+
+See `examples/keybinds.rs` for a runnable setup that configures `PromptKeymap`.
+
+```bash
+cargo run --example keybinds
+```
+
+## Default keybinds
+
+The following keys control the REPL input buffer by default:
+
+| Key         | Action                 |
+|-------------|------------------------|
+| Enter       | Submit command         |
+| Esc         | Clear input buffer     |
+| Left/Right  | Move cursor            |
+| Home/End    | Jump to start/end      |
+| Backspace   | Delete before cursor   |
+| Delete      | Delete at cursor       |
+| Ctrl+C      | Terminate app (signal) |
 
 > [!WARNING]
 > Ctrl+C behaves like a normal terminal interrupt because Bevy REPL
-> implements a hook to handle `SIGINT` (Ctrl+C) interrupts in addition to Bevy's
-> `AppExit` event to restore the terminal state (disable "raw mode") on exit. This
-> is baked into the REPL plugin and doesn't require any additional setup, so
-> Ctrl+C still works even if the built-in quit command is disabled.
+> installs a safety hook to handle `SIGINT` (Ctrl+C) and restore the terminal
+> (disable raw mode) on exit. This works even if a quit command is disabled but
+> also does not allow to use Ctrl+C to be mapped to other actions.
 
-Keybinds for the input buffer are not yet customizable (_see
-[Known Issues & Limitations](../dev/known_issues.md)_).
+## Customizing keybinds
+
+Keybinds are configured with the `PromptKeymap` resource in `bevy_repl::prompt::keymap`.
+Each action maps to an exact `(KeyCode, KeyModifiers)` pair as a `ReplKeybind`.
+
+> [!IMPORTANT]
+> The REPL uses Crossterm keycodes and modifiers to capture input, NOT Bevy
+> keycodes and modifiers.
+> ```rust
+> use bevy_ratatui::crossterm::event::{KeyCode as CrosstermKeyCode, KeyModifiers};
+> ```
+
+### Examples of combinations
+
+- v: `ReplKeybind { code: CrosstermKeyCode::Char('v'), mods: KeyModifiers::NONE }`
+- Shift+v: `ReplKeybind { code: CrosstermKeyCode::Char('V'), mods: KeyModifiers::SHIFT }`
+- Ctrl+v: `ReplKeybind { code: CrosstermKeyCode::Char('v'), mods: KeyModifiers::CONTROL }`
+- Ctrl+Shift+v: `ReplKeybind { code: CrosstermKeyCode::Char('V'), mods: KeyModifiers::CONTROL | KeyModifiers::SHIFT }`
+- Ctrl+Alt+Shift+v: `ReplKeybind { code: CrosstermKeyCode::Char('V'), mods: KeyModifiers::CONTROL | KeyModifiers::ALT | KeyModifiers::SHIFT }`
+
+### Capital letters and Shift
+
+Terminals often report Shifted letters as uppercase `KeyCode::Char('V')` and may also set `SHIFT`.
+Match both `code` and `mods` exactly in your binding.
+
+By default, the fallback “insert printable char” only fires for unmodified keys (no modifiers).
+If you want Shift-only typing (e.g., `Shift+v` -> `V`) to insert without an explicit binding,
+you can relax the fallback policy inside `PromptKeymap::map`:
+
+```rust
+// inside PromptKeymap::map fallback
+use bevy_ratatui::crossterm::event::KeyModifiers as M;
+if self.allow_plain_char_insert {
+    if let KeyCode::Char(c) = event.code {
+        if event.modifiers.is_empty() || event.modifiers == M::SHIFT {
+            return Some(ReplBufferEvent::Insert(c));
+        }
+    }
+}
+```

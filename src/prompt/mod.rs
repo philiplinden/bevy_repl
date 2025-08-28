@@ -1,11 +1,13 @@
 pub mod input;
 pub mod renderer;
 pub mod scroll;
+pub mod keymap;
 
 use bevy::prelude::*;
 use std::sync::Arc;
 
 use self::input::PromptInputPlugin;
+use self::keymap::PromptKeymapPlugin;
 use self::renderer::{PromptRenderer, PromptRenderPlugin};
 use self::scroll::ScrollRegionPlugin;
 
@@ -34,6 +36,7 @@ impl Plugin for PromptPlugin {
         app.insert_resource(self.config.clone());
         app.add_plugins((
             PromptInputPlugin,
+            PromptKeymapPlugin,
             PromptRenderPlugin { renderer: self.renderer.clone() },
             ScrollRegionPlugin,
         ));
