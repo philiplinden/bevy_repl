@@ -3,6 +3,7 @@ name: Deploy mdBook to GitHub Pages
 on:
   pull_request:
   push:
+    branches: [ "main" ]
     tags: [ "v*" ]
   workflow_dispatch: {}
 
