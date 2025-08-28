@@ -24,9 +24,6 @@ pub mod print;
 pub mod prompt;
 pub mod repl;
 
-#[cfg(feature = "stdout")]
-pub mod stdout;
-
 pub mod prelude {
     pub use crate::built_ins::ReplDefaultCommandsPlugin;
     #[cfg(not(feature = "derive"))]
