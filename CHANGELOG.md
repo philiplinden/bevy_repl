@@ -1,16 +1,44 @@
 # Changelog
 
-Notable changes to this project will be documented in this file.
+
+See [GitHub Releases](https://github.com/philiplinden/bevy_repl/releases) and
+the [Bevy REPL Book](https://philiplinden.github.io/bevy_repl) for details.
 
 ## [unreleased]
 
 ### 📚 Documentation
 
+- Update readme toc ([`e4390a3`](https://github.com/philiplinden/bevy_repl/commit/e4390a3ecf4f3a7e49f902e0c6d0a9efcdd90fc4))
+- Update readme ([`43493fc`](https://github.com/philiplinden/bevy_repl/commit/43493fc36b5ea83b9ad0b6b64b7b5ecf8fe5e0c5))
+- Add docs for other design experiments ([`b1b2abc`](https://github.com/philiplinden/bevy_repl/commit/b1b2abc013ee539c9655f9a1dd8703a7dba2547e))
+
+### 🧪 Experimental
+
+- Add placeholders for help ([`4354571`](https://github.com/philiplinden/bevy_repl/commit/4354571c6de62cc78d70f44d8d0c7f5d120aeba9))
+- Remove scrollreadyset, always stdout ([`bed7d47`](https://github.com/philiplinden/bevy_repl/commit/bed7d47147ffe3f7d78d0ed69b23b543efef08dd))
+- Move stdout behind feature flag ([`a6460bc`](https://github.com/philiplinden/bevy_repl/commit/a6460bca2ead70517691f120131c71f7795e05e5))
+- Make context mgmt better ([`8b0db88`](https://github.com/philiplinden/bevy_repl/commit/8b0db88ad54667d574dfeb219cbe71b9050baed6))
+- Remove pretty stuff ([`ce50975`](https://github.com/philiplinden/bevy_repl/commit/ce50975511f960847ca962f6c9096d35785642b8))
+
+### ⚙️ Repository
+
+- *(docs)* Build mdBook on PR, deploy only on tags using mdBook action ([`2e090cd`](https://github.com/philiplinden/bevy_repl/commit/2e090cd8acd32380afbd60a2e0dc18bce9fd5390))
+- Enable changelog generation ([`82832ca`](https://github.com/philiplinden/bevy_repl/commit/82832cab3f93282713862ad56b557e36af15466c))
+
+## [0.3.0] - 2025-08-14
+
+### 📚 Documentation
+
+- Update readme ([`a958b70`](https://github.com/philiplinden/bevy_repl/commit/a958b705327bd2623a7b98854ec84197ab1d9808))
+- Add demo tape to readme ([`ce5a626`](https://github.com/philiplinden/bevy_repl/commit/ce5a62600c6dcc7c4af8d240fc202b7a00da6f06))
+- Readability updates ([`55104ba`](https://github.com/philiplinden/bevy_repl/commit/55104ba0625ef91d54c16136e52e053d9abf7283))
+- Fancy demo ([`a328508`](https://github.com/philiplinden/bevy_repl/commit/a328508202d64ad721aca2f60fd4186e978e0c38))
+- Limitations ([`69b39fb`](https://github.com/philiplinden/bevy_repl/commit/69b39fb3109362e2fb6593032870d4884126fa1b))
 - Add known issues to readme ([`3a7dbe1`](https://github.com/philiplinden/bevy_repl/commit/3a7dbe1c7eb931a82a4b755f797e2d92aaea7bef))
-- Update readme ([`2c677ea`](https://github.com/philiplinden/bevy_repl/commit/2c677eaccfe6626643f34878005a44c9e3c387ed))
 
 ### 🐛 Bug Fixes
 
+- Disable the changelog for now ([`ca1d368`](https://github.com/philiplinden/bevy_repl/commit/ca1d36876c9188de896cfc04990fd0ad7d3f6bf8))
 - Clean up examples ([`3f6f234`](https://github.com/philiplinden/bevy_repl/commit/3f6f23478cb7fbd01e5b454cc2b9fa93857ff8d5))
 - Bad plugin setup ([`a1ebbe2`](https://github.com/philiplinden/bevy_repl/commit/a1ebbe262f5e09933b2085c6acf93c0ff20bbb93))
 - Close and quit were misconfigured ([`df104b1`](https://github.com/philiplinden/bevy_repl/commit/df104b1c2d681092473b18b247078bd3cd033c64))
@@ -18,6 +46,13 @@ Notable changes to this project will be documented in this file.
 
 ### 🧪 Experimental
 
+- Disable changelog on main for now ([`9b02990`](https://github.com/philiplinden/bevy_repl/commit/9b02990de3259c45000b042907dcee764eb7ad8f))
+- Demo ([`a1ff6b3`](https://github.com/philiplinden/bevy_repl/commit/a1ff6b35814d12e86fea38dd553c1ff1e7a432c0))
+- Custom log layer ([`bd50098`](https://github.com/philiplinden/bevy_repl/commit/bd5009857148a6e4d3016c2539a1213aef5e0776))
+- Pretty renderer is working ([`3cd37cd`](https://github.com/philiplinden/bevy_repl/commit/3cd37cd56beeb075ec2ef06ffba426b960b3c3b1))
+- Repl println macro ([`a7bb78f`](https://github.com/philiplinden/bevy_repl/commit/a7bb78fe151ce3e30f634d93e67bb122611e465b))
+- Lots of examples and ergonomic renderer settings ([`7e3cbee`](https://github.com/philiplinden/bevy_repl/commit/7e3cbee95dc8c65a2238c4f4056c618dd125e835))
+- Custom renderer ([`ca17531`](https://github.com/philiplinden/bevy_repl/commit/ca17531f035b85ef7ff265ad74815acee74b532d))
 - Even more examples ([`e70cf98`](https://github.com/philiplinden/bevy_repl/commit/e70cf9878b71bdbe277cfddfa1c6b983c0b28bf5))
 - Overhaul ([`d0bbea2`](https://github.com/philiplinden/bevy_repl/commit/d0bbea2136678e53368615042bd024a6e4b8e075))
 - Works with windowed apps too! ([`955262b`](https://github.com/philiplinden/bevy_repl/commit/955262b2e3b1df9d111bc8fc3851bc3f19fb2c06))
@@ -37,7 +72,7 @@ Notable changes to this project will be documented in this file.
 - Add rustyline, write out design docs ([`fd4ea0f`](https://github.com/philiplinden/bevy_repl/commit/fd4ea0f9ed8be49b0333468f540dbebf32a5fa49))
 
 
-## New Contributors ❤️
+### New Contributors ❤️
 
-* @philiplinden made their first contribution in [#5](https://github.com/philiplinden/bevy_repl/pull/5)
+* @philiplinden made their first contribution
 <!-- generated by git-cliff -->
