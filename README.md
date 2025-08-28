@@ -8,8 +8,12 @@ Bevy application runs, allowing users to enter commands and interact with the
 ECS at runtime.
 
 ```rust
-use bevy_repl::ReplPlugins;
-App::new().add_plugins(ReplPlugins);
+use bevy::prelude::*;
+use bevy_repl::prelude::*;
+
+fn main() {
+    App::new().add_plugins((DefaultPlugins, ReplPlugins));
+}
 ```
 
 ![Made with VHS](https://vhs.charm.sh/vhs-6kUt4mnyvUcmbpVfWzHx4s.gif)
@@ -33,8 +37,8 @@ The REPL is designed as an alternative to
 that want a terminal-like console to modify the game at runtime without
 implementing a full TUI or rendering features.
 
-> This is my first public Bevy plugin, and I vibe-coded a large part
-> of it. **You have been warned.**
+_This is my first public Bevy plugin, and I vibe-coded a large part of it._ 
+**_You have been warned_.**
 
 | Version | Bevy | Notes |
 | --- | --- | --- |
@@ -52,21 +56,9 @@ additional features at your own risk.
 | --- | --- | --- |
 | `derive` | Support clap's derive pattern for REPL commands | `false` |
 | `default_commands` | Enable all built-in commands | `true` |
-
-### Derive
-Use the `derive` feature to support clap's derive pattern for REPL commands.
-`#[derive(ReplCommand)]` will automatically implement the `ReplCommand` trait
-and create an event with the command's arguments and options. Configure the
-response by adding an observer for the REPL command like normal.
-
-### Default commands
-Enable built-in commands with feature flags. Each command is enabled separately
-by a feature flag. Use the `default_commands` feature to enable all built-in
-commands.
-
-| Feature Flag | Command | Description | Default |
-| --- | --- | --- | --- |
-| `quit` | `quit`, `q`, `exit` | Gracefully terminate the application | `true` |
+| `quit` | Enable the `quit` command | `true` (included in `default_commands`) |
+| `help` | Enable the `help` command | `false` |
+| `clear` | Enable the `clear` command | `false` |
 
 ## Batteries-included setup
 

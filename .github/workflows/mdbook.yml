@@ -1,4 +1,4 @@
-name: Deploy mdBook
+name: Deploy mdBook to GitHub Pages
 
 on:
   pull_request:
@@ -16,10 +16,31 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Cache Cargo binaries and registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: ${{ runner.os }}-cargo-tools-${{ hashFiles('**/book.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-tools-
+
       - name: Setup mdBook
         uses: peaceiris/actions-mdbook@v1
         with:
           mdbook-version: 'latest'
+
+      - name: Install mdBook Table of Contents plugin
+        uses: baptiste0928/cargo-install@v3
+        with:
+          crate: mdbook-toc
+
+      - name: Install mdBook alerts plugin
+        uses: baptiste0928/cargo-install@v3
+        with:
+          crate: mdbook-alerts
 
       - name: Build book
         run: mdbook build

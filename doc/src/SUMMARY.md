@@ -16,7 +16,6 @@
     - [Logging](design/logging.md)
     - [Scheduling](design/scheduling.md)
     - [Terminal Screens](design/terminal_screens.md)
-
 - [Development](dev/index.md)
     - [Known Issues & Limitations](dev/known_issues.md)
     - [Changelog](dev/changelog.md)

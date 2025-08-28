@@ -9,6 +9,13 @@ src = "doc/src"
 build-dir = "doc/book/"
 create-missing = false
 
+[preprocessor.toc]
+command = "mdbook-toc"
+renderer = ["html"]
+max-level = 3
+
+[preprocessor.alerts]
+
 [output.html]
 # Link back to the repository
 git-repository-url = "https://github.com/philiplinden/bevy_repl"

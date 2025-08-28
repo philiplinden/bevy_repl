@@ -12,11 +12,12 @@ The following keybinds control the REPL's input buffer cursor.
 | Delete | Delete at cursor |
 | Ctrl+C | Terminate app |
 
-**Note:** Ctrl+C behaves like a normal terminal interrupt because Bevy REPL
-implements a hook to handle `SIGINT` (Ctrl+C) interrupts in addition to Bevy's
-`AppExit` event to restore the terminal state (disable "raw mode") on exit. This
-is baked into the REPL plugin and doesn't require any additional setup, so
-Ctrl+C still works even if the built-in quit command is disabled.
+> [!WARNING]
+> Ctrl+C behaves like a normal terminal interrupt because Bevy REPL
+> implements a hook to handle `SIGINT` (Ctrl+C) interrupts in addition to Bevy's
+> `AppExit` event to restore the terminal state (disable "raw mode") on exit. This
+> is baked into the REPL plugin and doesn't require any additional setup, so
+> Ctrl+C still works even if the built-in quit command is disabled.
 
 Keybinds for the input buffer are not yet customizable (_see
 [Known Issues & Limitations](../dev/known_issues.md)_).

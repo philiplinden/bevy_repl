@@ -4,6 +4,8 @@ This section documents the design of the REPL and its components. I include it
 here as a reference for myself and for anyone who wants to understand how the
 REPL works.
 
+<!-- toc -->
+
 ## Headless Bevy
 
 The REPL is designed to be an interactive console for the Bevy app at runtime.
@@ -95,9 +97,10 @@ fn main() {
 If you need to keep the windowing features, you can disable the `WindowPlugin`
 and `WinitPlugin` to run the app in headless mode.
 
-**Tip:** Bevy REPL still runs in the terminal even if you spawn windows, so this
-is probably only useful if you are running the app in CI or some other headless
-environment.
+ > [!TIP]
+ > Bevy REPL still runs in the terminal even if you spawn windows, so this
+ > is probably only useful if you are running the app in CI or some other headless
+ > environment.
 
 ```rust
 use bevy::{

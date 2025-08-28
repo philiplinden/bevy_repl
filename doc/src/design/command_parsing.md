@@ -1,14 +1,9 @@
 # Command Parsing
 
-Input is parsed via `clap` commands and corresponding observer systems that execute when triggered by the REPL.
+Input is parsed via `clap` commands and corresponding observer systems that
+execute when triggered by the REPL.
 
-## Flow
-
-- Define a type implementing `ReplCommand` (builder pattern) or derive it (see Derive page).
-- Register the command with `.add_repl_command::<T>()`.
-- Handle it with an observer: `.add_observer(on_command)`.
-
-The REPL parses prompt input to a `T` and emits it as an event; observers run in `PostUpdate` with full ECS access.
+<!-- toc -->
 
 ## Minimal example (builder pattern)
 

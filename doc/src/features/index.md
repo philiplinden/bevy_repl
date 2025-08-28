@@ -1,3 +1,5 @@
 # Features
 
-{{#include ../../../README.md:47:54}}
+<!-- toc -->
+
+{{#include ../../../README.md:47:58}}
