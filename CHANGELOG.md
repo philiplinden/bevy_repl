@@ -1,8 +1,7 @@
 # Changelog
 
 
-See [GitHub Releases](https://github.com/philiplinden/bevy_repl/releases) and
-the [Bevy REPL Book](https://philiplinden.github.io/bevy_repl) for details.
+See [GitHub Releases](https://github.com/philiplinden/bevy_repl/releases) and the [Bevy REPL Book](https://philiplinden.github.io/bevy_repl) for details.
 
 ## [0.3.0] - 2025-08-14
 
