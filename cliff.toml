@@ -12,8 +12,7 @@ manifest_path = "Cargo.toml"
 header = """
 # Changelog\n
 
-See [GitHub Releases](https://github.com/philiplinden/bevy_repl/releases) and
-the [Bevy REPL Book](https://philiplinden.github.io/bevy_repl) for details.
+See [GitHub Releases](https://github.com/philiplinden/bevy_repl/releases) and the [Bevy REPL Book](https://philiplinden.github.io/bevy_repl) for details.
 
 """
 body = """
