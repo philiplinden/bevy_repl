@@ -31,7 +31,7 @@ output for interaction even in headless mode.
 - Works in terminal with headless and windowed apps
 - Built-in commands for common tasks (just `quit` for now)
 - Support for custom prompt rendering
-- Custom keybind support for REPL cursor controls
+- (_Experimental_) Custom keybind support for REPL cursor controls 
 
 The REPL is designed as an alternative to
 [makspll/bevy-console](https://github.com/makspll/bevy-console) for Bevy apps

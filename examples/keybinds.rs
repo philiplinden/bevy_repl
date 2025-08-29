@@ -45,52 +45,59 @@ impl Plugin for ExamplePlugin {
 
 fn use_custom_keybinds(mut commands: Commands, bevy_input: Res<ButtonInput<KeyCode>>) {
     if bevy_input.any_just_pressed([KeyCode::ControlLeft, KeyCode::ControlRight])
-        && bevy_input.just_pressed(KeyCode::KeyA)
+        && bevy_input.just_pressed(KeyCode::KeyS)
     {
+        info!("Using custom keybinds");
         commands.insert_resource(PromptKeymap {
             submit: Some(ReplKeybind {
-                code: CrosstermKeyCode::Enter,
-                mods: KeyModifiers::SHIFT,
-            }),
-            delete: Some(ReplKeybind {
-                code: CrosstermKeyCode::Delete,
-                mods: KeyModifiers::NONE,
+                code: CrosstermKeyCode::Char('Y'),
+                mods: KeyModifiers::CONTROL,
             }),
             clear: Some(ReplKeybind {
-                code: CrosstermKeyCode::Char('D'),
-                mods: KeyModifiers::CONTROL | KeyModifiers::SHIFT,
+                code: CrosstermKeyCode::Char('X'),
+                mods: KeyModifiers::CONTROL,
             }),
             ..default()
         });
     }
 }
 
+fn detect_bevy_keycode_input(bevy_input: Res<ButtonInput<KeyCode>>) {
+    let codes = bevy_input.get_pressed().collect::<Vec<_>>();
+    if codes.len() >= 1 {
+        info!("Detected Bevy keycodes: {:?}", codes);
+    }
+}
+
 fn use_default_keybinds(mut commands: Commands, bevy_input: Res<ButtonInput<KeyCode>>) {
     if bevy_input.any_just_pressed([KeyCode::ControlLeft, KeyCode::ControlRight])
-        && bevy_input.just_pressed(KeyCode::Backquote)
-    {
+        && bevy_input.just_pressed(KeyCode::KeyD) {
+        info!("Using default keybinds");
         commands.insert_resource(PromptKeymap::default());
     }
 }
 
 fn clear_all_keybinds(mut commands: Commands, bevy_input: Res<ButtonInput<KeyCode>>) {
-    if bevy_input.just_pressed(KeyCode::Backquote) {
+    if bevy_input.any_just_pressed([KeyCode::ControlLeft, KeyCode::ControlRight])
+        && bevy_input.just_pressed(KeyCode::KeyA)
+    {
+        info!("Clearing all keybinds");
         commands.insert_resource(PromptKeymap::none());
     }
 }
 
 fn instructions() {
     repl_println!();
-    repl_println!("Bevy REPL custom keybinds example");
+    repl_println!("Bevy REPL custom keybinds example (experimental)");
     repl_println!();
     repl_println!("This example shows how Bevy key events and REPL keybinds can");
     repl_println!("be configured to customize the REPL, even at runtime.");
     repl_println!();
     repl_println!("Controls (always active)");
     repl_println!("------------------------");
-    repl_println!("Switch to custom keybinds:   Ctrl+A");
-    repl_println!("Reset keybinds to defaults:  Ctrl+`");
-    repl_println!("Clear all keybinds:               `");
+    repl_println!("Switch to custom keybinds:   Ctrl+S");
+    repl_println!("Reset keybinds to defaults:  Ctrl+D");
+    repl_println!("Clear all keybinds:          Ctrl+A");
     repl_println!("Exit the app:                Ctrl+C");
     repl_println!();
     repl_println!("Default Keybinds");
@@ -100,8 +107,8 @@ fn instructions() {
     repl_println!();
     repl_println!("Custom Keybinds");
     repl_println!("----------------");
-    repl_println!("Submit buffer:           Shift+Enter");
-    repl_println!("Clear buffer:           Ctrl+Shift+D");
+    repl_println!("Submit buffer:                Ctrl+Y");
+    repl_println!("Clear buffer:                 Ctrl+X");
     repl_println!();
 }
 
@@ -110,10 +117,15 @@ fn main() {
     .add_plugins((
         DefaultPlugins.set(bevy::app::ScheduleRunnerPlugin::run_loop(
             std::time::Duration::from_secs_f64(1.0 / 60.0),
-        )),
+        )).set(bevy::log::LogPlugin {
+            filter: "info,bevy_repl=trace".to_string(),
+            level: bevy::log::Level::TRACE,
+            ..default()
+        }),
         ReplPlugins,
         ExamplePlugin,
     ))
+    .add_systems(Update, detect_bevy_keycode_input.in_set(ReplSet::Pre))
     .add_systems(PostStartup, instructions)
     .run();
 }

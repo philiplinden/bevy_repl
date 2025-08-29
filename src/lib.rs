@@ -48,7 +48,7 @@ pub mod prelude {
         LogEvent, custom_layer as repl_log_custom_layer, print_log_events_system,
         tracing_to_repl_fmt, tracing_to_repl_fmt_with_level,
     };
-    pub use crate::plugin::{ReplPlugins, StdoutRatatuiPlugin};
+    pub use crate::plugin::ReplPlugins;
 
     #[cfg(feature = "derive")]
     pub use bevy_repl_derive::ReplCommand;

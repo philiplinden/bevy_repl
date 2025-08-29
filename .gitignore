@@ -7,3 +7,5 @@ Cargo.lock
 
 # Ignore mdBook build output but keep sources
 doc/book/
+
+.vscode

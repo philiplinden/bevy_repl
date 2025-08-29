@@ -102,9 +102,13 @@ pub(super) fn parse_terminal_input(
     keymap: Res<PromptKeymap>,
 ) {
     for event in crossterm_key_events.read() {
-        if event.kind == CrosstermKeyEventKind::Press {
+        if matches!(
+            event.kind,
+            CrosstermKeyEventKind::Press | CrosstermKeyEventKind::Repeat
+        ) {
             // Parse REPL keybinds
             if let Some(buf_ev) = keymap.map(event) {
+                trace!("{:?}", buf_ev);
                 buffer_events.write(buf_ev);
                 continue;
             }

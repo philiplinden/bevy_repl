@@ -1,6 +1,5 @@
 use bevy::prelude::*;
 use bevy_ratatui::event::InputSet;
-use std::sync::atomic::{AtomicBool, Ordering};
 
 use std::collections::HashMap;
 
@@ -50,46 +49,6 @@ impl ReplPlugin {
     }
 }
 
-/// Install safety nets to always restore the terminal on abnormal exits.
-///
-/// - Panic hook: best-effort `disable_raw_mode()` before delegating to the previous hook.
-/// - Ctrl-C handler: best-effort `disable_raw_mode()` on SIGINT/SIGTERM.
-///
-/// Notes:
-/// - Idempotent and safe to call multiple times.
-/// - Does not handle SIGKILL or panic=abort where no user code runs.
-/// Global flag set to `true` when a Ctrl+C (SIGINT) or termination signal is received.
-///
-/// Used by the signal handler to notify the main application logic that a shutdown has been requested.
-/// This is an `AtomicBool` to ensure safe concurrent access between the signal handler thread and the main thread.
-/// The main thread can poll this flag to detect if Ctrl+C was pressed and exit gracefully.
-static CTRL_C_HIT: AtomicBool = AtomicBool::new(false);
-
-fn install_terminal_safety_nets() {
-    static ONCE: std::sync::Once = std::sync::Once::new();
-    ONCE.call_once(|| {
-        let prev = std::panic::take_hook();
-        std::panic::set_hook(Box::new(move |info| {
-            let _ = bevy_ratatui::crossterm::terminal::disable_raw_mode();
-            prev(info);
-        }));
-
-        // Best-effort signal handler for Ctrl-C and termination.
-        let _ = ctrlc::set_handler(|| {
-            let _ = bevy_ratatui::crossterm::terminal::disable_raw_mode();
-            // Mark that Ctrl+C was pressed so the Bevy app can exit gracefully.
-            CTRL_C_HIT.store(true, Ordering::SeqCst);
-        });
-    });
-}
-
-// Poll for Ctrl+C from the signal handler and request app exit.
-fn ctrlc_exit_check(mut exit: EventWriter<AppExit>) {
-    if CTRL_C_HIT.swap(false, Ordering::SeqCst) {
-        exit.write(AppExit::Success);
-    }
-}
-
 impl Plugin for ReplPlugin {
     fn build(&self, app: &mut App) {
         app.insert_resource(Repl {
@@ -102,8 +61,6 @@ impl Plugin for ReplPlugin {
         app.add_event::<ReplLifecycleEvent>();
         app.add_systems(Startup, emit_enable_if_enabled);
         app.add_observer(on_app_exit_emit_disable);
-        // Exit the app gracefully if the user presses Ctrl+C.
-        app.add_systems(Update, ctrlc_exit_check);
         app.configure_sets(
             Update,
             (
@@ -114,19 +71,15 @@ impl Plugin for ReplPlugin {
                 ReplSet::Post,
             )
                 .chain()
-                .after(InputSet::EmitCrossterm)
-                .before(InputSet::Post),
         );
-        // Wrapper set to anchor all REPL systems between ratatui input emission and post-processing
+        // Wrapper set to anchor all REPL systems at the end of the ratatui set.
+        // All of the REPL sets only run when the REPL is enabled.
         app.configure_sets(
             Update,
             ReplSet::All
-                .after(InputSet::EmitCrossterm)
-                .before(InputSet::Post)
+                .in_set(InputSet::Post)
                 .run_if(repl_is_enabled),
         );
-        // Install global safety nets for abnormal exits.
-        install_terminal_safety_nets();
     }
 }
 
@@ -135,9 +88,6 @@ pub struct Repl {
     pub enabled: bool,
     pub buffer: String,
     pub cursor_pos: usize,
-    pub history: Vec<String>,
-    pub history_index: usize,
-    pub history_enabled: bool,
     pub commands: HashMap<String, Box<dyn crate::command::CommandParser>>,
 }
 
@@ -147,9 +97,6 @@ impl Default for Repl {
             enabled: true,
             buffer: String::new(),
             cursor_pos: 0,
-            history: Vec::new(),
-            history_index: 0,
-            history_enabled: true,
             commands: HashMap::new(),
         }
     }
@@ -235,7 +182,7 @@ fn on_app_exit_emit_disable(_exit: Trigger<AppExit>, mut writer: EventWriter<Rep
     writer.write(ReplLifecycleEvent::Disable);
 }
 
-#[derive(Event)]
+#[derive(Event, Debug)]
 pub enum ReplBufferEvent {
     Insert(char),
     Backspace,
@@ -248,5 +195,5 @@ pub enum ReplBufferEvent {
     Submit,
 }
 
-#[derive(Event)]
+#[derive(Event, Debug)]
 pub struct ReplSubmitEvent(pub String);

@@ -70,3 +70,10 @@ if self.allow_plain_char_insert {
     }
 }
 ```
+
+### Advanced mappings & Kitty protocol
+Ratatui uses Kitty protocol by default, which is necessary for advanced keybinds
+like Ctrl+Enter. For now, this is not supported in the REPL natively, but you
+can use the REPL together with `bevy_ratatui` and may have better results.
+
+See `examples/alt_screen.rs` for a runnable setup that uses `bevy_ratatui`.
