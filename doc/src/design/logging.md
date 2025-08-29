@@ -1,12 +1,17 @@
 # Routing Bevy logs to the REPL
 
-You can optionally route logs produced by Bevy's `tracing` pipeline to the REPL
-so they are formatted in the REPL's renderer. Otherwise, `bevy::log::LogPlugin`
-will print logs directly to stdout. This means that if you are using an
-alternate TUI screen (like with the default `RatatuiPlugins`), Bevy log messages
-will not be visible in the REPL unless you disable Bevy's `LogPlugin`.
+By default, Bevy REPL integrates with Bevy's `LogPlugin` without additional
+setup. To only print the REPL to stdout, disable Bevy's `LogPlugin`.
 
-When the default `LogPlugin` is disabled, the REPL handles log routing like so:
+## Using an alternate TUI screen (experimental)
+
+If you are using an alternate TUI screen (like with `RatatuiPlugins`), Bevy log
+messages will not be visible in the REPL unless you disable Bevy's `LogPlugin`.
+
+If the Ratatui context is enabled (e.g.,
+`bevy_ratatui::RatatuiPlugins::default()` or
+`bevy_ratatui::context::ContextPlugin` is added to the app), the REPL handles
+log routing like so:
 
 - A custom `tracing` Layer captures log events and forwards them through an
   `mpsc` channel to a Non-Send resource.
@@ -21,8 +26,8 @@ use bevy_repl::prelude::*;
 fn main() {
     App::new()
         .add_plugins((
-            // 2) Disable Bevy's stdout logger to prevent duplicate/garbled output
             DefaultPlugins.build().disable::<bevy::log::LogPlugin>(),
+            bevy_ratatui::RatatuiPlugins::default(),
             ReplPlugins,
         ))
         .run();

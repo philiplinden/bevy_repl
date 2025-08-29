@@ -23,9 +23,10 @@ ctrlc = "3"
 # Error handling and logging
 anyhow = "1.0.99"
 tracing = { version = "0.1", features = [
-    "max_level_debug",
+    "max_level_trace",
     "release_max_level_warn",
 ] }
+color-eyre = "0.6.5"
 
 [features]
 default = [
@@ -40,6 +41,30 @@ help = []
 clear = []
 
 [[example]]
+name = "aliases"
+path = "examples/aliases.rs"
+
+[[example]]
+name = "alt_screen"
+path = "examples/alt_screen.rs"
+
+[[example]]
+name = "builder"
+path = "examples/builder.rs"
+
+[[example]]
+name = "builtins"
+path = "examples/builtins.rs"
+
+[[example]]
+name = "custom_log_layer"
+path = "examples/custom_log_layer.rs"
+
+[[example]]
+name = "custom_renderer"
+path = "examples/custom_renderer.rs"
+
+[[example]]
 name = "default"
 path = "examples/default.rs"
 
@@ -48,63 +73,50 @@ name = "demo"
 path = "examples/demo.rs"
 
 [[example]]
-name = "stdout"
-path = "examples/stdout.rs"
-required-features = ["stdout"]
+name = "derive"
+path = "examples/derive.rs"
+required-features = ["derive"]
 
 [[example]]
 name = "fixed_update"
 path = "examples/fixed_update.rs"
 
 [[example]]
-name = "update_resource"
-path = "examples/update_resource.rs"
+name = "keybinds"
+path = "examples/keybinds.rs"
 
 [[example]]
-name = "derive"
-path = "examples/derive.rs"
-required-features = ["derive"]
+name = "log"
+path = "examples/log.rs"
 
 [[example]]
-name = "builder"
-path = "examples/builder.rs"
-
-[[example]]
-name = "window"
-path = "examples/window.rs"
-required-features = ["bevy/bevy_window"]
-
-[[example]]
-name = "builtins"
-path = "examples/builtins.rs"
-
-[[example]]
-name = "aliases"
-path = "examples/aliases.rs"
-
-[[example]]
-name = "log_minimal"
-path = "examples/log_minimal.rs"
-
-[[example]]
-name = "key_events_suppressed"
-path = "examples/key_events_suppressed.rs"
-
-[[example]]
-name = "spawn_entity"
-path = "examples/spawn_entity.rs"
+name = "minimal"
+path = "examples/minimal.rs"
 
 [[example]]
 name = "query"
 path = "examples/query.rs"
 
 [[example]]
-name = "custom_renderer"
-path = "examples/custom_renderer.rs"
+name = "show_prompt_actions"
+path = "examples/show_prompt_actions.rs"
 
 [[example]]
-name = "disabled"
-path = "examples/disabled.rs"
+name = "spawn_entity"
+path = "examples/spawn_entity.rs"
+
+[[example]]
+name = "toggle"
+path = "examples/toggle.rs"
+
+[[example]]
+name = "update_resource"
+path = "examples/update_resource.rs"
+
+[[example]]
+name = "window"
+path = "examples/window.rs"
+required-features = ["bevy/bevy_window"]
 
 # Idiomatic Bevy code often triggers these lints, and the CI workflow treats them as errors.
 # In some cases they may still signal poor code quality however, so consider commenting out these lines.

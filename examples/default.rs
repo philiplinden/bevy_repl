@@ -8,9 +8,8 @@
 //! - Running headless via `ScheduleRunnerPlugin`
 //! - Typing commands in the terminal and quitting with `quit`
 
-use bevy::{app::ScheduleRunnerPlugin, prelude::*};
+use bevy::prelude::*;
 use bevy_repl::prelude::*;
-use std::time::Duration;
 
 // Define a simple command struct
 #[derive(Debug, Clone, Event, Default)]
@@ -93,9 +92,9 @@ fn main() {
         .add_plugins((
             DefaultPlugins
                 // Headless loop in the terminal
-                .set(ScheduleRunnerPlugin::run_loop(Duration::from_secs_f64(
-                    1.0 / 60.0,
-                ))),
+                .set(bevy::app::ScheduleRunnerPlugin::run_loop(
+                    std::time::Duration::from_secs_f64(1.0 / 60.0),
+                )),
             ReplPlugins,
         ))
         .add_repl_command::<PrintCommand>()

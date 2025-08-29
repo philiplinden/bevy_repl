@@ -8,9 +8,8 @@
 //! - `bevy/bevy_log` to enable logging to stdout with the LogPlugin
 //! - `bevy_ratatui/crossterm` for the crossterm TUI backend
 
-use bevy::{app::ScheduleRunnerPlugin, prelude::*};
+use bevy::prelude::*;
 use bevy_repl::prelude::*;
-use std::time::Duration;
 
 fn repl_print_block(block: &str) {
     for line in block.lines() {
@@ -539,17 +538,11 @@ Type `quit` to exit, or `next` to restart at the beginning.
 }
 
 fn main() {
-    // Install a global fmt layer that writes logs directly to the REPL printer,
-    // preserving colors and formatting. Do this BEFORE adding DefaultPlugins.
-    tracing_to_repl_fmt();
-
     App::new()
         .add_plugins((
-            DefaultPlugins
-                .set(ScheduleRunnerPlugin::run_loop(Duration::from_secs_f64(
-                    1.0 / 60.0,
-                )))
-                .disable::<bevy::log::LogPlugin>(),
+            DefaultPlugins.set(bevy::app::ScheduleRunnerPlugin::run_loop(
+                std::time::Duration::from_secs_f64(1.0 / 60.0),
+            )),
             ReplPlugins,
             DemoPlugin,
         ))

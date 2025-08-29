@@ -50,14 +50,13 @@ fn print_on_ping(_trigger: Trigger<PingCommand>) {
 }
 
 fn main() {
-    // Install a global fmt layer that writes logs directly to the REPL printer,
-    // preserving colors/formatting. Do this BEFORE adding DefaultPlugins.
-    tracing_to_repl_fmt();
-
     App::new()
         .add_plugins((
-            // Disable stdout logger to avoid duplicate output; our fmt layer prints
-            DefaultPlugins.build().disable::<bevy::log::LogPlugin>(),
+            DefaultPlugins
+                .set(bevy::app::ScheduleRunnerPlugin::run_loop(
+                    std::time::Duration::from_secs_f64(1.0 / 60.0)))
+                // Disable the default log plugin, ratatui will handle logs
+                .build().disable::<bevy::log::LogPlugin>(),
             bevy_ratatui::RatatuiPlugins::default(),
             ReplPlugins,
         ))

@@ -6,9 +6,8 @@
 //! - Registering a simple `ReplCommand` (ping)
 //! - Running headless via `ScheduleRunnerPlugin`
 //! - Typing commands in the terminal and quitting with `quit`
-use bevy::{app::ScheduleRunnerPlugin, prelude::*};
+use bevy::prelude::*;
 use bevy_repl::prelude::*;
-use std::time::Duration;
 
 #[derive(Debug, Clone, Event, Default)]
 struct PingCommand;
@@ -37,11 +36,9 @@ fn instructions() {
 fn main() {
     App::new()
         .add_plugins((
-            MinimalPlugins
-                // Run headless in the terminal
-                .set(ScheduleRunnerPlugin::run_loop(Duration::from_secs_f64(
-                    1.0 / 60.0,
-                ))),
+            DefaultPlugins.set(bevy::app::ScheduleRunnerPlugin::run_loop(std::time::Duration::from_secs_f64(
+                1.0 / 60.0,
+            ))),
             // Input plugin is required so the REPL can handle keyboard input
             bevy::input::InputPlugin::default(),
             // Runs the REPL headless in the terminal

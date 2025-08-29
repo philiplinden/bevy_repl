@@ -10,9 +10,7 @@
 //!   time-scale --set 2.0  # sets absolute value
 //!   time-scale --add -0.5 # adds delta to current value
 
-use std::time::Duration;
-
-use bevy::{app::ScheduleRunnerPlugin, prelude::*};
+use bevy::prelude::*;
 use bevy_repl::prelude::*;
 
 // -------- Resource we will mutate at runtime --------
@@ -32,7 +30,7 @@ struct TimeScaleCommand {
 
 impl ReplCommand for TimeScaleCommand {
     fn clap_command() -> clap::Command {
-        use clap::{value_parser, Arg, ArgGroup, Command};
+        use clap::{Arg, ArgGroup, Command, value_parser};
 
         Command::new("time-scale")
             .about("Get or modify the TimeScale resource")
@@ -122,7 +120,9 @@ fn main() {
     App::new()
         .add_plugins((
             // Headless loop in the terminal
-            MinimalPlugins.set(ScheduleRunnerPlugin::run_loop(Duration::from_secs_f64(1.0 / 60.0))),
+            DefaultPlugins.set(bevy::app::ScheduleRunnerPlugin::run_loop(
+                std::time::Duration::from_secs_f64(1.0 / 60.0),
+            )),
             // Required so the REPL can handle keyboard input
             bevy::input::InputPlugin::default(),
             ReplPlugins,

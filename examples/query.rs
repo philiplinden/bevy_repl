@@ -5,9 +5,7 @@
 //! - Accessing a `Query` inside the observer function
 //! - Listing entities and optionally filtering by `Name`
 
-use std::time::Duration;
-
-use bevy::{app::ScheduleRunnerPlugin, prelude::*};
+use bevy::prelude::*;
 use bevy_repl::prelude::*;
 
 /// List entities, optionally filtering by a substring of their Name component.
@@ -81,7 +79,9 @@ fn instructions() {
 fn main() {
     App::new()
         .add_plugins((
-            MinimalPlugins.set(ScheduleRunnerPlugin::run_loop(Duration::from_secs_f64(1.0 / 60.0))),
+            DefaultPlugins.set(bevy::app::ScheduleRunnerPlugin::run_loop(std::time::Duration::from_secs_f64(
+                1.0 / 60.0,
+            ))),
             bevy::input::InputPlugin::default(),
             ReplPlugins,
         ))

@@ -3,9 +3,8 @@
 //! Demonstrates:
 //! - Defining a command with clap's builder API
 //! - Parsing args/flags and converting to an ECS event
-use std::time::Duration;
 
-use bevy::{app::ScheduleRunnerPlugin, prelude::*};
+use bevy::prelude::*;
 use bevy_repl::prelude::*;
 
 // Define a simple command struct
@@ -89,11 +88,9 @@ fn instructions() {
 fn main() {
     App::new()
         .add_plugins((
-            MinimalPlugins
-                .set(ScheduleRunnerPlugin::run_loop(Duration::from_secs_f64(
-                    1.0 / 60.0,
-                ))),
-            bevy::input::InputPlugin::default(),
+            DefaultPlugins.set(bevy::app::ScheduleRunnerPlugin::run_loop(std::time::Duration::from_secs_f64(
+                1.0 / 60.0,
+            ))),
             ReplPlugins,
         ))
         .add_repl_command::<SayCommand>()

@@ -1,19 +1,5 @@
-//! Bevy log routing example.
-//!
-//! Demonstrates:
-//! - Routing Bevy/tracing logs to the REPL
-//! - Printing messages directly to the console with `repl_println!`
-
 use bevy::prelude::*;
 use bevy_repl::prelude::*;
-
-fn instructions() {
-    bevy_repl::repl_println!("\nBevy log routing example");
-    bevy_repl::repl_println!("Tracing logs are printed in the terminal above the prompt");
-    bevy_repl::repl_println!("just like a message that was printed directly.");
-    bevy_repl::repl_println!("\nType `ping` to emit some logs.");
-    bevy_repl::repl_println!("Type `quit` to exit.");
-}
 
 #[derive(Debug, Clone, Event, Default)]
 struct PingCommand;
@@ -48,12 +34,28 @@ fn print_on_ping(_trigger: Trigger<PingCommand>) {
     repl_println!("(direct print via repl_println!) Pong");
 }
 
+fn instructions() {
+    repl_println!("\nBevy custom log layer example (Experimental)");
+    repl_println!();
+    repl_println!("Tracing logs are printed in the terminal above the prompt");
+    repl_println!("just like a message that was printed directly.");
+    repl_println!();
+    repl_println!("\nType `ping` to emit some logs.");
+    repl_println!("Type `quit` to exit.");
+}
+
 fn main() {
     App::new()
         .add_plugins((
-            DefaultPlugins.set(bevy::app::ScheduleRunnerPlugin::run_loop(
-                std::time::Duration::from_secs_f64(1.0 / 60.0),
-            )),
+            DefaultPlugins
+                .set(bevy::app::ScheduleRunnerPlugin::run_loop(
+                    std::time::Duration::from_secs_f64(1.0 / 60.0),
+                ))
+                .set(bevy::log::LogPlugin {
+                    // Adds an EXTRA log layer on top of the default one.
+                    custom_layer: |app| repl_log_custom_layer(app),
+                    ..default()
+                }),
             ReplPlugins,
         ))
         .add_repl_command::<PingCommand>()

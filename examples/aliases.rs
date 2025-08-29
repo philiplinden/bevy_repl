@@ -10,9 +10,8 @@
 //!   print   <message>
 //!   echo    <message>
 
-use bevy::{app::ScheduleRunnerPlugin, prelude::*};
+use bevy::prelude::*;
 use bevy_repl::prelude::*;
-use std::time::Duration;
 
 // Define a simple command struct
 #[derive(Debug, Clone, Event, Default)]
@@ -66,10 +65,9 @@ fn instructions() {
 fn main() {
     App::new()
         .add_plugins((
-            MinimalPlugins.set(ScheduleRunnerPlugin::run_loop(Duration::from_secs_f64(
+            DefaultPlugins.set(bevy::app::ScheduleRunnerPlugin::run_loop(std::time::Duration::from_secs_f64(
                 1.0 / 60.0,
             ))),
-            bevy::input::InputPlugin::default(),
             ReplPlugins,
         ))
         .add_repl_command::<SayCommand>()
