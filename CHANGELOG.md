@@ -3,6 +3,34 @@
 
 See [GitHub Releases](https://github.com/philiplinden/bevy_repl/releases) and the [Bevy REPL Book](https://philiplinden.github.io/bevy_repl) for details.
 
+## [0.4.1](https://github.com/philiplinden/bevy_repl/compare/v0.3.0..v0.4.1) - 2025-08-29
+
+### 📚 Documentation
+
+- Add mdbook plugins ([`9b8ebd4`](https://github.com/philiplinden/bevy_repl/commit/9b8ebd43dc2d657436681c62bef6dcee7cd24bc2))
+- Introducing the Bevy REPL Book ([`b7710e0`](https://github.com/philiplinden/bevy_repl/commit/b7710e028bd3ad6bcb1c85e39e48acae6d0e0b26))
+- Update readme toc ([`e4390a3`](https://github.com/philiplinden/bevy_repl/commit/e4390a3ecf4f3a7e49f902e0c6d0a9efcdd90fc4))
+- Update readme ([`43493fc`](https://github.com/philiplinden/bevy_repl/commit/43493fc36b5ea83b9ad0b6b64b7b5ecf8fe5e0c5))
+- Add docs for other design experiments ([`b1b2abc`](https://github.com/philiplinden/bevy_repl/commit/b1b2abc013ee539c9655f9a1dd8703a7dba2547e))
+
+### 🧪 Experimental
+
+- Context refactor and better keybinds ([`dd28099`](https://github.com/philiplinden/bevy_repl/commit/dd28099b3dab46a554df1986105996f8db00557a))
+- Custom keybinds and cleaner examples ([`2209b9d`](https://github.com/philiplinden/bevy_repl/commit/2209b9ddb43429138fee7e897081d19eab11d65d))
+- Add placeholders for help ([`4354571`](https://github.com/philiplinden/bevy_repl/commit/4354571c6de62cc78d70f44d8d0c7f5d120aeba9))
+- Remove scrollreadyset, always stdout ([`bed7d47`](https://github.com/philiplinden/bevy_repl/commit/bed7d47147ffe3f7d78d0ed69b23b543efef08dd))
+- Move stdout behind feature flag ([`a6460bc`](https://github.com/philiplinden/bevy_repl/commit/a6460bca2ead70517691f120131c71f7795e05e5))
+- Make context mgmt better ([`8b0db88`](https://github.com/philiplinden/bevy_repl/commit/8b0db88ad54667d574dfeb219cbe71b9050baed6))
+- Remove pretty stuff ([`ce50975`](https://github.com/philiplinden/bevy_repl/commit/ce50975511f960847ca962f6c9096d35785642b8))
+
+### ⚙️ Repository
+
+- *(docs)* Build mdBook on PR, deploy only on tags using mdBook action ([`2e090cd`](https://github.com/philiplinden/bevy_repl/commit/2e090cd8acd32380afbd60a2e0dc18bce9fd5390))
+- Use the real github action for pages ([`06030f1`](https://github.com/philiplinden/bevy_repl/commit/06030f1ad0c06b38946cafc7be621f7e8b1fc067))
+- Deploy the book on every push to main ([`c4589a2`](https://github.com/philiplinden/bevy_repl/commit/c4589a25f531830ba41b1ab5334dcf6383fe07ac))
+- Make the book on every push to main ([`563574c`](https://github.com/philiplinden/bevy_repl/commit/563574cd55ca3028cf9ddb66fd6b1e5f3eb920ed))
+- Enable changelog generation ([`82832ca`](https://github.com/philiplinden/bevy_repl/commit/82832cab3f93282713862ad56b557e36af15466c))
+
 ## [0.3.0] - 2025-08-14
 
 ### 📚 Documentation

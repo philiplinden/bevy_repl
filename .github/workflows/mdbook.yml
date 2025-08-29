@@ -50,6 +50,7 @@ jobs:
           path: ./doc/book
 
   deploy:
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -59,4 +60,3 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
-        if: startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/main'
