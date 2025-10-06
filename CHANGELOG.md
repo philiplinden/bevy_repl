@@ -26,6 +26,7 @@ See [GitHub Releases](https://github.com/philiplinden/bevy_repl/releases) and th
 ### ⚙️ Repository
 
 - *(docs)* Build mdBook on PR, deploy only on tags using mdBook action ([`2e090cd`](https://github.com/philiplinden/bevy_repl/commit/2e090cd8acd32380afbd60a2e0dc18bce9fd5390))
+- Fix workflow deployments ([`d5726dc`](https://github.com/philiplinden/bevy_repl/commit/d5726dc6a0856b2bdba04d09affe4df9a4b84a65))
 - Use the real github action for pages ([`06030f1`](https://github.com/philiplinden/bevy_repl/commit/06030f1ad0c06b38946cafc7be621f7e8b1fc067))
 - Deploy the book on every push to main ([`c4589a2`](https://github.com/philiplinden/bevy_repl/commit/c4589a25f531830ba41b1ab5334dcf6383fe07ac))
 - Make the book on every push to main ([`563574c`](https://github.com/philiplinden/bevy_repl/commit/563574cd55ca3028cf9ddb66fd6b1e5f3eb920ed))
