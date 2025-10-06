@@ -36,7 +36,8 @@ impl ReplCommand for ListCommand {
 }
 
 /// Observer demonstrating a read-only ECS query inside the handler.
-fn on_list(trigger: Trigger<ListCommand>, query: Query<(Entity, Option<&Name>)>) {
+// MIGRATION: Trigger<T> -> On<T> for observer params in Bevy 0.17
+fn on_list(trigger: On<ListCommand>, query: Query<(Entity, Option<&Name>)>) {
     let cmd = trigger.event();
     let needle = cmd.name_contains.as_deref();
 

@@ -35,10 +35,11 @@ impl Plugin for PromptInputPlugin {
 /// System that updates the REPL buffer with events from the prompt. This is
 /// separate from the system that directly handles key events to allow for
 /// custom keybinds.
+// MIGRATION: EventReader -> MessageReader, EventWriter -> MessageWriter for buffered events
 fn update_repl_buffer(
     mut repl: ResMut<Repl>,
-    mut buffer_events: EventReader<ReplBufferEvent>,
-    mut parse_events: EventWriter<ReplSubmitEvent>,
+    mut buffer_events: MessageReader<ReplBufferEvent>,
+    mut parse_events: MessageWriter<ReplSubmitEvent>,
 ) {
     for event in buffer_events.read() {
         match event {
@@ -78,8 +79,9 @@ fn update_repl_buffer(
 
 /// System that blocks keyboard input from being forwarded to Bevy when REPL is enabled to
 /// prevent key events from reaching game systems while typing into the prompt.
+// MIGRATION: Events<T> -> Messages<T> for buffered events
 pub(super) fn block_keyboard_input_forwarding(
-    mut key_events: ResMut<Events<KeyboardInput>>,
+    mut key_events: ResMut<Messages<KeyboardInput>>,
     mut keyboard_input: ResMut<ButtonInput<KeyCode>>,
 ) {
     // Clear all keyboard events
@@ -96,9 +98,11 @@ pub(super) fn block_keyboard_input_forwarding(
 /// and stored to the REPL buffer. Ctrl+C is an exception because it is
 /// explicitly handled with the `ctrlc` crate in
 /// [`crate::repl::install_terminal_safety_nets`].
+// MIGRATION: EventWriter -> MessageWriter for ReplBufferEvent  
+// NOTE: KeyEvent from bevy_ratatui is likely still an Event, not a Message
 pub(super) fn parse_terminal_input(
-    mut crossterm_key_events: EventReader<KeyEvent>,
-    mut buffer_events: EventWriter<ReplBufferEvent>,
+    mut crossterm_key_events: EventReader<KeyEvent>,  // FIXME: Check if KeyEvent needs update in bevy_ratatui 0.17
+    mut buffer_events: MessageWriter<ReplBufferEvent>,
     keymap: Res<PromptKeymap>,
 ) {
     for event in crossterm_key_events.read() {

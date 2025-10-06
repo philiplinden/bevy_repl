@@ -12,8 +12,14 @@ keywords = ["bevy", "repl", "console", "debugging"]
 categories = ["game-development", "development-tools"]
 
 [dependencies]
-bevy = { version = "0.16.1", default-features = false, features = ["bevy_log", "trace"]}
-bevy_ratatui = { version = "0.9.2", features = ["crossterm"] }
+# MIGRATION: Updating to Bevy 0.17 - this is the core dependency change
+# TODO: Verify all features still exist in 0.17
+bevy = { version = "0.17", default-features = false, features = ["bevy_log", "trace"]}
+# MIGRATION TODO: bevy_ratatui 0.9.2 targets Bevy 0.16
+# Need to find a 0.17-compatible version or use a git branch
+# For now, leaving as-is but this WILL break compilation
+# Check: https://github.com/cxreiff/bevy_ratatui for 0.17 support
+bevy_ratatui = { version = "0.9.2", features = ["crossterm"] }  # FIXME: Needs 0.17-compatible version
 ratatui = "0.29.0"
 clap = { version = "4.5.46" }
 shell-words = "1.1"

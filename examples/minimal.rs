@@ -18,7 +18,8 @@ impl ReplCommand for PingCommand {
     }
 }
 
-fn on_ping(_trigger: Trigger<PingCommand>) {
+// MIGRATION: Trigger<T> -> On<T> for observer params in Bevy 0.17
+fn on_ping(_trigger: On<PingCommand>) {
     repl_println!("Pong");
 }
 

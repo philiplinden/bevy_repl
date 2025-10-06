@@ -55,10 +55,11 @@ impl Plugin for ReplPlugin {
             enabled: self.enable_on_startup,
             ..default()
         });
-        app.add_event::<ReplSubmitEvent>();
-        app.add_event::<ReplBufferEvent>();
+        // MIGRATION: These are buffered events, now Messages in 0.17
+        app.add_message::<ReplSubmitEvent>();
+        app.add_message::<ReplBufferEvent>();
         // Internal lifecycle event to manage terminal context without runtime toggle
-        app.add_event::<ReplLifecycleEvent>();
+        app.add_message::<ReplLifecycleEvent>();
         app.add_systems(Startup, emit_enable_if_enabled);
         app.add_observer(on_app_exit_emit_disable);
         app.configure_sets(
@@ -165,24 +166,29 @@ pub enum ReplSet {
     Post,
 }
 
-#[derive(Event)]
+// MIGRATION: Changed from Event to Message - this is a buffered event
+#[derive(Message, Clone)]
 pub enum ReplLifecycleEvent {
     Enable,
     Disable,
 }
 
 // TODO: someday this could be a system triggered by state transitions
-fn emit_enable_if_enabled(repl: Res<Repl>, mut writer: EventWriter<ReplLifecycleEvent>) {
+// MIGRATION: EventWriter -> MessageWriter for buffered events
+fn emit_enable_if_enabled(repl: Res<Repl>, mut writer: MessageWriter<ReplLifecycleEvent>) {
     if repl.enabled {
         writer.write(ReplLifecycleEvent::Enable);
     }
 }
 
-fn on_app_exit_emit_disable(_exit: Trigger<AppExit>, mut writer: EventWriter<ReplLifecycleEvent>) {
+// MIGRATION: Trigger<T> -> On<T> for observer params
+// MIGRATION: EventWriter -> MessageWriter for buffered events  
+fn on_app_exit_emit_disable(_exit: On<AppExit>, mut writer: MessageWriter<ReplLifecycleEvent>) {
     writer.write(ReplLifecycleEvent::Disable);
 }
 
-#[derive(Event, Debug)]
+// MIGRATION: Changed from Event to Message - this is a buffered event
+#[derive(Message, Debug, Clone)]
 pub enum ReplBufferEvent {
     Insert(char),
     Backspace,
@@ -195,5 +201,6 @@ pub enum ReplBufferEvent {
     Submit,
 }
 
-#[derive(Event, Debug)]
+// MIGRATION: Changed from Event to Message - this is a buffered event
+#[derive(Message, Debug, Clone)]
 pub struct ReplSubmitEvent(pub String);

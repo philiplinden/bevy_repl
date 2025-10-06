@@ -36,7 +36,8 @@ impl ReplCommand for SpawnEntityCommand {
 }
 
 /// Observer that handles the `spawn` command and spawns into the ECS.
-fn on_spawn(trigger: Trigger<SpawnEntityCommand>, mut commands: Commands) {
+// MIGRATION: Trigger<T> -> On<T> for observer params in Bevy 0.17
+fn on_spawn(trigger: On<SpawnEntityCommand>, mut commands: Commands) {
     let cmd = trigger.event();
 
     // Build the entity

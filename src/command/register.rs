@@ -10,7 +10,10 @@ pub trait ReplAppExt {
 
 impl ReplAppExt for App {
     fn add_repl_command<C: ReplCommand>(&mut self) -> &mut Self {
-        // Add the command event type
+        // MIGRATION: In Bevy 0.17, non-generic Event types are auto-registered
+        // We're keeping this for now as C is generic here, but specific implementations
+        // might not need it if reflect_auto_register is enabled (default)
+        // TODO: Test if this can be removed once bevy_ratatui is 0.17-compatible
         self.add_event::<C>();
 
         // Register command in the REPL

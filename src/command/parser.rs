@@ -86,8 +86,9 @@ impl<C: ReplCommand> CommandParser for TypedCommandParser<C> {
 }
 
 /// System that parses terminal input and triggers command observers
+// MIGRATION: EventReader -> MessageReader for buffered events
 pub fn parse_input_buffer_for_commands(
-    mut submitted_text: EventReader<ReplSubmitEvent>,
+    mut submitted_text: MessageReader<ReplSubmitEvent>,
     mut bevy_commands: Commands,
     repl: Res<Repl>,
 ) {

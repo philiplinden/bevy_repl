@@ -25,7 +25,8 @@ impl Plugin for ReplLogPrintPlugin {
             // screen.
             tracing_to_repl_fmt();
         }
-        app.add_event::<LogEvent>();
+        // MIGRATION: LogEvent is a buffered event, now a Message in 0.17
+        app.add_message::<LogEvent>();
         app.add_systems(
             Update,
             print_log_events_system
@@ -37,7 +38,8 @@ impl Plugin for ReplLogPrintPlugin {
 }
 
 /// Event emitted into the ECS for each tracing log event captured by the layer.
-#[derive(Event, Clone)]
+// MIGRATION: Changed from Event to Message - this is a buffered event
+#[derive(Message, Clone)]
 pub struct LogEvent {
     pub message: String,
     pub level: tracing::Level,
@@ -47,8 +49,9 @@ pub struct LogEvent {
 pub struct CapturedLogEvents(pub mpsc::Receiver<LogEvent>);
 
 /// Transfer all currently available items from the mpsc receiver into the ECS event queue.
+// MIGRATION: EventWriter -> MessageWriter for buffered events
 pub fn transfer_log_events(
-    mut log_events: EventWriter<LogEvent>,
+    mut log_events: MessageWriter<LogEvent>,
     receiver: NonSend<CapturedLogEvents>,
 ) {
     log_events.write_batch(receiver.0.try_iter());
@@ -66,6 +69,7 @@ impl<S: Subscriber> Layer<S> for CaptureLayer {
         event.record(&mut CaptureLayerVisitor(&mut message));
         if let Some(message) = message {
             let metadata = event.metadata();
+            // MIGRATION: LogEvent is now a Message, still sent via mpsc (no change needed here)
             let _ = self.sender.send(LogEvent { message, level: *metadata.level() });
         }
     }
@@ -88,7 +92,8 @@ pub fn custom_layer(app: &mut App) -> Option<BoxedLayer> {
     let layer = CaptureLayer { sender };
 
     app.insert_non_send_resource(CapturedLogEvents(receiver));
-    app.add_event::<LogEvent>();
+    // MIGRATION: LogEvent is a buffered event, now a Message in 0.17
+    app.add_message::<LogEvent>();
     app.add_systems(Update, transfer_log_events.in_set(ReplSet::Pre));
 
     Some(layer.boxed())
@@ -96,7 +101,8 @@ pub fn custom_layer(app: &mut App) -> Option<BoxedLayer> {
 
 /// Convenience system that prints captured `LogEvent`s via the REPL printer so they appear
 /// correctly above the prompt.
-pub fn print_log_events_system(mut events: EventReader<LogEvent>) {
+// MIGRATION: EventReader -> MessageReader for buffered events
+pub fn print_log_events_system(mut events: MessageReader<LogEvent>) {
     use crate::repl_println;
     for ev in events.read() {
         repl_println!("{:5} {}", ev.level, ev.message);
