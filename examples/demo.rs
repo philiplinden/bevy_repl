@@ -35,7 +35,7 @@ impl ReplCommand for BackCommand {
     }
 }
 
-fn on_next(_trigger: Trigger<NextCommand>, mut state: ResMut<DemoState>) {
+fn on_next(_trigger: On<NextCommand>, mut state: ResMut<DemoState>) {
     state.step = match state.step {
         DemoStep::Intro => DemoStep::CommandsAndAliases,
         DemoStep::CommandsAndAliases => DemoStep::Logging,
@@ -47,7 +47,7 @@ fn on_next(_trigger: Trigger<NextCommand>, mut state: ResMut<DemoState>) {
     };
 }
 
-fn on_back(_trigger: Trigger<BackCommand>, mut state: ResMut<DemoState>) {
+fn on_back(_trigger: On<BackCommand>, mut state: ResMut<DemoState>) {
     state.step = match state.step {
         DemoStep::Intro => DemoStep::End,
         DemoStep::CommandsAndAliases => DemoStep::Intro,
@@ -171,7 +171,7 @@ impl ReplCommand for SayCommand {
 }
 
 // System that handles the command with access to Bevy ECS
-fn on_say(trigger: Trigger<SayCommand>) {
+fn on_say(trigger: On<SayCommand>) {
     let command = trigger.event();
 
     let message = if command.shout {
@@ -212,13 +212,13 @@ impl ReplCommand for StopCommand {
     }
 }
 
-fn on_start(_t: Trigger<StartCommand>, mut stream: ResMut<LogStream>) {
+fn on_start(_t: On<StartCommand>, mut stream: ResMut<LogStream>) {
     stream.active = true;
     stream.auto_stop = Some(Timer::from_seconds(5.0, TimerMode::Once));
     repl_println!("Log stream started (auto-stop in ~5s). Use `stop` to end early.");
 }
 
-fn on_stop(_t: Trigger<StopCommand>, mut stream: ResMut<LogStream>) {
+fn on_stop(_t: On<StopCommand>, mut stream: ResMut<LogStream>) {
     if stream.active {
         stream.active = false;
         stream.auto_stop = None;
@@ -235,7 +235,7 @@ fn log_streamer(time: Res<Time>, mut stream: ResMut<LogStream>) {
             bevy::log::info!("demo log tick at {:.2}s", time.elapsed_secs());
         }
         if let Some(timer) = stream.auto_stop.as_mut() {
-            if timer.tick(time.delta()).finished() {
+            if timer.tick(time.delta()).is_finished() {
                 stream.active = false;
                 stream.auto_stop = None;
                 repl_println!("Auto-stopped log stream.");
@@ -253,7 +253,7 @@ impl ReplCommand for PingCommand {
     }
 }
 
-fn on_ping(_t: Trigger<PingCommand>) {
+fn on_ping(_t: On<PingCommand>) {
     repl_println!("pong");
 }
 
@@ -277,7 +277,7 @@ impl ReplCommand for SpawnCommand {
         Ok(SpawnCommand { name })
     }
 }
-fn on_spawn(trigger: Trigger<SpawnCommand>, mut commands: Commands) {
+fn on_spawn(trigger: On<SpawnCommand>, mut commands: Commands) {
     let name = trigger.event().name.clone();
     commands.spawn(Name::new(name.clone()));
     repl_println!("Spawned entity '{name}'.");
@@ -290,7 +290,7 @@ impl ReplCommand for ListCommand {
         clap::Command::new("list").about("List all entities with a Name component")
     }
 }
-fn on_list(_t: Trigger<ListCommand>, query: Query<(Entity, &Name)>) {
+fn on_list(_t: On<ListCommand>, query: Query<(Entity, &Name)>) {
     let count = query.iter().count();
     repl_println!("Entities: {}", count);
     for (e, name) in query.iter() {
@@ -317,7 +317,7 @@ impl ReplCommand for QueryCommand {
         Ok(QueryCommand { substring })
     }
 }
-fn on_query(trigger: Trigger<QueryCommand>, query: Query<(Entity, &Name)>) {
+fn on_query(trigger: On<QueryCommand>, query: Query<(Entity, &Name)>) {
     let sub = trigger.event().substring.to_lowercase();
     let mut found = 0usize;
     for (e, name) in query.iter() {
@@ -348,11 +348,7 @@ impl ReplCommand for RemoveCommand {
         Ok(RemoveCommand { substring })
     }
 }
-fn on_remove(
-    trigger: Trigger<RemoveCommand>,
-    mut commands: Commands,
-    query: Query<(Entity, &Name)>,
-) {
+fn on_remove(trigger: On<RemoveCommand>, mut commands: Commands, query: Query<(Entity, &Name)>) {
     let sub = trigger.event().substring.to_lowercase();
     let mut removed = 0usize;
     for (e, name) in query.iter() {
@@ -371,7 +367,7 @@ impl ReplCommand for TimeCommand {
         clap::Command::new("time").about("Show the current time (since startup)")
     }
 }
-fn on_time(_t: Trigger<TimeCommand>, time: Res<Time>) {
+fn on_time(_t: On<TimeCommand>, time: Res<Time>) {
     repl_println!("elapsed: {:.3}s", time.elapsed_secs());
 }
 
@@ -491,7 +487,7 @@ Try:
     remove <substring>  - remove entities with a Name component containing the substring
     time                - get the current time from the Time resource
 
-`next` to proceed. 
+`next` to proceed.
 "#,
             );
         }

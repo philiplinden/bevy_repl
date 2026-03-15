@@ -53,7 +53,7 @@ impl ReplCommand for PingCommand {
     }
 }
 
-fn on_ping(_: Trigger<PingCommand>) {
+fn on_ping(_: On<PingCommand>) {
     repl_println!("Pong");
 }
 

@@ -65,7 +65,7 @@ impl ReplCommand for TimeScaleCommand {
 }
 
 // -------- Observer that mutates the resource --------
-fn on_time_scale(trigger: Trigger<TimeScaleCommand>, mut scale: ResMut<TimeScale>) {
+fn on_time_scale(trigger: On<TimeScaleCommand>, mut scale: ResMut<TimeScale>) {
     let cmd = trigger.event();
 
     match (cmd.set, cmd.add) {
@@ -123,8 +123,6 @@ fn main() {
             DefaultPlugins.set(bevy::app::ScheduleRunnerPlugin::run_loop(
                 std::time::Duration::from_secs_f64(1.0 / 60.0),
             )),
-            // Required so the REPL can handle keyboard input
-            bevy::input::InputPlugin::default(),
             ReplPlugins,
         ))
         .add_repl_command::<TimeScaleCommand>()

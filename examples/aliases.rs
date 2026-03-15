@@ -41,7 +41,7 @@ impl ReplCommand for SayCommand {
 }
 
 // System that handles the command with access to Bevy ECS
-fn on_say(trigger: Trigger<SayCommand>) {
+fn on_say(trigger: On<SayCommand>) {
     let command = trigger.event();
 
     let message = command.message.clone();
@@ -65,9 +65,9 @@ fn instructions() {
 fn main() {
     App::new()
         .add_plugins((
-            DefaultPlugins.set(bevy::app::ScheduleRunnerPlugin::run_loop(std::time::Duration::from_secs_f64(
-                1.0 / 60.0,
-            ))),
+            DefaultPlugins.set(bevy::app::ScheduleRunnerPlugin::run_loop(
+                std::time::Duration::from_secs_f64(1.0 / 60.0),
+            )),
             ReplPlugins,
         ))
         .add_repl_command::<SayCommand>()

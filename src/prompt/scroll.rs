@@ -1,8 +1,8 @@
 use bevy::prelude::*;
-use std::io::{stdout, Write};
 use bevy_ratatui::crossterm::terminal;
+use std::io::{stdout, Write};
 
-use crate::print::{set_scroll_region_info, printed_lines};
+use crate::print::{printed_lines, set_scroll_region_info};
 use crate::repl::{Repl, ReplSet};
 
 pub struct ScrollRegionPlugin;
@@ -15,12 +15,10 @@ impl Plugin for ScrollRegionPlugin {
         // terminal size isn't ready at Startup and to provide ordering guarantees.
         app.add_systems(
             PostStartup,
-            (
-                manage_scroll_region
-                    .in_set(ReplSet::All)
-                    .after(ReplSet::Render)
-                    .before(ReplSet::Post),
-            ),
+            (manage_scroll_region
+                .in_set(ReplSet::All)
+                .after(ReplSet::Render)
+                .before(ReplSet::Post),),
         );
     }
 }
@@ -34,16 +32,19 @@ pub struct ScrollRegionState {
 
 /// Ensure the terminal scroll region reserves the bottom prompt area so that
 /// stdout/logs scroll above the REPL prompt instead of overwriting it.
-fn manage_scroll_region(
-    repl: Res<Repl>,
-    mut last: Local<Option<ScrollRegionState>>,
-) {
+fn manage_scroll_region(repl: Res<Repl>, mut last: Local<Option<ScrollRegionState>>) {
     let reserved_lines: u16 = if repl.enabled { 1 } else { 0 };
 
     // Read terminal size; if unavailable, do nothing
-    let Ok((_w, h)) = terminal::size() else { return };
+    let Ok((_w, h)) = terminal::size() else {
+        return;
+    };
 
-    let desired = ScrollRegionState { enabled: repl.enabled, height: h, reserved_lines };
+    let desired = ScrollRegionState {
+        enabled: repl.enabled,
+        height: h,
+        reserved_lines,
+    };
     if last.as_ref() == Some(&desired) {
         return; // No change
     }
@@ -64,7 +65,13 @@ fn manage_scroll_region(
         let bottom = h.saturating_sub(reserved_lines);
         let _ = write!(out, "\x1B[1;{}r", bottom);
         set_scroll_region_info(h, reserved_lines);
-        scroll_reserved_region_up(&mut out, bottom, reserved_lines, prev_reserved, printed_lines());
+        scroll_reserved_region_up(
+            &mut out,
+            bottom,
+            reserved_lines,
+            prev_reserved,
+            printed_lines(),
+        );
     }
     let _ = out.flush();
 

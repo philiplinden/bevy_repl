@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use bevy_ratatui::crossterm::event::{KeyCode, KeyModifiers};
-use bevy_ratatui::event::KeyEvent;
+use bevy_ratatui::event::KeyMessage;
 
 use crate::repl::ReplBufferEvent;
 
@@ -18,7 +18,7 @@ pub struct Binding {
     pub mods: KeyModifiers,
 }
 impl Binding {
-    fn matches(&self, ev: &KeyEvent) -> bool {
+    fn matches(&self, ev: &KeyMessage) -> bool {
         // For non-character keys, SHIFT is often inconsistently reported by terminals.
         // Treat SHIFT as a no-op for non-char keys by normalizing it away for comparison.
         match self.code {
@@ -90,31 +90,55 @@ impl Default for PromptKeymap {
         use KeyCode as K;
         use KeyModifiers as M;
         Self {
-            submit:    Some(Binding { code: K::Enter,     mods: M::NONE }),
-            backspace: Some(Binding { code: K::Backspace, mods: M::NONE }),
-            left:      Some(Binding { code: K::Left,      mods: M::NONE }),
-            right:     Some(Binding { code: K::Right,     mods: M::NONE }),
-            home:      Some(Binding { code: K::Home,      mods: M::NONE }),
-            end:       Some(Binding { code: K::End,       mods: M::NONE }),
-            delete:    Some(Binding { code: K::Delete,    mods: M::NONE }),
-            clear:     Some(Binding { code: K::Esc,       mods: M::NONE }),
+            submit: Some(Binding {
+                code: K::Enter,
+                mods: M::NONE,
+            }),
+            backspace: Some(Binding {
+                code: K::Backspace,
+                mods: M::NONE,
+            }),
+            left: Some(Binding {
+                code: K::Left,
+                mods: M::NONE,
+            }),
+            right: Some(Binding {
+                code: K::Right,
+                mods: M::NONE,
+            }),
+            home: Some(Binding {
+                code: K::Home,
+                mods: M::NONE,
+            }),
+            end: Some(Binding {
+                code: K::End,
+                mods: M::NONE,
+            }),
+            delete: Some(Binding {
+                code: K::Delete,
+                mods: M::NONE,
+            }),
+            clear: Some(Binding {
+                code: K::Esc,
+                mods: M::NONE,
+            }),
             allow_plain_char_insert: true,
         }
     }
 }
 
 impl PromptKeymap {
-    pub fn map(&self, event: &KeyEvent) -> Option<ReplBufferEvent> {
+    pub fn map(&self, event: &KeyMessage) -> Option<ReplBufferEvent> {
         // Explicit bindings (exact key + modifiers), ordered by precedence
         if let Some(ev) = [
-            (self.submit.as_ref(),    ReplBufferEvent::Submit),
+            (self.submit.as_ref(), ReplBufferEvent::Submit),
             (self.backspace.as_ref(), ReplBufferEvent::Backspace),
-            (self.left.as_ref(),      ReplBufferEvent::MoveLeft),
-            (self.right.as_ref(),     ReplBufferEvent::MoveRight),
-            (self.home.as_ref(),      ReplBufferEvent::JumpToStart),
-            (self.end.as_ref(),       ReplBufferEvent::JumpToEnd),
-            (self.delete.as_ref(),    ReplBufferEvent::Delete),
-            (self.clear.as_ref(),     ReplBufferEvent::Clear),
+            (self.left.as_ref(), ReplBufferEvent::MoveLeft),
+            (self.right.as_ref(), ReplBufferEvent::MoveRight),
+            (self.home.as_ref(), ReplBufferEvent::JumpToStart),
+            (self.end.as_ref(), ReplBufferEvent::JumpToEnd),
+            (self.delete.as_ref(), ReplBufferEvent::Delete),
+            (self.clear.as_ref(), ReplBufferEvent::Clear),
         ]
         .into_iter()
         .find_map(|(b, out)| b.and_then(|b| b.matches(event).then_some(out)))
@@ -134,14 +158,14 @@ impl PromptKeymap {
 
     pub fn none() -> Self {
         Self {
-            submit:    None,
+            submit: None,
             backspace: None,
-            left:      None,
-            right:     None,
-            home:      None,
-            end:       None,
-            delete:    None,
-            clear:     None,
+            left: None,
+            right: None,
+            home: None,
+            end: None,
+            delete: None,
+            clear: None,
             allow_plain_char_insert: false,
         }
     }

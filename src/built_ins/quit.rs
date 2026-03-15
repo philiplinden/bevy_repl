@@ -18,9 +18,6 @@ impl crate::command::ReplCommand for QuitCommand {
     }
 }
 
-// MIGRATION: Two changes here:
-// 1. Trigger<T> -> On<T> for observer params
-// 2. AppExit is now an observer event, use Commands::trigger instead of EventWriter
-fn on_quit(_trigger: On<QuitCommand>, mut commands: Commands) {
-    commands.trigger(AppExit::Success);
+fn on_quit(_trigger: On<QuitCommand>, mut exit: MessageWriter<AppExit>) {
+    exit.write(AppExit::Success);
 }

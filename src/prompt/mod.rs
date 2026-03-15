@@ -1,14 +1,14 @@
 pub mod input;
+pub mod keymap;
 pub mod renderer;
 pub mod scroll;
-pub mod keymap;
 
 use bevy::prelude::*;
 use std::sync::Arc;
 
 use self::input::PromptInputPlugin;
 use self::keymap::PromptKeymapPlugin;
-use self::renderer::{PromptRenderer, PromptRenderPlugin};
+use self::renderer::{PromptRenderPlugin, PromptRenderer};
 use self::scroll::ScrollRegionPlugin;
 
 /// Visual configuration for the REPL prompt bar.
@@ -30,14 +30,21 @@ impl Default for PromptPlugin {
 impl Plugin for PromptPlugin {
     fn build(&self, app: &mut App) {
         app.insert_resource(ReplPrompt {
-            symbol: Some(self.config.symbol.clone().unwrap_or_else(|| "> ".to_string())),
+            symbol: Some(
+                self.config
+                    .symbol
+                    .clone()
+                    .unwrap_or_else(|| "> ".to_string()),
+            ),
             buffer: String::new(),
         });
         app.insert_resource(self.config.clone());
         app.add_plugins((
             PromptInputPlugin,
             PromptKeymapPlugin,
-            PromptRenderPlugin { renderer: self.renderer.clone() },
+            PromptRenderPlugin {
+                renderer: self.renderer.clone(),
+            },
             ScrollRegionPlugin,
         ));
     }

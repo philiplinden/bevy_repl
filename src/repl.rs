@@ -35,17 +35,23 @@ impl Default for ReplPlugin {
 impl ReplPlugin {
     /// Create a REPL plugin that starts enabled (default).
     pub fn enabled() -> Self {
-        Self { enable_on_startup: true }
+        Self {
+            enable_on_startup: true,
+        }
     }
 
     /// Create a REPL plugin that starts disabled (no runtime toggle in v1).
     pub fn disabled() -> Self {
-        Self { enable_on_startup: false }
+        Self {
+            enable_on_startup: false,
+        }
     }
 
     /// Configure whether the REPL starts enabled.
     pub fn with_enabled(enabled: bool) -> Self {
-        Self { enable_on_startup: enabled }
+        Self {
+            enable_on_startup: enabled,
+        }
     }
 }
 
@@ -55,13 +61,11 @@ impl Plugin for ReplPlugin {
             enabled: self.enable_on_startup,
             ..default()
         });
-        // MIGRATION: These are buffered events, now Messages in 0.17
         app.add_message::<ReplSubmitEvent>();
         app.add_message::<ReplBufferEvent>();
-        // Internal lifecycle event to manage terminal context without runtime toggle
         app.add_message::<ReplLifecycleEvent>();
         app.add_systems(Startup, emit_enable_if_enabled);
-        app.add_observer(on_app_exit_emit_disable);
+        app.add_systems(Last, on_app_exit_emit_disable);
         app.configure_sets(
             Update,
             (
@@ -71,15 +75,13 @@ impl Plugin for ReplPlugin {
                 ReplSet::Render,
                 ReplSet::Post,
             )
-                .chain()
+                .chain(),
         );
         // Wrapper set to anchor all REPL systems at the end of the ratatui set.
         // All of the REPL sets only run when the REPL is enabled.
         app.configure_sets(
             Update,
-            ReplSet::All
-                .in_set(InputSet::Post)
-                .run_if(repl_is_enabled),
+            ReplSet::All.in_set(InputSet::Post).run_if(repl_is_enabled),
         );
     }
 }
@@ -166,28 +168,27 @@ pub enum ReplSet {
     Post,
 }
 
-// MIGRATION: Changed from Event to Message - this is a buffered event
 #[derive(Message, Clone)]
 pub enum ReplLifecycleEvent {
     Enable,
     Disable,
 }
 
-// TODO: someday this could be a system triggered by state transitions
-// MIGRATION: EventWriter -> MessageWriter for buffered events
 fn emit_enable_if_enabled(repl: Res<Repl>, mut writer: MessageWriter<ReplLifecycleEvent>) {
     if repl.enabled {
         writer.write(ReplLifecycleEvent::Enable);
     }
 }
 
-// MIGRATION: Trigger<T> -> On<T> for observer params
-// MIGRATION: EventWriter -> MessageWriter for buffered events  
-fn on_app_exit_emit_disable(_exit: On<AppExit>, mut writer: MessageWriter<ReplLifecycleEvent>) {
-    writer.write(ReplLifecycleEvent::Disable);
+fn on_app_exit_emit_disable(
+    mut exit: MessageReader<AppExit>,
+    mut writer: MessageWriter<ReplLifecycleEvent>,
+) {
+    for _ in exit.read() {
+        writer.write(ReplLifecycleEvent::Disable);
+    }
 }
 
-// MIGRATION: Changed from Event to Message - this is a buffered event
 #[derive(Message, Debug, Clone)]
 pub enum ReplBufferEvent {
     Insert(char),
@@ -201,6 +202,5 @@ pub enum ReplBufferEvent {
     Submit,
 }
 
-// MIGRATION: Changed from Event to Message - this is a buffered event
 #[derive(Message, Debug, Clone)]
 pub struct ReplSubmitEvent(pub String);

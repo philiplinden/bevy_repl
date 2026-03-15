@@ -14,7 +14,7 @@ impl ReplCommand for PingCommand {
     }
 }
 
-fn on_ping(_trigger: Trigger<PingCommand>) {
+fn on_ping(_trigger: On<PingCommand>) {
     info!("Pong");
 }
 

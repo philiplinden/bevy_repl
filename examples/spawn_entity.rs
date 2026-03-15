@@ -1,5 +1,5 @@
 //! Command example that spawns an entity via the REPL.
-//! 
+//!
 //! Demonstrates:
 //! - Defining a command with clap's derive macros
 //! - Automatic `ReplCommand` via `#[derive(ReplCommand)]`
@@ -36,7 +36,6 @@ impl ReplCommand for SpawnEntityCommand {
 }
 
 /// Observer that handles the `spawn` command and spawns into the ECS.
-// MIGRATION: Trigger<T> -> On<T> for observer params in Bevy 0.17
 fn on_spawn(trigger: On<SpawnEntityCommand>, mut commands: Commands) {
     let cmd = trigger.event();
 
@@ -66,10 +65,9 @@ fn instructions() {
 fn main() {
     App::new()
         .add_plugins((
-            DefaultPlugins.set(bevy::app::ScheduleRunnerPlugin::run_loop(std::time::Duration::from_secs_f64(
-                1.0 / 60.0,
-            ))),
-            bevy::input::InputPlugin::default(),
+            DefaultPlugins.set(bevy::app::ScheduleRunnerPlugin::run_loop(
+                std::time::Duration::from_secs_f64(1.0 / 60.0),
+            )),
             ReplPlugins,
         ))
         .add_repl_command::<SpawnEntityCommand>()

@@ -3,10 +3,10 @@ use bevy::prelude::*;
 #[cfg(feature = "quit")]
 mod quit;
 
-#[cfg(feature="clear")]
+#[cfg(feature = "clear")]
 mod clear;
 
-#[cfg(feature="help")]
+#[cfg(feature = "help")]
 mod help;
 
 pub struct ReplDefaultCommandsPlugin;

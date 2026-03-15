@@ -3,7 +3,12 @@ use ratatui::layout::Rect;
 /// Compute the bottom-aligned bar area with the given height inside the total frame area.
 pub fn bottom_bar_area(total: Rect, height: u16) -> Rect {
     if total.height == 0 || height == 0 || total.height < height {
-        return Rect { x: total.x, y: total.y, width: total.width, height: 0 };
+        return Rect {
+            x: total.x,
+            y: total.y,
+            width: total.width,
+            height: 0,
+        };
     }
     Rect {
         x: total.x,
