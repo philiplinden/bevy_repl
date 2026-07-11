@@ -91,7 +91,7 @@ pub fn custom_layer(app: &mut App) -> Option<BoxedLayer> {
     let (sender, receiver) = mpsc::channel();
     let layer = CaptureLayer { sender };
 
-    app.insert_non_send_resource(CapturedLogEvents(receiver));
+    app.insert_non_send(CapturedLogEvents(receiver));
     app.add_message::<LogEvent>();
     app.add_systems(Update, transfer_log_events.in_set(ReplSet::Pre));
 

@@ -12,14 +12,14 @@ keywords = ["bevy", "repl", "console", "debugging"]
 categories = ["game-development", "development-tools"]
 
 [dependencies]
-bevy = { version = "0.18", default-features = false, features = ["bevy_log", "trace"]}
-bevy_ratatui = { version = "0.11", features = ["crossterm"] }
-ratatui = "0.30.0"
-clap = { version = "4.5.46" }
+bevy = { version = "0.19", default-features = false, features = ["bevy_log", "trace"]}
+bevy_ratatui = { git = "https://github.com/apekros/bevy_ratatui", rev = "631c06f160ca04ae9960c58bb399cb23513a60eb", features = ["crossterm"] }
+ratatui = "0.30.2"
+clap = { version = "4.6.1" }
 shell-words = "1.1"
 bevy_repl_derive = { version = "0.1.0", path = "./bevy_repl_derive", optional = true }
 ctrlc = "3"
-anyhow = "1.0.99"
+anyhow = "1.0.103"
 color-eyre = "0.6.5"
 
 # Error handling and logging
