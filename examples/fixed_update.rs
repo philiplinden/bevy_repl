@@ -67,8 +67,7 @@ struct StartTimerCommand;
 
 impl ReplCommand for StartTimerCommand {
     fn clap_command() -> clap::Command {
-        clap::Command::new("start")
-            .about("Starts the timer")
+        clap::Command::new("start").about("Starts the timer")
     }
 }
 
@@ -77,8 +76,7 @@ struct StopTimerCommand;
 
 impl ReplCommand for StopTimerCommand {
     fn clap_command() -> clap::Command {
-        clap::Command::new("stop")
-            .about("Stops the timer")
+        clap::Command::new("stop").about("Stops the timer")
     }
 }
 
@@ -87,21 +85,20 @@ struct ResetTimerCommand;
 
 impl ReplCommand for ResetTimerCommand {
     fn clap_command() -> clap::Command {
-        clap::Command::new("reset")
-            .about("Resets the timer to 0")
+        clap::Command::new("reset").about("Resets the timer to 0")
     }
 }
 
 // Command handlers
-fn on_start_timer(_trigger: Trigger<StartTimerCommand>, mut timer: ResMut<TimerResource>) {
+fn on_start_timer(_trigger: On<StartTimerCommand>, mut timer: ResMut<TimerResource>) {
     timer.start();
 }
 
-fn on_stop_timer(_trigger: Trigger<StopTimerCommand>, mut timer: ResMut<TimerResource>) {
+fn on_stop_timer(_trigger: On<StopTimerCommand>, mut timer: ResMut<TimerResource>) {
     timer.stop();
 }
 
-fn on_reset_timer(_trigger: Trigger<ResetTimerCommand>, mut timer: ResMut<TimerResource>) {
+fn on_reset_timer(_trigger: On<ResetTimerCommand>, mut timer: ResMut<TimerResource>) {
     timer.reset();
 }
 
@@ -114,17 +111,20 @@ fn display_timer_status(timer: Res<TimerResource>) {
         TimerState::Running => "Running",
         TimerState::Stopped => "Stopped",
     };
-    info!("Timer Status: {} | Elapsed: {:.2} seconds", state_str, timer.elapsed_seconds);
+    info!(
+        "Timer Status: {} | Elapsed: {:.2} seconds",
+        state_str, timer.elapsed_seconds
+    );
 }
 
 // System that increments the timer when running
 fn update_timer(mut timer: ResMut<TimerResource>, time: Res<Time>) {
     if timer.is_running() {
         timer.timer.tick(time.delta());
-        
+
         // Increment elapsed time by the delta time
         timer.elapsed_seconds += time.delta_secs();
-        
+
         // Log every second when running
         if timer.timer.just_finished() {
             info!("Timer: {:.2} seconds", timer.elapsed_seconds);
@@ -145,7 +145,6 @@ fn instructions() {
     repl_println!("Press CTRL+C to exit any time.");
     repl_println!();
 }
-
 
 fn main() {
     App::new()

@@ -1,5 +1,5 @@
 //! Bevy alternate screen example.
-//! 
+//!
 //! Demonstrates:
 //! - Using RatatuiPlugins in conjunction with ReplPlugins
 //! - Routing Bevy/tracing logs to the REPL
@@ -25,27 +25,27 @@ impl ReplCommand for PingCommand {
     }
 }
 
-fn error_on_ping(_trigger: Trigger<PingCommand>) {
+fn error_on_ping(_trigger: On<PingCommand>) {
     tracing::error!("Pong");
 }
 
-fn warn_on_ping(_trigger: Trigger<PingCommand>) {
+fn warn_on_ping(_trigger: On<PingCommand>) {
     tracing::warn!("Pong");
 }
 
-fn info_on_ping(_trigger: Trigger<PingCommand>) {
+fn info_on_ping(_trigger: On<PingCommand>) {
     tracing::info!("Pong");
 }
 
-fn debug_on_ping(_trigger: Trigger<PingCommand>) {
+fn debug_on_ping(_trigger: On<PingCommand>) {
     tracing::debug!("Pong");
 }
 
-fn trace_on_ping(_trigger: Trigger<PingCommand>) {
+fn trace_on_ping(_trigger: On<PingCommand>) {
     tracing::trace!("Pong");
 }
 
-fn print_on_ping(_trigger: Trigger<PingCommand>) {
+fn print_on_ping(_trigger: On<PingCommand>) {
     repl_println!("(direct print via repl_println!) Pong");
 }
 
@@ -54,9 +54,11 @@ fn main() {
         .add_plugins((
             DefaultPlugins
                 .set(bevy::app::ScheduleRunnerPlugin::run_loop(
-                    std::time::Duration::from_secs_f64(1.0 / 60.0)))
+                    std::time::Duration::from_secs_f64(1.0 / 60.0),
+                ))
                 // Disable the default log plugin, ratatui will handle logs
-                .build().disable::<bevy::log::LogPlugin>(),
+                .build()
+                .disable::<bevy::log::LogPlugin>(),
             bevy_ratatui::RatatuiPlugins::default(),
             ReplPlugins,
         ))

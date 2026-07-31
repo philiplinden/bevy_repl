@@ -1,11 +1,11 @@
-use bevy::prelude::*;
 use bevy::input::keyboard::KeyboardInput;
+use bevy::prelude::*;
 use bevy_ratatui::crossterm::event::KeyEventKind as CrosstermKeyEventKind;
-use bevy_ratatui::event::KeyEvent;
+use bevy_ratatui::event::KeyMessage;
 use std::io::{stdout, Write};
 
-use crate::repl::{Repl, ReplBufferEvent, ReplSubmitEvent, ReplSet};
 use crate::prompt::keymap::PromptKeymap;
+use crate::repl::{Repl, ReplBufferEvent, ReplSet, ReplSubmitEvent};
 
 pub struct PromptInputPlugin;
 
@@ -26,7 +26,7 @@ impl Plugin for PromptInputPlugin {
                 // prevent key events from reaching game systems while typing into the prompt.
                 block_keyboard_input_forwarding
                     .in_set(ReplSet::Post)
-                    .in_set(ReplSet::All)
+                    .in_set(ReplSet::All),
             ),
         );
     }
@@ -37,8 +37,8 @@ impl Plugin for PromptInputPlugin {
 /// custom keybinds.
 fn update_repl_buffer(
     mut repl: ResMut<Repl>,
-    mut buffer_events: EventReader<ReplBufferEvent>,
-    mut parse_events: EventWriter<ReplSubmitEvent>,
+    mut buffer_events: MessageReader<ReplBufferEvent>,
+    mut parse_events: MessageWriter<ReplSubmitEvent>,
 ) {
     for event in buffer_events.read() {
         match event {
@@ -79,7 +79,7 @@ fn update_repl_buffer(
 /// System that blocks keyboard input from being forwarded to Bevy when REPL is enabled to
 /// prevent key events from reaching game systems while typing into the prompt.
 pub(super) fn block_keyboard_input_forwarding(
-    mut key_events: ResMut<Events<KeyboardInput>>,
+    mut key_events: ResMut<Messages<KeyboardInput>>,
     mut keyboard_input: ResMut<ButtonInput<KeyCode>>,
 ) {
     // Clear all keyboard events
@@ -97,8 +97,8 @@ pub(super) fn block_keyboard_input_forwarding(
 /// explicitly handled with the `ctrlc` crate in
 /// [`crate::repl::install_terminal_safety_nets`].
 pub(super) fn parse_terminal_input(
-    mut crossterm_key_events: EventReader<KeyEvent>,
-    mut buffer_events: EventWriter<ReplBufferEvent>,
+    mut crossterm_key_events: MessageReader<KeyMessage>,
+    mut buffer_events: MessageWriter<ReplBufferEvent>,
     keymap: Res<PromptKeymap>,
 ) {
     for event in crossterm_key_events.read() {

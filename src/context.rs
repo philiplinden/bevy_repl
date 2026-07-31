@@ -1,8 +1,9 @@
 use bevy::prelude::*;
 use bevy_ratatui::{
     crossterm::{
-        ExecutableCommand, cursor,
+        cursor,
         terminal::{disable_raw_mode, enable_raw_mode},
+        ExecutableCommand,
     },
     error::ErrorPlugin,
     event::EventPlugin,
@@ -14,8 +15,8 @@ use color_eyre::{
     config::{EyreHook, HookBuilder, PanicHook},
     eyre,
 };
-use ratatui::{Terminal, backend::CrosstermBackend};
-use std::io::{Stdout, stdout};
+use ratatui::{backend::CrosstermBackend, Terminal};
+use std::io::{stdout, Stdout};
 use std::panic;
 
 /// The plugin behaves like a [`RatatuiContext`] but for [`ReplContext`]. It
@@ -47,7 +48,7 @@ impl Plugin for ReplContextPlugin {
         // Replicates the bevy_ratatui ContextPlugin
         app.add_systems(Startup, context_setup);
         // Replicates the bevy_ratatui CleanupPlugin
-        app.add_observer(context_cleanup);
+        app.add_systems(Last, context_cleanup);
     }
 }
 
@@ -75,7 +76,13 @@ impl ReplContext {
     }
 
     fn restore() -> Result<()> {
+        use std::io::Write;
         let mut stdout = stdout();
+        // Reset scroll region (DECSTBM) in case it was set
+        let _ = write!(stdout, "\x1B[r");
+        // Move cursor to a new line so the shell prompt doesn't overlap
+        let _ = write!(stdout, "\r\n");
+        let _ = stdout.flush();
         stdout.execute(cursor::Show)?;
         disable_raw_mode()?;
         Ok(())
@@ -93,9 +100,11 @@ pub fn context_setup(mut commands: Commands) -> Result {
 /// Equivalent to what [`CleanupPlugin`] does, but for the REPL context. (The
 /// regular cleanup plugin will remove [`RatatuiContext`] resources but not
 /// [`ReplContext`] so we have to do it ourselves.)
-fn context_cleanup(_trigger: Trigger<AppExit>, mut commands: Commands) {
-    commands.remove_resource::<KittyEnabled>();
-    commands.remove_resource::<ReplContext>();
+fn context_cleanup(mut exit: MessageReader<AppExit>, mut commands: Commands) {
+    for _ in exit.read() {
+        commands.remove_resource::<KittyEnabled>();
+        commands.remove_resource::<ReplContext>();
+    }
 }
 
 /// Installs hooks for panic and error handling. This is a ripoff of the

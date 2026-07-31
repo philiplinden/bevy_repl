@@ -1,8 +1,8 @@
-use bevy::prelude::*;
-use bevy_ratatui::event::InputSet;
+use super::ReplCommand;
 use crate::repl::{Repl, ReplSubmitEvent};
 use crate::repl_println;
-use super::ReplCommand;
+use bevy::prelude::*;
+use bevy_ratatui::event::InputSet;
 pub struct ParserPlugin;
 
 impl Plugin for ParserPlugin {
@@ -87,7 +87,7 @@ impl<C: ReplCommand> CommandParser for TypedCommandParser<C> {
 
 /// System that parses terminal input and triggers command observers
 pub fn parse_input_buffer_for_commands(
-    mut submitted_text: EventReader<ReplSubmitEvent>,
+    mut submitted_text: MessageReader<ReplSubmitEvent>,
     mut bevy_commands: Commands,
     repl: Res<Repl>,
 ) {
@@ -112,7 +112,10 @@ pub fn parse_input_buffer_for_commands(
         if let Some(parser) = repl.commands.get(key) {
             let _ = parser.parse_and_trigger(&input, &mut bevy_commands);
         } else {
-            error!("Unknown command '{}'", input);
+            error!(
+                "Unknown command '{}'. Type 'help' to see available commands.",
+                key
+            );
         }
     }
 }

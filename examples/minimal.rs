@@ -1,7 +1,7 @@
 //! Minimal Bevy REPL example.
-//! 
+//!
 //! This example shows the minimum amount of dependencies needed to use the REPL.
-//! 
+//!
 //! Demonstrates:
 //! - Registering a simple `ReplCommand` (ping)
 //! - Running headless via `ScheduleRunnerPlugin`
@@ -18,7 +18,7 @@ impl ReplCommand for PingCommand {
     }
 }
 
-fn on_ping(_trigger: Trigger<PingCommand>) {
+fn on_ping(_trigger: On<PingCommand>) {
     repl_println!("Pong");
 }
 
@@ -36,11 +36,9 @@ fn instructions() {
 fn main() {
     App::new()
         .add_plugins((
-            DefaultPlugins.set(bevy::app::ScheduleRunnerPlugin::run_loop(std::time::Duration::from_secs_f64(
-                1.0 / 60.0,
-            ))),
-            // Input plugin is required so the REPL can handle keyboard input
-            bevy::input::InputPlugin::default(),
+            DefaultPlugins.set(bevy::app::ScheduleRunnerPlugin::run_loop(
+                std::time::Duration::from_secs_f64(1.0 / 60.0),
+            )),
             // Runs the REPL headless in the terminal
             ReplPlugins,
         ))

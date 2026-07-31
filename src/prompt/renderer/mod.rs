@@ -7,9 +7,9 @@ use bevy::prelude::*;
 use bevy_ratatui::RatatuiContext;
 use ratatui::layout::Rect;
 
-use crate::repl::{Repl, ReplSet};
 use super::{ReplPrompt, ReplPromptConfig};
-
+use crate::context::ReplContext;
+use crate::repl::{Repl, ReplSet};
 
 /// Public label: "scroll region ready". Always available, even in minimal mode.
 pub struct PromptRenderPlugin {
@@ -49,10 +49,13 @@ impl Plugin for PromptRenderPlugin {
     }
 }
 
-/// Render entrypoint: delegates to the active renderer strategy
+/// Render entrypoint: delegates to the active renderer strategy.
+///
+/// Prefers `RatatuiContext` (alternate screen) when present, otherwise falls
+/// back to `ReplContext` (main screen, no alternate screen).
 pub(super) fn display_prompt(
-    // Prefer ratatui's default terminal context when present (alternate screen)
     term_ratatui: Option<ResMut<RatatuiContext>>,
+    term_repl: Option<ResMut<ReplContext>>,
     repl: Res<Repl>,
     prompt: Res<ReplPrompt>,
     visuals: Option<Res<ReplPromptConfig>>,
@@ -60,11 +63,25 @@ pub(super) fn display_prompt(
 ) {
     let visuals = visuals.map(|v| v.clone()).unwrap_or_default();
 
+    let render = |f: &mut ratatui::Frame<'_>| {
+        let area = Rect {
+            x: 0,
+            y: 0,
+            width: f.area().width,
+            height: f.area().height,
+        };
+        let ctx = RenderCtx {
+            repl: &repl,
+            prompt: &prompt,
+            visuals: &visuals,
+            area,
+        };
+        active.0.render(f, &ctx);
+    };
+
     if let Some(mut term) = term_ratatui {
-        let _ = term.draw(|f| {
-            let area = Rect { x: 0, y: 0, width: f.area().width, height: f.area().height };
-            let ctx = RenderCtx { repl: &repl, prompt: &prompt, visuals: &visuals, area };
-            active.0.render(f, &ctx);
-        });
-    } else { return }; // No terminal context yet
+        let _ = term.draw(render);
+    } else if let Some(mut term) = term_repl {
+        let _ = term.draw(render);
+    }
 }

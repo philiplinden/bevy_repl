@@ -3,12 +3,12 @@
 
 use std::sync::mpsc;
 
-use bevy::prelude::*;
 use bevy::log::{
     tracing::{self, Subscriber},
     tracing_subscriber::{self as ts, Layer},
     BoxedLayer,
 };
+use bevy::prelude::*;
 
 use crate::repl::ReplSet;
 
@@ -25,7 +25,7 @@ impl Plugin for ReplLogPrintPlugin {
             // screen.
             tracing_to_repl_fmt();
         }
-        app.add_event::<LogEvent>();
+        app.add_message::<LogEvent>();
         app.add_systems(
             Update,
             print_log_events_system
@@ -37,7 +37,7 @@ impl Plugin for ReplLogPrintPlugin {
 }
 
 /// Event emitted into the ECS for each tracing log event captured by the layer.
-#[derive(Event, Clone)]
+#[derive(Message, Clone)]
 pub struct LogEvent {
     pub message: String,
     pub level: tracing::Level,
@@ -48,7 +48,7 @@ pub struct CapturedLogEvents(pub mpsc::Receiver<LogEvent>);
 
 /// Transfer all currently available items from the mpsc receiver into the ECS event queue.
 pub fn transfer_log_events(
-    mut log_events: EventWriter<LogEvent>,
+    mut log_events: MessageWriter<LogEvent>,
     receiver: NonSend<CapturedLogEvents>,
 ) {
     log_events.write_batch(receiver.0.try_iter());
@@ -66,7 +66,11 @@ impl<S: Subscriber> Layer<S> for CaptureLayer {
         event.record(&mut CaptureLayerVisitor(&mut message));
         if let Some(message) = message {
             let metadata = event.metadata();
-            let _ = self.sender.send(LogEvent { message, level: *metadata.level() });
+
+            let _ = self.sender.send(LogEvent {
+                message,
+                level: *metadata.level(),
+            });
         }
     }
 }
@@ -87,8 +91,8 @@ pub fn custom_layer(app: &mut App) -> Option<BoxedLayer> {
     let (sender, receiver) = mpsc::channel();
     let layer = CaptureLayer { sender };
 
-    app.insert_non_send_resource(CapturedLogEvents(receiver));
-    app.add_event::<LogEvent>();
+    app.insert_non_send(CapturedLogEvents(receiver));
+    app.add_message::<LogEvent>();
     app.add_systems(Update, transfer_log_events.in_set(ReplSet::Pre));
 
     Some(layer.boxed())
@@ -96,7 +100,7 @@ pub fn custom_layer(app: &mut App) -> Option<BoxedLayer> {
 
 /// Convenience system that prints captured `LogEvent`s via the REPL printer so they appear
 /// correctly above the prompt.
-pub fn print_log_events_system(mut events: EventReader<LogEvent>) {
+pub fn print_log_events_system(mut events: MessageReader<LogEvent>) {
     use crate::repl_println;
     for ev in events.read() {
         repl_println!("{:5} {}", ev.level, ev.message);
@@ -112,11 +116,15 @@ struct ReplMakeWriter;
 
 impl ts::fmt::MakeWriter<'_> for ReplMakeWriter {
     type Writer = ReplWriter;
-    fn make_writer(&self) -> Self::Writer { ReplWriter::default() }
+    fn make_writer(&self) -> Self::Writer {
+        ReplWriter::default()
+    }
 }
 
 #[derive(Default)]
-struct ReplWriter { buf: String }
+struct ReplWriter {
+    buf: String,
+}
 
 impl std::io::Write for ReplWriter {
     fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
@@ -150,8 +158,8 @@ pub fn tracing_to_repl_fmt() {
 /// Same as `install_tracing_to_repl_fmt`, but lets you choose the max log level
 /// (to mirror the `level` used by Bevy's `LogPlugin`).
 pub fn tracing_to_repl_fmt_with_level(level: bevy::log::Level) {
-    use ts::{fmt, prelude::*, registry::Registry};
     use ts::filter::LevelFilter;
+    use ts::{fmt, prelude::*, registry::Registry};
 
     let lf = match level {
         bevy::log::Level::ERROR => LevelFilter::ERROR,

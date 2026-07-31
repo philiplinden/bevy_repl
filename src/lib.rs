@@ -30,12 +30,12 @@ pub mod prelude {
     pub use crate::command::ReplCommand;
     pub use crate::command::{ReplAppExt, ReplResult};
     pub use crate::prompt::{
-        PromptPlugin, ReplPrompt, ReplPromptConfig,
-        renderer::{ActiveRenderer, PromptRenderPlugin, PromptRenderer, simple::SimpleRenderer},
         keymap::{Binding as ReplKeybind, PromptKeymap},
+        renderer::{simple::SimpleRenderer, ActiveRenderer, PromptRenderPlugin, PromptRenderer},
+        PromptPlugin, ReplPrompt, ReplPromptConfig,
     };
     pub use crate::repl::{
-        Repl, ReplBufferEvent, ReplPlugin, ReplSet, ReplSubmitEvent, repl_is_enabled,
+        repl_is_enabled, Repl, ReplBufferEvent, ReplPlugin, ReplSet, ReplSubmitEvent,
     };
     // Bring the robust printing macro into the prelude for convenient use.
     // This allows: `use bevy_repl::prelude::*;` then `repl_println!(...)`.
@@ -45,8 +45,8 @@ pub mod prelude {
 
     pub use crate::context::ReplContextPlugin;
     pub use crate::log_ecs::{
-        LogEvent, custom_layer as repl_log_custom_layer, print_log_events_system,
-        tracing_to_repl_fmt, tracing_to_repl_fmt_with_level,
+        custom_layer as repl_log_custom_layer, print_log_events_system, tracing_to_repl_fmt,
+        tracing_to_repl_fmt_with_level, LogEvent,
     };
     pub use crate::plugin::ReplPlugins;
 
@@ -54,7 +54,10 @@ pub mod prelude {
     pub use bevy_repl_derive::ReplCommand;
 
     // re-exports for convenience
-    pub use bevy_ratatui::crossterm::event::{KeyCode as CrosstermKey, KeyModifiers as CrosstermMods};
+    pub use bevy_ratatui::crossterm::event::{
+        KeyCode as CrosstermKey, KeyModifiers as CrosstermMods,
+    };
+    pub use bevy_ratatui::event::KeyMessage;
 }
 
 // re-export at the root for convenience

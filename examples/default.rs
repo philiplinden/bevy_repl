@@ -37,7 +37,7 @@ impl ReplCommand for PrintCommand {
 }
 
 // System that handles the command with access to Bevy ECS
-fn on_print(trigger: Trigger<PrintCommand>) {
+fn on_print(trigger: On<PrintCommand>) {
     let command = trigger.event();
     let message = command.message.clone();
     repl_println!("printing: {}", message);
@@ -69,7 +69,7 @@ impl ReplCommand for LogCommand {
 }
 
 // System that handles the command with access to Bevy ECS
-fn on_log(trigger: Trigger<LogCommand>) {
+fn on_log(trigger: On<LogCommand>) {
     let command = trigger.event();
     let message = command.message.clone();
     tracing::info!("logging: {}", message);

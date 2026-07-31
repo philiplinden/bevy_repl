@@ -1,5 +1,5 @@
 //! Simple, robust printing helpers suitable for raw/alternate screen.
-//! 
+//!
 //! Use the `repl_println!` macro to print a formatted line that:
 //! - moves the cursor to column 0
 //! - writes the formatted content
@@ -9,10 +9,10 @@
 //! This avoids newline/cursor issues that can happen in raw or alternate screen modes.
 
 use std::io::{stdout, Write};
-use std::sync::atomic::{AtomicU64, AtomicU16, Ordering};
+use std::sync::atomic::{AtomicU16, AtomicU64, Ordering};
 
 use bevy_ratatui::crossterm::{
-    cursor::{MoveToColumn, MoveTo},
+    cursor::{MoveTo, MoveToColumn},
     queue,
 };
 
@@ -30,7 +30,9 @@ pub fn set_scroll_region_info(h: u16, reserved: u16) {
 #[inline]
 pub fn get_scroll_region_info() -> Option<(u16, u16)> {
     let h = SCROLL_H.load(Ordering::Relaxed);
-    if h == 0 { return None; }
+    if h == 0 {
+        return None;
+    }
     let r = SCROLL_RESERVED.load(Ordering::Relaxed);
     Some((h, r))
 }
@@ -39,7 +41,9 @@ pub fn get_scroll_region_info() -> Option<(u16, u16)> {
 static PRINT_COUNT: AtomicU64 = AtomicU64::new(0);
 
 #[inline]
-pub fn printed_lines() -> usize { PRINT_COUNT.load(Ordering::Relaxed).try_into().unwrap() }
+pub fn printed_lines() -> usize {
+    PRINT_COUNT.load(Ordering::Relaxed).try_into().unwrap()
+}
 
 /// Low-level function used by [`repl_println!`] to print a formatted line.
 ///
@@ -80,8 +84,10 @@ pub fn repl_print(args: std::fmt::Arguments) -> std::io::Result<()> {
     }
     write!(out, "{}", args)?;
     write!(out, "\r\n")?;
-    out.flush()
-        .map(|_| { PRINT_COUNT.fetch_add(1, Ordering::Relaxed); () })
+    out.flush().map(|_| {
+        PRINT_COUNT.fetch_add(1, Ordering::Relaxed);
+        ()
+    })
 }
 
 /// Print a line that behaves well in raw/alternate screen contexts.

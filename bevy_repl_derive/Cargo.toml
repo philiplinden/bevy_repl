@@ -13,4 +13,4 @@ proc-macro = true
 proc-macro2 = "1.0"
 quote = "1.0"
 syn = { version = "2.0", features = ["full"] }
-clap = { version = "4.5.45", features = ["derive"] }
+clap = { version = "4.6.1", features = ["derive"] }

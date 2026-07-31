@@ -44,17 +44,22 @@ impl ReplCommand for SayCommand {
 
     fn to_event(matches: &clap::ArgMatches) -> ReplResult<Self> {
         let message = matches.get_one::<String>("message").unwrap().clone();
-        let repeat = matches.get_one::<String>("repeat")
+        let repeat = matches
+            .get_one::<String>("repeat")
             .and_then(|s| s.parse::<usize>().ok())
             .unwrap_or(1);
         let shout = matches.get_flag("shout");
-        
-        Ok(SayCommand { message, repeat, shout })
+
+        Ok(SayCommand {
+            message,
+            repeat,
+            shout,
+        })
     }
 }
 
 // System that handles the command with access to Bevy ECS
-fn on_say(trigger: Trigger<SayCommand>) {
+fn on_say(trigger: On<SayCommand>) {
     let command = trigger.event();
 
     let message = if command.shout {
@@ -64,7 +69,7 @@ fn on_say(trigger: Trigger<SayCommand>) {
     };
     // Print the main message
     repl_println!("Saying: {}", message);
-    
+
     // Print repeated messages
     for i in 0..command.repeat {
         repl_println!("{}: {}", i + 1, message);
@@ -88,9 +93,9 @@ fn instructions() {
 fn main() {
     App::new()
         .add_plugins((
-            DefaultPlugins.set(bevy::app::ScheduleRunnerPlugin::run_loop(std::time::Duration::from_secs_f64(
-                1.0 / 60.0,
-            ))),
+            DefaultPlugins.set(bevy::app::ScheduleRunnerPlugin::run_loop(
+                std::time::Duration::from_secs_f64(1.0 / 60.0),
+            )),
             ReplPlugins,
         ))
         .add_repl_command::<SayCommand>()

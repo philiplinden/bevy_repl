@@ -1,5 +1,5 @@
 //! Example showing that observer functions can run ECS Queries.
-//! 
+//!
 //! Demonstrates:
 //! - Using a REPL command derived with clap
 //! - Accessing a `Query` inside the observer function
@@ -36,7 +36,7 @@ impl ReplCommand for ListCommand {
 }
 
 /// Observer demonstrating a read-only ECS query inside the handler.
-fn on_list(trigger: Trigger<ListCommand>, query: Query<(Entity, Option<&Name>)>) {
+fn on_list(trigger: On<ListCommand>, query: Query<(Entity, Option<&Name>)>) {
     let cmd = trigger.event();
     let needle = cmd.name_contains.as_deref();
 
@@ -79,10 +79,9 @@ fn instructions() {
 fn main() {
     App::new()
         .add_plugins((
-            DefaultPlugins.set(bevy::app::ScheduleRunnerPlugin::run_loop(std::time::Duration::from_secs_f64(
-                1.0 / 60.0,
-            ))),
-            bevy::input::InputPlugin::default(),
+            DefaultPlugins.set(bevy::app::ScheduleRunnerPlugin::run_loop(
+                std::time::Duration::from_secs_f64(1.0 / 60.0),
+            )),
             ReplPlugins,
         ))
         .add_repl_command::<ListCommand>()

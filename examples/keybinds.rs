@@ -20,7 +20,7 @@ impl ReplCommand for PingCommand {
     }
 }
 
-fn on_ping(_trigger: Trigger<PingCommand>) {
+fn on_ping(_trigger: On<PingCommand>) {
     repl_println!("Pong");
 }
 
@@ -71,7 +71,8 @@ fn detect_bevy_keycode_input(bevy_input: Res<ButtonInput<KeyCode>>) {
 
 fn use_default_keybinds(mut commands: Commands, bevy_input: Res<ButtonInput<KeyCode>>) {
     if bevy_input.any_just_pressed([KeyCode::ControlLeft, KeyCode::ControlRight])
-        && bevy_input.just_pressed(KeyCode::KeyD) {
+        && bevy_input.just_pressed(KeyCode::KeyD)
+    {
         info!("Using default keybinds");
         commands.insert_resource(PromptKeymap::default());
     }
@@ -114,18 +115,20 @@ fn instructions() {
 
 fn main() {
     App::new()
-    .add_plugins((
-        DefaultPlugins.set(bevy::app::ScheduleRunnerPlugin::run_loop(
-            std::time::Duration::from_secs_f64(1.0 / 60.0),
-        )).set(bevy::log::LogPlugin {
-            filter: "info,bevy_repl=trace".to_string(),
-            level: bevy::log::Level::TRACE,
-            ..default()
-        }),
-        ReplPlugins,
-        ExamplePlugin,
-    ))
-    .add_systems(Update, detect_bevy_keycode_input.in_set(ReplSet::Pre))
-    .add_systems(PostStartup, instructions)
-    .run();
+        .add_plugins((
+            DefaultPlugins
+                .set(bevy::app::ScheduleRunnerPlugin::run_loop(
+                    std::time::Duration::from_secs_f64(1.0 / 60.0),
+                ))
+                .set(bevy::log::LogPlugin {
+                    filter: "info,bevy_repl=trace".to_string(),
+                    level: bevy::log::Level::TRACE,
+                    ..default()
+                }),
+            ReplPlugins,
+            ExamplePlugin,
+        ))
+        .add_systems(Update, detect_bevy_keycode_input.in_set(ReplSet::Pre))
+        .add_systems(PostStartup, instructions)
+        .run();
 }

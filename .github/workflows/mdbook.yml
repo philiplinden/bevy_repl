@@ -29,12 +29,17 @@ jobs:
       - name: Setup mdBook
         uses: peaceiris/actions-mdbook@v1
         with:
-          mdbook-version: 'latest'
+          # Pinned to 0.4.x: mdbook-alerts depends on the `mdbook` crate directly
+          # and hasn't been updated for the 0.5.x RenderContext format yet.
+          mdbook-version: '0.4.52'
 
       - name: Install mdBook Table of Contents plugin
         uses: baptiste0928/cargo-install@v3
         with:
           crate: mdbook-toc
+          # 0.15.x switched to the mdbook-preprocessor crate, which targets the
+          # mdbook 0.5.x format; pin to the last 0.4.x-compatible release.
+          version: '0.14.2'
 
       - name: Install mdBook alerts plugin
         uses: baptiste0928/cargo-install@v3

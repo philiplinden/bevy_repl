@@ -18,6 +18,6 @@ impl crate::command::ReplCommand for QuitCommand {
     }
 }
 
-fn on_quit(_trigger: Trigger<QuitCommand>, mut exit: EventWriter<AppExit>) {
+fn on_quit(_trigger: On<QuitCommand>, mut exit: MessageWriter<AppExit>) {
     exit.write(AppExit::Success);
 }
