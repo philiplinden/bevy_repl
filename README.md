@@ -43,6 +43,7 @@ _This is my first public Bevy plugin, and I vibe-coded a large part of it._
 
 | Version | Bevy | Notes |
 | --- | --- | --- |
+| 0.5.0 | 0.19.0 | Compatibility update for [Bevy 0.19.0](https://github.com/bevyengine/bevy/releases/tag/0.19.0). Depends on https://github.com/ratatui/bevy_ratatui/pull/98 |
 | 0.4.1 | 0.16.1 | Better docs: [philiplinden.github.io/bevy_repl](https://philiplinden.github.io/bevy_repl/) |
 | 0.4.0 | 0.16.1 | Removed the "pretty" renderer in favor of getting simple prompt features working. Changed the interface slightly. This is a breaking change! See [examples](https://github.com/philiplinden/bevy_repl/tree/main/examples) for help. |
 | 0.3.0 | 0.16.1 | First release. Supports `derive` feature. Only `quit` built-in command is implemented. Includes a "pretty" renderer for fancy prompt styling, but it doesn't work very well. |
