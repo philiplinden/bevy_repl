@@ -9,3 +9,11 @@ Cargo.lock
 doc/book/
 
 .vscode
+
+# # AI
+# .claude
+# CLAUDE.md
+# .agents
+# AGENTS.md
+# doc/agents/*
+# CONTEXT.md
