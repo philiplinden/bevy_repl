@@ -12,7 +12,8 @@ keywords = ["bevy", "repl", "console", "debugging", "dev_tools", "tracing", "cli
 categories = ["game-development", "development-tools", "command-line-utilities"]
 
 [dependencies]
-bevy = { version = "0.19", default-features = false }
+bevy = { version = "0.19", default-features = false, features = ["bevy_log"] }
+tracing-subscriber = { version = "0.3", features = ["fmt", "ansi", "registry"] }
 crossterm = "0.28"
 clap = { version = "4.6" }
 shell-words = "1.1"
@@ -20,7 +21,6 @@ ctrlc = "3"
 
 # Optional features
 bevy_repl_derive = { version = "0.1.0", path = "./bevy_repl_derive", optional = true }
-tracing-subscriber = { version = "0.3", optional = true, features = ["fmt", "ansi", "registry"] }
 
 # FIXME(remove this after nothing depends on it)
 bevy_ratatui = "0.11.1"
@@ -28,11 +28,9 @@ bevy_ratatui = "0.11.1"
 [features]
 default = [
     "derive",
-    "log",
     "default_commands",
 ]
 derive = ["bevy_repl_derive", "clap/derive"]
-log = ["dep:tracing-subscriber"]
 default_commands = ["quit", "help", "clear"]
 quit = []
 help = []

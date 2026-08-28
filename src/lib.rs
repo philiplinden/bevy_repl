@@ -17,7 +17,6 @@
 
 pub mod built_ins;
 pub mod command;
-pub mod context;
 pub mod log_ecs;
 pub mod print;
 pub mod prompt;
@@ -42,7 +41,6 @@ pub mod prelude {
     // Low-level printer if callers prefer a function over the macro.
     pub use crate::print::repl_print;
 
-    pub use crate::context::ReplContextPlugin;
     pub use crate::log_ecs::{
         LogEvent, custom_layer as repl_log_custom_layer, print_log_events_system,
         tracing_to_repl_fmt, tracing_to_repl_fmt_with_level,
@@ -50,12 +48,6 @@ pub mod prelude {
 
     #[cfg(feature = "derive")]
     pub use bevy_repl_derive::ReplCommand;
-
-    // re-exports for convenience
-    pub use bevy_ratatui::crossterm::event::{
-        KeyCode as CrosstermKey, KeyModifiers as CrosstermMods,
-    };
-    pub use bevy_ratatui::event::KeyMessage;
 }
 
 use bevy::app::{PluginGroup, PluginGroupBuilder};

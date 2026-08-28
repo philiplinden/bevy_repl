@@ -1,4 +1,7 @@
+use crate::command::CommandParser;
+
 use bevy::prelude::*;
+use crossterm::event::KeyCode;
 use std::collections::HashMap;
 
 /// A Bevy plugin that provides a Read-Eval-Print Loop (REPL) interface for interactive command input.
@@ -56,6 +59,10 @@ impl ReplPlugin {
     }
 }
 
+pub fn repl_is_enabled(repl: Res<Repl>) -> bool {
+    repl.enabled
+}
+
 impl Plugin for ReplPlugin {
     fn build(&self, app: &mut App) {
         app.insert_resource(Repl {
@@ -94,23 +101,44 @@ impl Plugin for ReplPlugin {
 #[derive(Resource)]
 pub struct Repl {
     pub enabled: bool,
+    pub prompt_symbol: String,
     pub buffer: String,
     pub cursor_pos: usize,
-    pub commands: HashMap<String, Box<dyn crate::command::CommandParser>>,
+    pub toggle_key: Option<KeyCode>,
+    pub commands: HashMap<String, Box<dyn CommandParser>>,
 }
 
 impl Default for Repl {
     fn default() -> Self {
         Self {
             enabled: true,
+            prompt_symbol: "> ".to_string(),
             buffer: String::new(),
             cursor_pos: 0,
+            toggle_key: Some(KeyCode::Backquote),
             commands: HashMap::new(),
         }
     }
 }
 
 impl Repl {
+    pub fn clear_terminal() -> std::io::Result<()> {
+        use crossterm::{
+            cursor::MoveTo,
+            execute,
+            terminal::{Clear, ClearType},
+        };
+        use std::io::stdout;
+
+        let mut out = stdout();
+        execute!(
+            out,
+            Clear(ClearType::All),
+            Clear(ClearType::Purge), // Clears scrollback history if supported
+            MoveTo(0, 0)
+        )?;
+        Ok(())
+    }
     pub fn drain_buffer(&mut self) -> String {
         let buffer = self.buffer.clone();
         self.clear_buffer();
@@ -153,10 +181,6 @@ impl Repl {
     }
 }
 
-pub fn repl_is_enabled(repl: Res<Repl>) -> bool {
-    repl.enabled
-}
-
 #[derive(SystemSet, Debug, Hash, PartialEq, Eq, Clone)]
 pub enum ReplSet {
     /// Wrapper for all REPL systems to allow global ordering and run conditions
@@ -174,6 +198,22 @@ pub enum ReplSet {
     /// Post stage for consuming/forwarding behavior
     Post,
 }
+
+#[derive(Message, Debug, Clone)]
+pub enum ReplBufferEvent {
+    Insert(char),
+    Backspace,
+    Delete,
+    MoveLeft,
+    MoveRight,
+    JumpToStart,
+    JumpToEnd,
+    Clear,
+    Submit,
+}
+
+#[derive(Message, Debug, Clone)]
+pub struct ReplSubmitEvent(pub String);
 
 /// Event emitted when the REPL is enabled or disabled to notify other systems of the change.
 #[derive(Message, Clone)]
@@ -206,18 +246,24 @@ fn on_app_exit_emit_disable(
     }
 }
 
-#[derive(Message, Debug, Clone)]
-pub enum ReplBufferEvent {
-    Insert(char),
-    Backspace,
-    Delete,
-    MoveLeft,
-    MoveRight,
-    JumpToStart,
-    JumpToEnd,
-    Clear,
-    Submit,
-}
+pub fn handle_repl_lifecycle(
+    mut reader: MessageReader<ReplLifecycleEvent>,
+    mut repl: ResMut<Repl>,
+) {
+    for event in reader.read() {
+        let should_enable = match event {
+            ReplLifecycleEvent::Enable => true,
+            ReplLifecycleEvent::Disable => false,
+            ReplLifecycleEvent::Toggle => !repl.enabled,
+        };
 
-#[derive(Message, Debug, Clone)]
-pub struct ReplSubmitEvent(pub String);
+        if should_enable && !repl.enabled {
+            repl.enabled = true;
+            let _ = Repl::init_terminal();
+        } else if !should_enable && repl.enabled {
+            repl.enabled = false;
+            repl.clear_buffer();
+            let _ = Repl::restore_terminal();
+        }
+    }
+}

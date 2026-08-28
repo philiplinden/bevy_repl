@@ -16,6 +16,10 @@ impl crate::command::ReplCommand for QuitCommand {
             .visible_alias("exit")
             .about("Exits the app gracefully")
     }
+    // No arguments to extract, just construct the unit struct
+    fn to_event(_matches: &clap::ArgMatches) -> Result<Self, clap::Error> {
+        Ok(Self)
+    }
 }
 
 fn on_quit(_trigger: On<QuitCommand>, mut exit: MessageWriter<AppExit>) {

@@ -14,58 +14,105 @@ Specifically:
 
 ## Answer
 
-### 1. `ReplTerminal` RAII Resource & Drop Semantics
-Create a dedicated `ReplTerminal` resource that owns terminal raw mode. Its `Drop` implementation calls `ReplTerminal::restore()` to ensure that normal app exit, system panic, or resource removal resets the terminal.
+### 1. Unified `Repl` Resource & Terminal Lifecycle
+Terminal lifecycle and raw-mode management are consolidated directly onto the single `Repl` resource, eliminating redundant resources (`ReplTerminal`, `ReplPrompt`, `ReplPromptConfig`):
 
 ```rust
 #[derive(Resource)]
-pub struct ReplTerminal {
-    pub raw_mode_enabled: bool,
+pub struct Repl {
+    pub enabled: bool,
+    pub prompt_symbol: String,
+    pub buffer: String,
+    pub cursor_pos: usize,
+    pub toggle_key: Option<KeyCode>,
+    pub commands: HashMap<String, Box<dyn CommandParser>>,
 }
 
-impl Drop for ReplTerminal {
-    fn drop(&mut self) {
-        let _ = Self::restore();
-    }
-}
-
-impl ReplTerminal {
-    pub fn init() -> std::io::Result<Self> {
+impl Repl {
+    pub fn init_terminal() -> std::io::Result<()> {
         crossterm::terminal::enable_raw_mode()?;
-        Ok(Self { raw_mode_enabled: true })
+        let mut out = std::io::stdout();
+        if let Ok((_, rows)) = crossterm::terminal::size() {
+            let bottom = rows.saturating_sub(1);
+            let _ = write!(out, "\x1B[1;{}r", bottom);
+            let _ = out.flush();
+        }
+        Ok(())
     }
 
-    pub fn restore() -> std::io::Result<()> {
+    pub fn restore_terminal() -> std::io::Result<()> {
         use std::io::Write;
         let mut out = std::io::stdout();
-        // 1. Reset DECSTBM scroll region to full window
+        let (_, rows) = crossterm::terminal::size().unwrap_or((80, 24));
+        let prompt_row = rows.saturating_sub(1);
+
+        // 1. Clear prompt line
+        let _ = crossterm::queue!(
+            out,
+            crossterm::cursor::MoveTo(0, prompt_row),
+            crossterm::terminal::Clear(crossterm::terminal::ClearType::CurrentLine),
+        );
+        // 2. Reset scroll region back to full screen
         let _ = write!(out, "\x1B[r");
-        // 2. Ensure cursor is visible
-        let _ = crossterm::execute!(out, crossterm::cursor::Show);
-        // 3. Move to fresh line to avoid prompt overlap
+        // 3. Move cursor to bottom row & show cursor
+        let _ = crossterm::queue!(out, crossterm::cursor::MoveTo(0, prompt_row), crossterm::cursor::Show);
         let _ = write!(out, "\r\n");
         let _ = out.flush();
         // 4. Disable raw mode
         crossterm::terminal::disable_raw_mode()?;
         Ok(())
     }
+
+    pub fn clear_terminal() -> std::io::Result<()> {
+        use crossterm::{cursor::MoveTo, execute, terminal::{Clear, ClearType}};
+        let mut out = std::io::stdout();
+        execute!(out, Clear(ClearType::All), Clear(ClearType::Purge), MoveTo(0, 0))?;
+        Ok(())
+    }
 }
 ```
 
-### 2. Standard Panic Hook Wrapper
-Keep panic handling simple and dependency-free using `std::panic::take_hook` and `std::panic::set_hook`. When a panic occurs, `ReplTerminal::restore()` is executed before forwarding to the default hook, preventing stair-stepped backtraces and leaving the terminal in a clean state.
+### 2. Safety Hooks (Panic & SIGINT)
+`install_safety_hooks()` wraps `std::panic::set_hook` and `ctrlc::set_handler` to guarantee `Repl::restore_terminal()` executes before process termination:
 
 ```rust
-pub fn install_terminal_panic_hook() {
+pub fn install_safety_hooks() {
     let default_hook = std::panic::take_hook();
     std::panic::set_hook(Box::new(move |panic_info| {
-        let _ = ReplTerminal::restore();
+        let _ = Repl::restore_terminal();
         default_hook(panic_info);
     }));
+
+    let _ = ctrlc::set_handler(move || {
+        let _ = Repl::restore_terminal();
+        std::process::exit(0);
+    });
 }
 ```
 
-### 3. Dynamic Runtime Toggle Lifecycle
-- When `ReplLifecycleEvent::Enable` is triggered, `enable_raw_mode()` is called and the `ReplTerminal` resource is inserted.
-- When `ReplLifecycleEvent::Disable` is triggered, `ReplTerminal::restore()` is called and the resource is removed (or `raw_mode_enabled` set to false).
-- App shutdown (`AppExit`) removes `ReplTerminal`, triggering `drop()` to clean up.
+### 3. Synchronous Lifecycle System
+`handle_repl_lifecycle` executes state transitions immediately without deferred command buffering:
+
+```rust
+pub fn handle_repl_lifecycle(
+    mut reader: MessageReader<ReplLifecycleEvent>,
+    mut repl: ResMut<Repl>,
+) {
+    for event in reader.read() {
+        let should_enable = match event {
+            ReplLifecycleEvent::Enable => true,
+            ReplLifecycleEvent::Disable => false,
+            ReplLifecycleEvent::Toggle => !repl.enabled,
+        };
+
+        if should_enable && !repl.enabled {
+            repl.enabled = true;
+            let _ = Repl::init_terminal();
+        } else if !should_enable && repl.enabled {
+            repl.enabled = false;
+            repl.clear_buffer();
+            let _ = Repl::restore_terminal();
+        }
+    }
+}
+```

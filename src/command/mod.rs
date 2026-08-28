@@ -1,29 +1,115 @@
-use anyhow::Result;
 use bevy::prelude::*;
 
 pub mod parser;
 pub mod register;
 
 pub use parser::{
-    parse_input_buffer_for_commands, CommandParser, ParserPlugin, TypedCommandParser,
+    CommandParser, ParserPlugin, TypedCommandParser, parse_input_buffer_for_commands,
 };
-pub use register::{register_command_in_repl, ReplAppExt};
+pub use register::{ReplAppExt, register_command_in_repl};
 
 pub type ReplResult<T> = Result<T, clap::error::Error>;
 
-/// Trait for commands that can be registered with the REPL
-pub trait ReplCommand:
-    Send + Sync + Clone + Event<Trigger<'static>: Default> + Default + 'static
-{
-    /// Returns the clap::Command definition for this command
+/// Trait for commands that can be registered with the REPL.
+///
+/// Implementors define their CLI argument schema via [`clap::Command`] and specify
+/// how parsed arguments are converted into a strongly-typed Bevy [`Event`].
+///
+/// # The Command Execution Pipeline
+///
+/// When a user enters a command into the terminal, it takes the following path:
+///
+/// 1. **Tokenization**: `shell-words` splits the raw input string into `argv` tokens (handling quotes/escapes).
+/// 2. **Parsing**: `clap` matches `argv` against [`ReplCommand::clap_command`], producing [`clap::ArgMatches`].
+/// 3. **Conversion ([`ReplCommand::to_event`])**: Converts parsed [`clap::ArgMatches`] into the typed `Self` event struct.
+/// 4. **Dispatch**: Bevy triggers observers listening to `Trigger<Self>` via `commands.trigger(event)`.
+///
+/// # Examples
+///
+/// ## Parameterized Command
+///
+/// For commands with arguments, [`to_event`](ReplCommand::to_event) extracts typed values from `matches`:
+///
+/// ```rust
+/// use bevy::prelude::*;
+/// use bevy_repl::prelude::*;
+///
+/// #[derive(Event, Clone, Debug)]
+/// pub struct SpawnCommand {
+///     pub name: String,
+///     pub count: u32,
+/// }
+///
+/// impl ReplCommand for SpawnCommand {
+///     fn clap_command() -> clap::Command {
+///         clap::Command::new("spawn")
+///             .about("Spawns an entity")
+///             .arg(clap::Arg::new("name").required(true).help("Entity name"))
+///             .arg(
+///                 clap::Arg::new("count")
+///                     .short('c')
+///                     .long("count")
+///                     .default_value("1")
+///                     .value_parser(clap::value_parser!(u32)),
+///             )
+///     }
+///
+///     fn to_event(matches: &clap::ArgMatches) -> Result<Self, clap::Error> {
+///         let name = matches.get_one::<String>("name").unwrap().clone();
+///         let count = *matches.get_one::<u32>("count").unwrap();
+///         Ok(Self { name, count })
+///     }
+/// }
+/// ```
+///
+/// ## Zero-Argument / Unit Command
+///
+/// For flag or unit commands (like `quit` or `clear`), `to_event` simply constructs `Self`:
+///
+/// ```rust
+/// use bevy::prelude::*;
+/// use bevy_repl::prelude::*;
+///
+/// #[derive(Event, Clone, Debug)]
+/// pub struct QuitCommand;
+///
+/// impl ReplCommand for QuitCommand {
+///     fn clap_command() -> clap::Command {
+///         clap::Command::new("quit").about("Exits the application")
+///     }
+///
+///     fn to_event(_matches: &clap::ArgMatches) -> Result<Self, clap::Error> {
+///         Ok(Self)
+///     }
+/// }
+/// ```
+///
+/// ## Derive Macro (`#[derive(ReplCommand)]`)
+///
+/// When using `bevy_repl_derive`, you can derive `ReplCommand` alongside `clap::Parser` to generate
+/// `clap_command` and `to_event` automatically:
+///
+/// ```rust,ignore
+/// #[derive(clap::Parser, ReplCommand, Event, Clone, Debug)]
+/// #[command(name = "spawn", about = "Spawns an entity")]
+/// pub struct SpawnCommand {
+///     pub name: String,
+///     #[arg(short, long, default_value_t = 1)]
+///     pub count: u32,
+/// }
+/// ```
+pub trait ReplCommand: Send + Sync + Clone + Event + 'static {
+    /// Returns the [`clap::Command`] definition for this command.
     fn clap_command() -> clap::Command;
 
-    /// Create the command event from parsed clap argument matches
-    fn to_event(_matches: &clap::ArgMatches) -> ReplResult<Self> {
-        Ok(Self::default())
-    }
+    /// Converts parsed [`clap::ArgMatches`] into the strongly-typed Bevy event.
+    ///
+    /// This acts as the constructor bridging parsed CLI string values to your Rust struct.
+    ///
+    /// TIP: avoid this boilerplate with `#[derive(ReplCommand)` (requires the `derive` feature)
+    fn to_event(matches: &clap::ArgMatches) -> Result<Self, clap::Error>;
 
-    /// Parse arguments from a string slice
+    /// Convenience helper to parse a string slice against this command's definition.
     fn parse(args: &[&str]) -> Result<clap::ArgMatches, clap::Error>
     where
         Self: Sized,

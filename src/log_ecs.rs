@@ -4,9 +4,9 @@
 use std::sync::mpsc;
 
 use bevy::log::{
+    BoxedLayer,
     tracing::{self, Subscriber},
     tracing_subscriber::{self as ts, Layer},
-    BoxedLayer,
 };
 use bevy::prelude::*;
 

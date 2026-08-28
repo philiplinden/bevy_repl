@@ -15,7 +15,7 @@ A complete technical architecture and implementation specification for removing 
 
 ## Decisions so far
 
-- [[01] Terminal Lifecycle and Panic Recovery](issues/01-terminal-lifecycle-and-panic-recovery.md): RAII `ReplTerminal` resource with `Drop` restoration, lightweight `std::panic` hook wrapper, and dynamic raw-mode toggle on REPL enable/disable.
+- [[01] Terminal Lifecycle and Panic Recovery](issues/01-terminal-lifecycle-and-panic-recovery.md): Single unified `Repl` resource managing session state and direct terminal lifecycle helpers (`init_terminal`, `restore_terminal`, `clear_terminal`), eliminating `ReplTerminal` and `ReplPrompt` redundancies, with panic and SIGINT safety hooks.
 - [[02] Crossterm Event Ingestion and Input Suppression](issues/02-crossterm-event-ingestion-and-input-suppression.md): Non-blocking `poll(Duration::ZERO)` in `ReplSet::Capture` with `Press | Repeat` filtering, modular `PromptKeymap`, Shift+Enter multiline, state-based input suppression, and toggle-key filtering.
 - [[03] Sticky Prompt and DECSTBM Scroll Region](issues/03-sticky-prompt-and-decstbm-scroll-region.md): ANSI DECSTBM escape codes for row partitioning, change-detection prompt rendering in `ReplSet::Render`, and dynamic resize handling.
 - [[05] Clap Command Parser and Observer Dispatch](issues/05-clap-command-parser-and-observer-dispatch.md): Shell-words tokenization, explicit required `to_event` mapping (eliminating silent argument loss and artificial `Default` bound), `bevy_repl_derive` support, and `Commands::trigger` observer dispatch.
