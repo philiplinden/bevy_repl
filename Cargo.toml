@@ -3,39 +3,34 @@ members = [".", "bevy_repl_derive"]
 
 [package]
 name = "bevy_repl"
-version = "0.5.0"
+version = "0.6.0"
 edition = "2024"
-description = "Add a REPL to headless Bevy applications"
+description = "Add a REPL to the terminal for interactive headless or windowed Bevy applications"
 license = "MIT"
 repository = "https://github.com/philiplinden/bevy_repl"
-keywords = ["bevy", "repl", "console", "debugging"]
-categories = ["game-development", "development-tools"]
+keywords = ["bevy", "repl", "console", "debugging", "dev_tools", "tracing", "cli", "terminal", "headless", "utility"]
+categories = ["game-development", "development-tools", "command-line-utilities"]
 
 [dependencies]
-bevy = { version = "0.19", default-features = false, features = ["bevy_log", "trace"]}
-bevy_ratatui = { git = "https://github.com/apekros/bevy_ratatui", rev = "631c06f160ca04ae9960c58bb399cb23513a60eb", features = ["crossterm"] }
-ratatui = "0.30.2"
-clap = { version = "4.6.1" }
+bevy = { version = "0.19", default-features = false }
+crossterm = "0.28"
+clap = { version = "4.6" }
 shell-words = "1.1"
-bevy_repl_derive = { version = "0.1.0", path = "./bevy_repl_derive", optional = true }
 ctrlc = "3"
-anyhow = "1.0.103"
-color-eyre = "0.6.5"
 
-# Error handling and logging
-tracing = { version = "0.1", features = [
-    "max_level_trace",
-    "release_max_level_warn",
-] }
+# Optional features
+bevy_repl_derive = { version = "0.1.0", path = "./bevy_repl_derive", optional = true }
+tracing-subscriber = { version = "0.3", optional = true, features = ["fmt", "ansi", "registry"] }
 
 [features]
 default = [
-    "dev",
+    "derive",
+    "log",
     "default_commands",
 ]
-dev = ["bevy/dynamic_linking"]
 derive = ["bevy_repl_derive", "clap/derive"]
-default_commands = ["quit", "help"]
+log = ["dep:tracing-subscriber"]
+default_commands = ["quit", "help", "clear"]
 quit = []
 help = []
 clear = []

@@ -21,6 +21,7 @@ A complete technical architecture and implementation specification for removing 
 - [[05] Clap Command Parser and Observer Dispatch](issues/05-clap-command-parser-and-observer-dispatch.md): Shell-words tokenization, explicit required `to_event` mapping (eliminating silent argument loss and artificial `Default` bound), `bevy_repl_derive` support, and `Commands::trigger` observer dispatch.
 - [[06] Derive Macro Ergonomics and Complexity](issues/06-derive-macro-ergonomics-and-complexity.md): Dual macro design (`#[repl_command]` attribute macro to automatically inject `clap::Parser`/`Event`/`Clone` derives alongside standard `#[derive(ReplCommand)]`), zero `Default` bound requirement, and feature gating.
 - [[04] Tracing Subscriber Integration](issues/04-tracing-subscriber-integration.md): `repl_tracing_layer()` integration for Bevy's `LogPlugin`, scroll-region log positioning at row $H-1$, and automatic cursor restoration back to the prompt line.
+- [[07] Prune and Feature-Gate Dependencies](issues/07-prune-and-feature-gate-dependencies.md): Removed `bevy_ratatui`, `ratatui`, `anyhow`, `color-eyre`; configured lean core dependencies and fast linker profile in `.cargo/config.toml`.
 
 ## Not yet specified
 

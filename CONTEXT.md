@@ -7,8 +7,12 @@ An interactive command-line REPL integrated directly into the Bevy ECS schedule,
 ### Core REPL & Lifecycle
 
 **REPL**:
-The central resource and controller that manages the interactive session in the host terminal, holding the active line buffer, cursor position, and registered command parsers.
+The central resource and controller that manages the interactive session in the host terminal, holding the active line buffer, cursor position, and registered command parsers. Owns none of the terminal device state itself.
 _Avoid_: In-game overlay console, graphical console, shell instance
+
+**REPL Terminal**:
+The RAII resource that owns the terminal device's raw-mode state, restoring it (disabling raw mode, resetting the scroll region) on drop, panic, or REPL disable. Lifecycle is independent of the `REPL` resource's session state.
+_Avoid_: ReplContext, terminal context, raw mode manager
 
 **Raw Mode**:
 The terminal configuration where input characters are forwarded immediately without OS line buffering or local echo, enabling fine-grained cursor navigation and instant keystroke capture.
@@ -17,6 +21,14 @@ _Avoid_: Unbuffered mode, direct mode
 **Input Suppression**:
 The active clearing and resetting of Bevy's `ButtonInput<KeyCode>` and `KeyboardInput` streams while the REPL is active to prevent prompt keystrokes from leaking into game logic.
 _Avoid_: Input blocking, key consumption, event swallowing
+
+**Lifecycle Event**:
+An `Enable`/`Disable` event that toggles the REPL session, driving the `REPL Terminal`'s raw-mode setup/teardown and the scroll region boundary in lockstep.
+_Avoid_: Toggle event, activation event
+
+**Toggle Key**:
+The designated key (default: backtick) that triggers a `Lifecycle Event` to enable or disable the REPL, intercepted before it can be inserted into the buffer.
+_Avoid_: Hotkey, activation key
 
 ### Commands & Execution
 
