@@ -25,46 +25,68 @@ pub mod tracing;
 
 pub mod prelude {
     pub use crate::built_ins::ReplDefaultCommandsPlugin;
-    #[cfg(not(feature = "derive"))]
     pub use crate::command::ReplCommand;
     pub use crate::command::{ReplAppExt, ReplResult};
     pub use crate::input::InputPlugin;
     pub use crate::keymap::{Binding as ReplKeybind, ReplKeymap};
     pub use crate::repl::{
-        Repl, ReplBufferEvent, ReplPlugin, ReplSet, ReplSubmitEvent, repl_is_enabled,
+        Repl, ReplBufferEvent, ReplLifecycleEvent, ReplPlugin, ReplSet, ReplSubmitEvent,
+        repl_is_enabled,
     };
     // Bring the robust printing macro into the prelude for convenient use.
-    // This allows: `use bevy_repl::prelude::*;` then `repl_println!(...)`.
     pub use crate::repl_println;
     // Low-level printer if callers prefer a function over the macro.
     pub use crate::print::repl_print;
 
-    pub use crate::tracing::{
-        LogEvent, custom_layer as repl_log_custom_layer, print_log_events_system,
-        tracing_to_repl_fmt, tracing_to_repl_fmt_with_level,
-    };
+    pub use crate::ReplDefaultPluginsExt;
+    pub use crate::ReplPlugins;
+    pub use crate::tracing::repl_tracing_layer;
 
     #[cfg(feature = "derive")]
     pub use bevy_repl_derive::ReplCommand;
 }
 
 use bevy::app::{PluginGroup, PluginGroupBuilder};
+use bevy::prelude::DefaultPlugins;
 
-/// Default REPL plugin group: includes ratatui plugins and default commands.
+/// Default REPL plugin group.
 ///
-/// This is the turnkey setup most users want. It wires in the REPL core, prompt
-/// plugin, parser, and the default commands.
+/// This is the turnkey setup most users want. It wires in the REPL core, input capture,
+/// keymap, command parser, and the default commands.
 pub struct ReplPlugins;
 
 impl PluginGroup for ReplPlugins {
     fn build(self) -> PluginGroupBuilder {
         PluginGroupBuilder::start::<Self>()
-            .add(crate::repl::ReplPlugin::default())
+            .add(crate::repl::ReplPlugin)
             .add(crate::command::ParserPlugin)
             .add(crate::input::InputPlugin)
-            .add(crate::keymap::ReplKeymapPlugin)
-            .add(crate::tracing::ReplLogPrintPlugin)
-            // only adds commands that are enabled by feature flags
+            .add(crate::keymap::InputKeymapPlugin)
+            .add(crate::print::PrintPlugin)
             .add(crate::built_ins::ReplDefaultCommandsPlugin)
+    }
+}
+
+/// Extension trait for configuring `DefaultPlugins` with scroll-safe REPL log routing.
+pub trait ReplDefaultPluginsExt {
+    /// Configures Bevy's `LogPlugin` to route tracing logs into the REPL's scroll region.
+    fn adapt_for_repl(self) -> PluginGroupBuilder;
+}
+
+impl ReplDefaultPluginsExt for DefaultPlugins {
+    fn adapt_for_repl(self) -> PluginGroupBuilder {
+        self.set(bevy::log::LogPlugin {
+            custom_layer: crate::tracing::repl_tracing_layer,
+            ..Default::default()
+        })
+    }
+}
+
+impl ReplDefaultPluginsExt for PluginGroupBuilder {
+    fn adapt_for_repl(self) -> PluginGroupBuilder {
+        self.set(bevy::log::LogPlugin {
+            custom_layer: crate::tracing::repl_tracing_layer,
+            ..Default::default()
+        })
     }
 }

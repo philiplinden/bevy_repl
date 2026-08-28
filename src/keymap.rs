@@ -30,22 +30,8 @@ impl Binding {
     }
 
     pub fn matches(&self, ev: &KeyEvent) -> bool {
-        match self.code {
-            KeyCode::Char(_) => ev.code == self.code && ev.modifiers == self.mods,
-            _ => {
-                ev.code == self.code
-                    && normalize_nonchar_mods(ev.modifiers) == normalize_nonchar_mods(self.mods)
-            }
-        }
+        ev.code == self.code && ev.modifiers == self.mods
     }
-}
-
-fn normalize_nonchar_mods(mods: KeyModifiers) -> KeyModifiers {
-    // Ignore SHIFT for non-character keys (Enter, arrows, etc.). Keep CONTROL/ALT.
-    use KeyModifiers as M;
-    let mut m = mods;
-    m.set(M::SHIFT, false);
-    m
 }
 
 /// Keymap for mapping exact (key code, modifiers) to REPL buffer editing actions.
@@ -76,7 +62,7 @@ impl Default for ReplKeymap {
         Self {
             enable: None,
             disable: None,
-            toggle: Some(Binding::plain(K::Backquote)),
+            toggle: Some(Binding::plain(K::Char('`'))),
             submit: Some(Binding::plain(K::Enter)),
             newline: Some(Binding::new(K::Enter, M::SHIFT)),
             backspace: Some(Binding::plain(K::Backspace)),

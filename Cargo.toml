@@ -41,10 +41,6 @@ name = "aliases"
 path = "examples/aliases.rs"
 
 [[example]]
-name = "alt_screen"
-path = "examples/alt_screen.rs"
-
-[[example]]
 name = "builder"
 path = "examples/builder.rs"
 
@@ -55,10 +51,6 @@ path = "examples/builtins.rs"
 [[example]]
 name = "custom_log_layer"
 path = "examples/custom_log_layer.rs"
-
-[[example]]
-name = "custom_renderer"
-path = "examples/custom_renderer.rs"
 
 [[example]]
 name = "default"

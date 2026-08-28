@@ -44,9 +44,15 @@ impl<'a> tracing_subscriber::fmt::MakeWriter<'a> for ReplMakeWriter {
     }
 }
 
+/// Creates the formatting layer that routes tracing events through `ReplMakeWriter`.
+pub fn make_repl_layer<S>() -> impl tracing_subscriber::Layer<S>
+where
+    S: bevy::log::tracing::Subscriber + for<'a> tracing_subscriber::registry::LookupSpan<'a>,
+{
+    fmt::layer().with_ansi(true).with_writer(ReplMakeWriter)
+}
+
 /// Returns a boxed tracing layer ready to attach to Bevy's `LogPlugin`.
 pub fn repl_tracing_layer(_app: &mut App) -> Option<BoxedLayer> {
-    let layer = fmt::layer().with_ansi(true).with_writer(ReplMakeWriter);
-
-    Some(Box::new(layer))
+    Some(Box::new(make_repl_layer()))
 }

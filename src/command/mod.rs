@@ -98,7 +98,7 @@ pub type ReplResult<T> = Result<T, clap::error::Error>;
 ///     pub count: u32,
 /// }
 /// ```
-pub trait ReplCommand: Send + Sync + Clone + Event + 'static {
+pub trait ReplCommand: Send + Sync + Clone + Event<Trigger<'static>: Default> + 'static {
     /// Returns the [`clap::Command`] definition for this command.
     fn clap_command() -> clap::Command;
 

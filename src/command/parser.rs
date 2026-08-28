@@ -84,7 +84,7 @@ impl<C: ReplCommand> CommandParser for TypedCommandParser<C> {
 
 /// Observer that parses submitted terminal input and triggers command observers
 pub fn parse_input_buffer_for_commands(
-    trigger: Trigger<ReplSubmitEvent>,
+    trigger: On<ReplSubmitEvent>,
     mut bevy_commands: Commands,
     repl: Res<Repl>,
 ) {

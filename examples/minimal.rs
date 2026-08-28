@@ -16,6 +16,10 @@ impl ReplCommand for PingCommand {
     fn clap_command() -> clap::Command {
         clap::Command::new("ping").about("Test command")
     }
+
+    fn to_event(_matches: &clap::ArgMatches) -> Result<Self, clap::Error> {
+        Ok(Self)
+    }
 }
 
 fn on_ping(_trigger: On<PingCommand>) {
