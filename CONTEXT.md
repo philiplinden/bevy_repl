@@ -1,14 +1,14 @@
 # Bevy REPL
 
-An interactive command-line REPL integrated directly into the Bevy ECS schedule, allowing runtime inspection, command execution, and logging in headless and graphical applications.
+An interactive command-line REPL integrated directly into the Bevy ECS schedule, allowing runtime inspection, command execution, and logging directly within the user's host terminal (in both headless and windowed applications).
 
 ## Language
 
 ### Core REPL & Lifecycle
 
 **REPL**:
-The central resource and controller that manages the interactive session, holding the active line buffer, cursor position, and registered command parsers.
-_Avoid_: Console, shell, terminal instance
+The central resource and controller that manages the interactive session in the host terminal, holding the active line buffer, cursor position, and registered command parsers.
+_Avoid_: In-game overlay console, graphical console, shell instance
 
 **Raw Mode**:
 The terminal configuration where input characters are forwarded immediately without OS line buffering or local echo, enabling fine-grained cursor navigation and instant keystroke capture.
