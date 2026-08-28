@@ -8,6 +8,7 @@
 //! - Running headless via `ScheduleRunnerPlugin`
 //! - Typing commands in the terminal and quitting with `quit`
 
+use bevy::log::info;
 use bevy::prelude::*;
 use bevy_repl::prelude::*;
 
@@ -72,7 +73,7 @@ impl ReplCommand for LogCommand {
 fn on_log(trigger: On<LogCommand>) {
     let command = trigger.event();
     let message = command.message.clone();
-    tracing::info!("logging: {}", message);
+    info!("logging: {}", message);
 }
 
 fn instructions() {
@@ -94,7 +95,8 @@ fn main() {
                 // Headless loop in the terminal
                 .set(bevy::app::ScheduleRunnerPlugin::run_loop(
                     std::time::Duration::from_secs_f64(1.0 / 60.0),
-                )),
+                ))
+                .adapt_for_repl(),
             ReplPlugins,
         ))
         .add_repl_command::<PrintCommand>()

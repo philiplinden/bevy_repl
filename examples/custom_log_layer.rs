@@ -1,3 +1,4 @@
+use bevy::log::{debug, error, info, trace, warn};
 use bevy::prelude::*;
 use bevy_repl::prelude::*;
 
@@ -8,26 +9,30 @@ impl ReplCommand for PingCommand {
     fn clap_command() -> clap::Command {
         clap::Command::new("ping").about("Test command")
     }
+
+    fn to_event(_matches: &clap::ArgMatches) -> Result<Self, clap::Error> {
+        Ok(Self)
+    }
 }
 
 fn error_on_ping(_trigger: On<PingCommand>) {
-    tracing::error!("Pong");
+    error!("Pong");
 }
 
 fn warn_on_ping(_trigger: On<PingCommand>) {
-    tracing::warn!("Pong");
+    warn!("Pong");
 }
 
 fn info_on_ping(_trigger: On<PingCommand>) {
-    tracing::info!("Pong");
+    info!("Pong");
 }
 
 fn debug_on_ping(_trigger: On<PingCommand>) {
-    tracing::debug!("Pong");
+    debug!("Pong");
 }
 
 fn trace_on_ping(_trigger: On<PingCommand>) {
-    tracing::trace!("Pong");
+    trace!("Pong");
 }
 
 fn print_on_ping(_trigger: On<PingCommand>) {
@@ -35,7 +40,7 @@ fn print_on_ping(_trigger: On<PingCommand>) {
 }
 
 fn instructions() {
-    repl_println!("\nBevy custom log layer example (Experimental)");
+    repl_println!("\nBevy custom log layer example");
     repl_println!();
     repl_println!("Tracing logs are printed in the terminal above the prompt");
     repl_println!("just like a message that was printed directly.");
@@ -52,8 +57,10 @@ fn main() {
                     std::time::Duration::from_secs_f64(1.0 / 60.0),
                 ))
                 .set(bevy::log::LogPlugin {
-                    // Adds an EXTRA log layer on top of the default one.
-                    custom_layer: |app| repl_log_custom_layer(app),
+                    // Manually configure the REPL custom log layer along with custom filters/levels
+                    custom_layer: repl_tracing_layer,
+                    filter: "info,bevy_repl=trace".to_string(),
+                    level: bevy::log::Level::TRACE,
                     ..default()
                 }),
             ReplPlugins,
