@@ -1,4 +1,4 @@
-use crate::command::CommandParser;
+use crate::{command::CommandParser, keymap::ReplKeymap};
 
 use bevy::prelude::*;
 use crossterm::event::KeyCode;
@@ -38,7 +38,6 @@ impl Plugin for ReplPlugin {
         app.insert_resource(Repl::default());
         app.add_message::<ReplSubmitEvent>();
         app.add_message::<ReplBufferEvent>();
-        app.add_message::<ReplLifecycleEvent>();
         app.add_systems(Startup, init_repl);
         app.add_systems(Last, on_app_exit_emit_disable);
         app.configure_sets(
@@ -68,18 +67,18 @@ pub struct Repl {
     pub prompt_symbol: String,
     pub buffer: String,
     pub cursor_pos: usize,
-    pub toggle_key: Option<KeyCode>,
+    pub keymap: ReplKeymap,
     pub commands: HashMap<String, Box<dyn CommandParser>>,
 }
 
 impl Default for Repl {
     fn default() -> Self {
         Self {
-            enabled: true,
+            enabled: false,
             prompt_symbol: "> ".to_string(),
             buffer: String::new(),
             cursor_pos: 0,
-            toggle_key: Some(KeyCode::Backquote),
+            keymap: ReplKeymap::default(),
             commands: HashMap::new(),
         }
     }
@@ -121,6 +120,12 @@ impl Repl {
         self.buffer.clear();
         self.cursor_pos = 0;
     }
+    pub fn clear_to_start(&mut self) {
+        if self.cursor_pos > 0 {
+            self.buffer.drain(..self.cursor_pos);
+            self.cursor_pos = 0;
+        }
+    }
     pub fn backspace(&mut self) {
         if self.cursor_pos > 0 {
             self.buffer.remove(self.cursor_pos - 1);
@@ -154,7 +159,9 @@ impl Repl {
     }
 }
 
-/// A simple helper function to control the `run_if` condition for the repl systems
+/// A simple helper function to control the `run_if` condition for the repl systems.
+///
+/// FIXME(2026-08-28): I'm not sure what happens if there is no Repl resource when calling this function.
 pub fn repl_is_enabled(repl: Res<Repl>) -> bool {
     repl.enabled
 }
@@ -187,10 +194,12 @@ pub enum ReplBufferEvent {
     JumpToStart,
     JumpToEnd,
     Clear,
+    ClearToStart,
+    ClearScreen,
     Submit,
 }
 
-#[derive(Message, Debug, Clone)]
+#[derive(Event, Debug, Clone)]
 pub struct ReplSubmitEvent(pub String);
 
 /// Event emitted when the REPL is enabled or disabled to notify other systems of the change.
@@ -198,26 +207,5 @@ pub struct ReplSubmitEvent(pub String);
 pub enum ReplLifecycleEvent {
     Enable,
     Disable,
-}
-
-pub fn handle_repl_lifecycle(
-    mut reader: MessageReader<ReplLifecycleEvent>,
-    mut repl: ResMut<Repl>,
-) {
-    for event in reader.read() {
-        let should_enable = match event {
-            ReplLifecycleEvent::Enable => true,
-            ReplLifecycleEvent::Disable => false,
-            ReplLifecycleEvent::Toggle => !repl.enabled,
-        };
-
-        if should_enable && !repl.enabled {
-            repl.enabled = true;
-            let _ = Repl::init_terminal();
-        } else if !should_enable && repl.enabled {
-            repl.enabled = false;
-            repl.clear_buffer();
-            let _ = Repl::restore_terminal();
-        }
-    }
+    Toggle,
 }

@@ -29,7 +29,7 @@ pub mod prelude {
     pub use crate::command::ReplCommand;
     pub use crate::command::{ReplAppExt, ReplResult};
     pub use crate::input::InputPlugin;
-    pub use crate::keymap::{Binding as ReplKeybind, PromptKeymap};
+    pub use crate::keymap::{Binding as ReplKeybind, ReplKeymap};
     pub use crate::repl::{
         Repl, ReplBufferEvent, ReplPlugin, ReplSet, ReplSubmitEvent, repl_is_enabled,
     };
@@ -62,7 +62,7 @@ impl PluginGroup for ReplPlugins {
             .add(crate::repl::ReplPlugin::default())
             .add(crate::command::ParserPlugin)
             .add(crate::input::InputPlugin)
-            .add(crate::keymap::PromptKeymapPlugin)
+            .add(crate::keymap::ReplKeymapPlugin)
             .add(crate::tracing::ReplLogPrintPlugin)
             // only adds commands that are enabled by feature flags
             .add(crate::built_ins::ReplDefaultCommandsPlugin)

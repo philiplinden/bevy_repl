@@ -1,6 +1,6 @@
 //! Custom keybinds example for Bevy REPL.
 //!
-//! Demonstrates how to configure the PromptKeymap resource to use
+//! Demonstrates how to configure the ReplKeymap resource to use
 //! exact key + modifier combinations for REPL actions, and how the
 //! fallback character insertion works.
 //!
@@ -48,7 +48,7 @@ fn use_custom_keybinds(mut commands: Commands, bevy_input: Res<ButtonInput<KeyCo
         && bevy_input.just_pressed(KeyCode::KeyS)
     {
         info!("Using custom keybinds");
-        commands.insert_resource(PromptKeymap {
+        commands.insert_resource(ReplKeymap {
             submit: Some(ReplKeybind {
                 code: CrosstermKeyCode::Char('Y'),
                 mods: KeyModifiers::CONTROL,
@@ -74,7 +74,7 @@ fn use_default_keybinds(mut commands: Commands, bevy_input: Res<ButtonInput<KeyC
         && bevy_input.just_pressed(KeyCode::KeyD)
     {
         info!("Using default keybinds");
-        commands.insert_resource(PromptKeymap::default());
+        commands.insert_resource(ReplKeymap::default());
     }
 }
 
@@ -83,7 +83,7 @@ fn clear_all_keybinds(mut commands: Commands, bevy_input: Res<ButtonInput<KeyCod
         && bevy_input.just_pressed(KeyCode::KeyA)
     {
         info!("Clearing all keybinds");
-        commands.insert_resource(PromptKeymap::none());
+        commands.insert_resource(ReplKeymap::none());
     }
 }
 

@@ -1,15 +1,13 @@
 use super::ReplCommand;
-use crate::repl::{Repl, ReplSet, ReplSubmitEvent};
+use crate::repl::{Repl, ReplSubmitEvent};
 use crate::repl_println;
 use bevy::prelude::*;
+
 pub struct ParserPlugin;
 
 impl Plugin for ParserPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(
-            Update,
-            parse_input_buffer_for_commands.in_set(ReplSet::Parse),
-        );
+        app.add_observer(parse_input_buffer_for_commands);
     }
 }
 
@@ -84,37 +82,37 @@ impl<C: ReplCommand> CommandParser for TypedCommandParser<C> {
     }
 }
 
-/// System that parses terminal input and triggers command observers
+/// Observer that parses submitted terminal input and triggers command observers
 pub fn parse_input_buffer_for_commands(
-    mut submitted_text: MessageReader<ReplSubmitEvent>,
+    trigger: Trigger<ReplSubmitEvent>,
     mut bevy_commands: Commands,
     repl: Res<Repl>,
 ) {
-    for event in submitted_text.read() {
-        let input = event.0.clone();
-        // Skip empty input
-        if input.is_empty() {
-            continue;
+    let input = &trigger.event().0;
+    // Skip empty input
+    if input.is_empty() {
+        return;
+    }
+
+    // Tokenize input and dispatch by the first token (command name or alias)
+    let argv = match shell_words::split(input) {
+        Ok(v) => v,
+        Err(_) => {
+            repl_println!("Invalid input: {}", input);
+            return;
         }
-        // Tokenize input and dispatch by the first token (command name or alias)
-        let argv = match shell_words::split(&input) {
-            Ok(v) => v,
-            Err(_) => {
-                error!("Invalid input: {}", input);
-                continue;
-            }
-        };
-        if argv.is_empty() {
-            continue;
-        }
-        let key = &argv[0];
-        if let Some(parser) = repl.commands.get(key) {
-            let _ = parser.parse_and_trigger(&input, &mut bevy_commands);
-        } else {
-            error!(
-                "Unknown command '{}'. Type 'help' to see available commands.",
-                key
-            );
-        }
+    };
+    if argv.is_empty() {
+        return;
+    }
+
+    let key = &argv[0];
+    if let Some(parser) = repl.commands.get(key) {
+        let _ = parser.parse_and_trigger(input, &mut bevy_commands);
+    } else {
+        repl_println!(
+            "Unknown command '{}'. Type 'help' to see available commands.",
+            key
+        );
     }
 }

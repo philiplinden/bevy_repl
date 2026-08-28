@@ -1,12 +1,4 @@
-//! Simple, robust printing helpers suitable for raw/alternate screen.
-//!
-//! Use the `repl_println!` macro to print a formatted line that:
-//! - moves the cursor to column 0
-//! - writes the formatted content
-//! - appends a CRLF ("\r\n")
-//! - flushes stdout
-//!
-//! This avoids newline/cursor issues that can happen in raw or alternate screen modes.
+//! Terminal output, scroll region management, and safe printing helpers.
 
 use bevy::prelude::*;
 use crossterm::{
@@ -14,32 +6,11 @@ use crossterm::{
     queue, terminal,
 };
 use std::io::{Write, stdout};
-use std::sync::atomic::{AtomicU16, Ordering};
 
 use crate::repl::Repl;
 
-// Track scroll region info (terminal height and reserved bottom lines) so printers can
-// position output above the prompt area when using ratatui's alternate screen.
-static SCROLL_H: AtomicU16 = AtomicU16::new(0);
-static SCROLL_RESERVED: AtomicU16 = AtomicU16::new(0);
-
-#[inline]
-pub fn set_scroll_region_info(h: u16, reserved: u16) {
-    SCROLL_H.store(h, Ordering::Relaxed);
-    SCROLL_RESERVED.store(reserved, Ordering::Relaxed);
-}
-
-#[inline]
-pub fn get_scroll_region_info() -> Option<(u16, u16)> {
-    let h = SCROLL_H.load(Ordering::Relaxed);
-    if h == 0 {
-        return None;
-    }
-    let r = SCROLL_RESERVED.load(Ordering::Relaxed);
-    Some((h, r))
-}
-
-/// System that ensures the terminal scroll region reserves the bottom prompt area.
+/// System that ensures the terminal scroll region reserves the bottom prompt area
+/// so that stdout/logs scroll above the active prompt line.
 pub fn manage_scroll_region(repl: Res<Repl>, mut last_state: Local<Option<(bool, u16)>>) {
     let Ok((_w, h)) = terminal::size() else {
         return;
@@ -54,67 +25,41 @@ pub fn manage_scroll_region(repl: Res<Repl>, mut last_state: Local<Option<(bool,
     if repl.enabled {
         let bottom = h.saturating_sub(1);
         let _ = write!(out, "\x1B[1;{}r", bottom);
-        set_scroll_region_info(h, 1);
     } else if last_state.is_some() {
         let _ = write!(out, "\x1B[r");
-        set_scroll_region_info(h, 0);
     }
     let _ = out.flush();
 
     *last_state = Some(current_state);
 }
 
-/// Low-level function used by [`repl_println!`] to print a formatted line.
-///
-/// # Scroll Region Behavior
-/// If a scroll region is active (as set by the pretty renderer), this function moves the cursor
-/// to the last scrollable line (just above any reserved bottom lines) before printing. This ensures
-/// that output scrolls above the prompt or status area, rather than overwriting it. If no scroll region
-/// is active, the cursor is simply moved to column 0 for robustness.
-///
-/// # CRLF Handling
-/// The function always appends a carriage return and line feed (`\r\n`) after the formatted content,
-/// regardless of platform. This ensures correct line endings and cursor positioning in raw or alternate
-/// screen modes, where standard `\n` may not behave as expected.
-///
-/// # When to Use
-/// Use this function (or, preferably, the [`repl_println!`] macro) when printing output in raw or
-/// alternate screen contexts, or when robust cursor and line handling is required. It is a drop-in
-/// replacement for `println!` in these scenarios. For standard terminal output outside of raw/alt
-/// screen modes, regular printing macros may suffice.
-///
-/// This function is typically not called directly; prefer using [`repl_println!`] for convenience.
+/// Low-level function used by [`repl_println!`] to print a formatted line with
+/// explicit CRLF (`\r\n`) and cursor coordination within the scroll region.
 pub fn repl_print(args: std::fmt::Arguments) -> std::io::Result<()> {
     let mut out = stdout();
-    // If a scroll region is active (pretty mode), move to the last scrollable line
-    // so output scrolls ABOVE the prompt area. When we position the cursor explicitly,
-    // we skip MoveToColumn and rely on a simple '\n' for newline to avoid CR issues.
-    let mut used_explicit_position = false;
-    if let Some((h, reserved)) = get_scroll_region_info() {
-        if reserved > 0 {
-            let target_row = h.saturating_sub(reserved).saturating_sub(1); // 0-based row index
-            queue!(out, MoveTo(0, target_row))?;
-            used_explicit_position = true;
-        }
+
+    if let Ok((_cols, rows)) = terminal::size() {
+        // Move to the bottom of the scroll region (row H-1 in 0-based indexing)
+        let target_row = rows.saturating_sub(2);
+        let prompt_row = rows.saturating_sub(1);
+
+        let _ = queue!(out, MoveTo(0, target_row));
+        write!(out, "{}", args)?;
+        write!(out, "\r\n")?;
+        // Move back down toward prompt row
+        let _ = queue!(out, MoveTo(0, prompt_row));
+    } else {
+        let _ = queue!(out, MoveToColumn(0));
+        write!(out, "{}", args)?;
+        write!(out, "\r\n")?;
     }
-    if !used_explicit_position {
-        // Minimal/normal case: ensure we start at column 0 for robustness
-        queue!(out, MoveToColumn(0))?;
-    }
-    write!(out, "{}", args)?;
-    write!(out, "\r\n")?;
+
     out.flush()
 }
 
 /// Print a line that behaves well in raw/alternate screen contexts.
 ///
-/// This is a drop-in replacement where you'd use `println!`, but it ensures
-/// a carriage return is sent (CRLF) and stdout is flushed.
-///
-/// Example:
-/// ```ignore
-/// repl_println!("Hello {}", name);
-/// ```
+/// Ensures a carriage return is sent (CRLF) and stdout is flushed.
 #[macro_export]
 macro_rules! repl_println {
     () => {{
