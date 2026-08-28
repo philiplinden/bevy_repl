@@ -74,18 +74,12 @@ pub trait ReplDefaultPluginsExt {
 
 impl ReplDefaultPluginsExt for DefaultPlugins {
     fn adapt_for_repl(self) -> PluginGroupBuilder {
-        self.set(bevy::log::LogPlugin {
-            custom_layer: crate::tracing::repl_tracing_layer,
-            ..Default::default()
-        })
+        self.build().disable::<bevy::log::LogPlugin>()
     }
 }
 
 impl ReplDefaultPluginsExt for PluginGroupBuilder {
     fn adapt_for_repl(self) -> PluginGroupBuilder {
-        self.set(bevy::log::LogPlugin {
-            custom_layer: crate::tracing::repl_tracing_layer,
-            ..Default::default()
-        })
+        self.disable::<bevy::log::LogPlugin>()
     }
 }

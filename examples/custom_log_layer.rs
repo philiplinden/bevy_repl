@@ -56,13 +56,7 @@ fn main() {
                 .set(bevy::app::ScheduleRunnerPlugin::run_loop(
                     std::time::Duration::from_secs_f64(1.0 / 60.0),
                 ))
-                .set(bevy::log::LogPlugin {
-                    // Manually configure the REPL custom log layer along with custom filters/levels
-                    custom_layer: repl_tracing_layer,
-                    filter: "info,bevy_repl=trace".to_string(),
-                    level: bevy::log::Level::TRACE,
-                    ..default()
-                }),
+                .adapt_for_repl(),
             ReplPlugins,
         ))
         .add_repl_command::<PingCommand>()

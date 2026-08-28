@@ -24,7 +24,8 @@ impl Plugin for PrintPlugin {
                 render_prompt
                     .in_set(ReplSet::Print)
                     .in_set(ReplSet::All)
-                    .after(manage_scroll_region),
+                    .after(manage_scroll_region)
+                    .run_if(resource_changed::<Repl>),
             ),
         );
     }
@@ -72,7 +73,7 @@ pub fn manage_scroll_region(repl: Res<Repl>, mut last_state: Local<Option<(bool,
     *last_state = Some(current_state);
 }
 
-/// System that renders the prompt line at the bottom of the terminal.
+/// System that renders the prompt line at the bottom of the terminal using Bevy change detection.
 pub fn render_prompt(repl: Res<Repl>) {
     if !repl.enabled {
         return;
@@ -105,7 +106,6 @@ pub fn repl_print(args: std::fmt::Arguments) -> std::io::Result<()> {
     if let Ok((_cols, rows)) = terminal::size() {
         // Move to the bottom of the scroll region (row H-1 in 0-based indexing)
         let target_row = rows.saturating_sub(2);
-        let prompt_row = rows.saturating_sub(1);
 
         if formatted.is_empty() {
             let _ = queue!(out, MoveTo(0, target_row));
@@ -117,8 +117,6 @@ pub fn repl_print(args: std::fmt::Arguments) -> std::io::Result<()> {
                 write!(out, "\r\n")?;
             }
         }
-        // Move back down toward prompt row
-        let _ = queue!(out, MoveTo(0, prompt_row));
     } else {
         if formatted.is_empty() {
             let _ = queue!(out, MoveToColumn(0));
