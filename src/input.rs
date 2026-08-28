@@ -3,8 +3,8 @@ use bevy::prelude::*;
 use crossterm::event::{self, Event, KeyEventKind};
 use std::time::Duration;
 
-use crate::keymap::ReplKeymap;
-use crate::repl::{Repl, ReplBufferEvent, ReplLifecycleEvent, ReplSet, ReplSubmitEvent};
+use crate::keymap::{KeymapLifecycleAction, ReplKeymap};
+use crate::repl::{Repl, ReplBufferEvent, ReplSet, ReplSubmitEvent};
 
 pub struct InputPlugin;
 
@@ -25,21 +25,35 @@ impl Plugin for InputPlugin {
 }
 
 /// System that captures keyboard input from the terminal and immediately updates the REPL buffer.
+///
+/// This system runs every frame in `PreUpdate` with non-blocking polling.
+/// When the REPL is disabled, it listens exclusively for lifecycle keys (e.g. F3 to enable).
+/// When enabled, it handles full buffer editing, command execution, and Ctrl+C exit.
 pub fn capture_terminal_input(
     mut repl: ResMut<Repl>,
-    mut lifecycle_events: MessageWriter<ReplLifecycleEvent>,
     mut app_exit: MessageWriter<AppExit>,
     mut commands: Commands,
     keymap: Res<ReplKeymap>,
 ) {
-    if !repl.enabled {
-        return;
-    }
-
     while event::poll(Duration::ZERO).unwrap_or(false) {
         if let Ok(Event::Key(key_event)) = event::read() {
             if matches!(key_event.kind, KeyEventKind::Press | KeyEventKind::Repeat) {
-                // Ctrl+C in raw mode: immediately restore terminal and exit
+                // 1. Check for lifecycle transitions (toggle, enable, disable) - ALWAYS ACTIVE
+                if let Some(action) = keymap.check_lifecycle(&key_event) {
+                    match action {
+                        KeymapLifecycleAction::Enable => repl.enable(),
+                        KeymapLifecycleAction::Disable => repl.disable(),
+                        KeymapLifecycleAction::Toggle => repl.toggle(),
+                    }
+                    continue;
+                }
+
+                // If REPL is disabled, ignore all regular typing (pass-through)
+                if !repl.enabled {
+                    continue;
+                }
+
+                // 2. Ctrl+C in raw mode: immediately restore terminal and exit
                 if key_event
                     .modifiers
                     .contains(crossterm::event::KeyModifiers::CONTROL)
@@ -50,13 +64,7 @@ pub fn capture_terminal_input(
                     return;
                 }
 
-                // 1. Check for lifecycle transitions (toggle, enable, disable)
-                if let Some(lifecycle_ev) = keymap.check_lifecycle(&key_event) {
-                    lifecycle_events.write(lifecycle_ev);
-                    continue;
-                }
-
-                // 2. Map key event to buffer action and apply immediately
+                // 3. Map key event to buffer action and apply immediately
                 if let Some(action) = keymap.map(&key_event) {
                     match action {
                         ReplBufferEvent::Insert(c) => repl.insert(c),

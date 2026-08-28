@@ -30,8 +30,7 @@ pub mod prelude {
     pub use crate::input::InputPlugin;
     pub use crate::keymap::{Binding as ReplKeybind, ReplKeymap};
     pub use crate::repl::{
-        Repl, ReplBufferEvent, ReplLifecycleEvent, ReplPlugin, ReplSet, ReplSubmitEvent,
-        repl_is_enabled,
+        Repl, ReplBufferEvent, ReplPlugin, ReplSet, ReplSubmitEvent, repl_is_enabled,
     };
     // Bring the robust printing macro into the prelude for convenient use.
     pub use crate::repl_println;

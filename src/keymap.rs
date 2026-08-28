@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 
-use crate::repl::{ReplBufferEvent, ReplLifecycleEvent};
+use crate::repl::ReplBufferEvent;
 
 pub struct InputKeymapPlugin;
 
@@ -62,7 +62,7 @@ impl Default for ReplKeymap {
         Self {
             enable: None,
             disable: None,
-            toggle: Some(Binding::plain(K::Char('`'))),
+            toggle: Some(Binding::plain(K::F(3))),
             submit: Some(Binding::plain(K::Enter)),
             newline: Some(Binding::new(K::Enter, M::SHIFT)),
             backspace: Some(Binding::plain(K::Backspace)),
@@ -79,22 +79,29 @@ impl Default for ReplKeymap {
     }
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum KeymapLifecycleAction {
+    Enable,
+    Disable,
+    Toggle,
+}
+
 impl ReplKeymap {
     /// Check if the key event matches any lifecycle transitions (enable, disable, toggle).
-    pub fn check_lifecycle(&self, event: &KeyEvent) -> Option<ReplLifecycleEvent> {
+    pub fn check_lifecycle(&self, event: &KeyEvent) -> Option<KeymapLifecycleAction> {
         if let Some(b) = &self.toggle {
             if b.matches(event) {
-                return Some(ReplLifecycleEvent::Toggle);
+                return Some(KeymapLifecycleAction::Toggle);
             }
         }
         if let Some(b) = &self.enable {
             if b.matches(event) {
-                return Some(ReplLifecycleEvent::Enable);
+                return Some(KeymapLifecycleAction::Enable);
             }
         }
         if let Some(b) = &self.disable {
             if b.matches(event) {
-                return Some(ReplLifecycleEvent::Disable);
+                return Some(KeymapLifecycleAction::Disable);
             }
         }
         None

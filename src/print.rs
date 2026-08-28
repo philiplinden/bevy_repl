@@ -3,7 +3,9 @@
 use bevy::prelude::*;
 use crossterm::{
     cursor::{MoveTo, MoveToColumn},
-    queue, terminal,
+    queue,
+    style::Print,
+    terminal::{self, Clear, ClearType},
 };
 use std::io::{Write, stdout};
 
@@ -28,6 +30,27 @@ impl Plugin for PrintPlugin {
     }
 }
 
+/// Sets the DECSTBM scroll region to rows 1..=bottom_row (1-based index).
+pub fn set_scroll_region(bottom_row: u16) {
+    let mut out = stdout();
+    let _ = write!(out, "\x1B[1;{}r", bottom_row);
+    let _ = out.flush();
+}
+
+/// Resets the DECSTBM scroll region to the full window.
+pub fn reset_scroll_region() {
+    let mut out = stdout();
+    let _ = write!(out, "\x1B[r");
+    let _ = out.flush();
+}
+
+/// Clears the prompt row at the bottom of the screen.
+pub fn clear_prompt_line(prompt_row: u16) {
+    let mut out = stdout();
+    let _ = queue!(out, MoveTo(0, prompt_row), Clear(ClearType::CurrentLine));
+    let _ = out.flush();
+}
+
 /// System that ensures the terminal scroll region reserves the bottom prompt area
 /// so that stdout/logs scroll above the active prompt line.
 pub fn manage_scroll_region(repl: Res<Repl>, mut last_state: Local<Option<(bool, u16)>>) {
@@ -40,14 +63,11 @@ pub fn manage_scroll_region(repl: Res<Repl>, mut last_state: Local<Option<(bool,
         return;
     }
 
-    let mut out = stdout();
     if repl.enabled {
-        let bottom = h.saturating_sub(1);
-        let _ = write!(out, "\x1B[1;{}r", bottom);
+        set_scroll_region(h.saturating_sub(1));
     } else if last_state.is_some() {
-        let _ = write!(out, "\x1B[r");
+        reset_scroll_region();
     }
-    let _ = out.flush();
 
     *last_state = Some(current_state);
 }
@@ -63,17 +83,9 @@ pub fn render_prompt(repl: Res<Repl>) {
     };
     let prompt_row = rows.saturating_sub(1);
     let rendered_line = format!("{}{}", repl.prompt_symbol, repl.buffer);
-
-    let mut out = stdout();
-    use crossterm::{
-        cursor::MoveTo,
-        queue,
-        style::Print,
-        terminal::{Clear, ClearType},
-    };
-
     let cursor_x = (repl.prompt_symbol.len() + repl.cursor_pos) as u16;
 
+    let mut out = stdout();
     let _ = queue!(
         out,
         MoveTo(0, prompt_row),
@@ -88,7 +100,6 @@ pub fn render_prompt(repl: Res<Repl>) {
 /// explicit CRLF (`\r\n`) and cursor coordination within the scroll region.
 pub fn repl_print(args: std::fmt::Arguments) -> std::io::Result<()> {
     let mut out = stdout();
-
     let formatted = format!("{}", args);
 
     if let Ok((_cols, rows)) = terminal::size() {

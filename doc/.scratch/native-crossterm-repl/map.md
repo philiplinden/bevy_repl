@@ -22,13 +22,9 @@ A complete technical architecture and implementation specification for removing 
 - [[06] Derive Macro Ergonomics and Complexity](issues/06-derive-macro-ergonomics-and-complexity.md): Dual macro design (`#[repl_command]` attribute macro to automatically inject `clap::Parser`/`Event`/`Clone` derives alongside standard `#[derive(ReplCommand)]`), zero `Default` bound requirement, and feature gating.
 - [[04] Tracing Subscriber Integration](issues/04-tracing-subscriber-integration.md): Direct `repl_tracing_layer` using `ReplMakeWriter` / `ReplWriter` passing formatted bytes straight to `repl_print`, with automatic fallback initialization when `LogPlugin` is absent and `DefaultPlugins.with_repl_log()` helper.
 - [[07] Prune and Feature-Gate Dependencies](issues/07-prune-and-feature-gate-dependencies.md): Removed `bevy_ratatui`, `ratatui`, `anyhow`, `color-eyre`; configured lean core dependencies and fast linker profile in `.cargo/config.toml`.
+- [[08] Unified Headless Toggle and Schedule Gating](issues/08-unified-headless-toggle-and-schedule-gating.md): Always-on `capture_terminal_input` listening for F3 toggle even when disabled, selective schedule gating (`Print` only), eliminating user-side toggle boilerplate.
 
 ## Not yet specified
-
-- Multi-line / word-wrapped prompt reserving $N$ bottom rows for long commands.
-- Status bar / gutter line (top or bottom) for FPS, entity counts, or custom debug diagnostics.
-- Command history buffer and arrow-key navigation (`Up`/`Down` history stack).
-- Key modifier chords (Ctrl, Alt, Shift) comprehensive mapping table.
 
 ## Out of scope
 

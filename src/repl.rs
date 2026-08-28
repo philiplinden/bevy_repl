@@ -41,9 +41,7 @@ impl Plugin for ReplPlugin {
         }
         app.init_resource::<Repl>();
         app.add_message::<ReplBufferEvent>();
-        app.add_message::<ReplLifecycleEvent>();
         app.add_systems(Startup, init_repl);
-        app.add_systems(PreUpdate, handle_repl_lifecycle);
         app.add_systems(Last, on_app_exit_restore);
         app.configure_sets(
             PreUpdate,
@@ -57,7 +55,7 @@ impl Plugin for ReplPlugin {
             )
                 .chain(),
         );
-        app.configure_sets(PreUpdate, ReplSet::All.run_if(repl_is_enabled));
+        app.configure_sets(PreUpdate, ReplSet::Print.run_if(repl_is_enabled));
     }
 }
 
@@ -75,8 +73,11 @@ fn install_safety_hooks() {
 }
 
 fn init_repl(repl: Res<Repl>) {
+    let _ = crossterm::terminal::enable_raw_mode();
     if repl.enabled {
-        let _ = Repl::init_terminal();
+        if let Ok((_, rows)) = crossterm::terminal::size() {
+            crate::print::set_scroll_region(rows.saturating_sub(1));
+        }
     }
 }
 
@@ -130,50 +131,56 @@ impl Repl {
     }
 
     pub fn enable(&mut self) {
-        self.enabled = true;
+        if !self.enabled {
+            self.enabled = true;
+            if let Ok((_, rows)) = crossterm::terminal::size() {
+                crate::print::set_scroll_region(rows.saturating_sub(1));
+            }
+        }
     }
+
     pub fn disable(&mut self) {
-        self.enabled = false;
+        if self.enabled {
+            self.enabled = false;
+            self.clear_buffer();
+            let (_, rows) = crossterm::terminal::size().unwrap_or((80, 24));
+            crate::print::clear_prompt_line(rows.saturating_sub(1));
+            crate::print::reset_scroll_region();
+        }
     }
     pub fn toggle(&mut self) {
-        self.enabled = !self.enabled;
+        if self.enabled {
+            self.disable();
+        } else {
+            self.enable();
+        }
     }
-    pub fn init_terminal() -> std::io::Result<()> {
-        use crossterm::terminal;
-        use std::io::{Write, stdout};
 
-        terminal::enable_raw_mode()?;
-        let mut out = stdout();
-        if let Ok((_, rows)) = terminal::size() {
-            let bottom = rows.saturating_sub(1);
-            let _ = write!(out, "\x1B[1;{}r", bottom);
-            let _ = out.flush();
+    pub fn init_terminal() -> std::io::Result<()> {
+        crossterm::terminal::enable_raw_mode()?;
+        if let Ok((_, rows)) = crossterm::terminal::size() {
+            crate::print::set_scroll_region(rows.saturating_sub(1));
         }
         Ok(())
     }
 
     pub fn restore_terminal() -> std::io::Result<()> {
-        use crossterm::{
-            cursor::{MoveTo, Show},
-            queue,
-            terminal::{self, Clear, ClearType},
-        };
-        use std::io::{Write, stdout};
-
-        let mut out = stdout();
-        let (_, rows) = terminal::size().unwrap_or((80, 24));
+        let (_, rows) = crossterm::terminal::size().unwrap_or((80, 24));
         let prompt_row = rows.saturating_sub(1);
 
-        // 1. Clear prompt line
-        let _ = queue!(out, MoveTo(0, prompt_row), Clear(ClearType::CurrentLine));
-        // 2. Reset scroll region
-        let _ = write!(out, "\x1B[r");
-        // 3. Move cursor to bottom row & show
-        let _ = queue!(out, MoveTo(0, prompt_row), Show);
-        let _ = write!(out, "\r\n");
-        let _ = out.flush();
-        // 4. Disable raw mode
-        terminal::disable_raw_mode()?;
+        crate::print::clear_prompt_line(prompt_row);
+        crate::print::reset_scroll_region();
+
+        let mut out = std::io::stdout();
+        let _ = crossterm::queue!(
+            out,
+            crossterm::cursor::MoveTo(0, prompt_row),
+            crossterm::cursor::Show
+        );
+        let _ = std::io::Write::write(&mut out, b"\r\n");
+        let _ = std::io::Write::flush(&mut out);
+
+        crossterm::terminal::disable_raw_mode()?;
         Ok(())
     }
 
@@ -183,13 +190,11 @@ impl Repl {
             execute,
             terminal::{Clear, ClearType},
         };
-        use std::io::stdout;
-
-        let mut out = stdout();
+        let mut out = std::io::stdout();
         execute!(
             out,
             Clear(ClearType::All),
-            Clear(ClearType::Purge), // Clears scrollback history if supported
+            Clear(ClearType::Purge),
             MoveTo(0, 0)
         )?;
         Ok(())
@@ -284,33 +289,3 @@ pub enum ReplBufferEvent {
 
 #[derive(Event, Debug, Clone)]
 pub struct ReplSubmitEvent(pub String);
-
-/// Event emitted when the REPL is enabled or disabled to notify other systems of the change.
-#[derive(Message, Clone)]
-pub enum ReplLifecycleEvent {
-    Enable,
-    Disable,
-    Toggle,
-}
-
-pub fn handle_repl_lifecycle(
-    mut reader: MessageReader<ReplLifecycleEvent>,
-    mut repl: ResMut<Repl>,
-) {
-    for event in reader.read() {
-        let should_enable = match event {
-            ReplLifecycleEvent::Enable => true,
-            ReplLifecycleEvent::Disable => false,
-            ReplLifecycleEvent::Toggle => !repl.enabled,
-        };
-
-        if should_enable && !repl.enabled {
-            repl.enabled = true;
-            let _ = Repl::init_terminal();
-        } else if !should_enable && repl.enabled {
-            repl.enabled = false;
-            repl.clear_buffer();
-            let _ = Repl::restore_terminal();
-        }
-    }
-}

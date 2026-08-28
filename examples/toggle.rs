@@ -4,9 +4,9 @@
 use bevy::prelude::*;
 use bevy_repl::prelude::*;
 
-fn toggle_repl(input: Res<ButtonInput<KeyCode>>, mut writer: MessageWriter<ReplLifecycleEvent>) {
-    if input.just_pressed(KeyCode::Backquote) {
-        writer.write(ReplLifecycleEvent::Toggle);
+fn toggle_repl(input: Res<ButtonInput<KeyCode>>, mut repl: ResMut<Repl>) {
+    if input.just_pressed(KeyCode::F3) {
+        repl.toggle();
     }
 }
 

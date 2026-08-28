@@ -5,7 +5,7 @@ members = [".", "bevy_repl_derive"]
 name = "bevy_repl"
 version = "1.0.0"
 edition = "2024"
-description = "Add a REPL to the terminal for interactive headless or windowed Bevy applications"
+description ="Interact with a headless or windowed Bevy application from the terminal with custom commands."
 license = "MIT"
 repository = "https://github.com/philiplinden/bevy_repl"
 keywords = ["bevy", "repl", "console", "debugging", "dev_tools", "tracing", "cli", "terminal", "headless", "utility"]
@@ -21,9 +21,6 @@ ctrlc = "3"
 
 # Optional features
 bevy_repl_derive = { version = "0.1.0", path = "./bevy_repl_derive", optional = true }
-
-# FIXME(remove this after nothing depends on it)
-bevy_ratatui = "0.11.1"
 
 [features]
 default = [
