@@ -8,13 +8,15 @@
 //!
 //! This avoids newline/cursor issues that can happen in raw or alternate screen modes.
 
-use std::io::{stdout, Write};
-use std::sync::atomic::{AtomicU16, AtomicU64, Ordering};
-
-use bevy_ratatui::crossterm::{
+use bevy::prelude::*;
+use crossterm::{
     cursor::{MoveTo, MoveToColumn},
-    queue,
+    queue, terminal,
 };
+use std::io::{Write, stdout};
+use std::sync::atomic::{AtomicU16, Ordering};
+
+use crate::repl::Repl;
 
 // Track scroll region info (terminal height and reserved bottom lines) so printers can
 // position output above the prompt area when using ratatui's alternate screen.
@@ -37,12 +39,29 @@ pub fn get_scroll_region_info() -> Option<(u16, u16)> {
     Some((h, r))
 }
 
-// Track how many lines have been printed
-static PRINT_COUNT: AtomicU64 = AtomicU64::new(0);
+/// System that ensures the terminal scroll region reserves the bottom prompt area.
+pub fn manage_scroll_region(repl: Res<Repl>, mut last_state: Local<Option<(bool, u16)>>) {
+    let Ok((_w, h)) = terminal::size() else {
+        return;
+    };
+    let current_state = (repl.enabled, h);
 
-#[inline]
-pub fn printed_lines() -> usize {
-    PRINT_COUNT.load(Ordering::Relaxed).try_into().unwrap()
+    if last_state.as_ref() == Some(&current_state) {
+        return;
+    }
+
+    let mut out = stdout();
+    if repl.enabled {
+        let bottom = h.saturating_sub(1);
+        let _ = write!(out, "\x1B[1;{}r", bottom);
+        set_scroll_region_info(h, 1);
+    } else if last_state.is_some() {
+        let _ = write!(out, "\x1B[r");
+        set_scroll_region_info(h, 0);
+    }
+    let _ = out.flush();
+
+    *last_state = Some(current_state);
 }
 
 /// Low-level function used by [`repl_println!`] to print a formatted line.
@@ -84,10 +103,7 @@ pub fn repl_print(args: std::fmt::Arguments) -> std::io::Result<()> {
     }
     write!(out, "{}", args)?;
     write!(out, "\r\n")?;
-    out.flush().map(|_| {
-        PRINT_COUNT.fetch_add(1, Ordering::Relaxed);
-        ()
-    })
+    out.flush()
 }
 
 /// Print a line that behaves well in raw/alternate screen contexts.

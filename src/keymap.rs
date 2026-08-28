@@ -4,9 +4,9 @@ use bevy_ratatui::event::KeyMessage;
 
 use crate::repl::ReplBufferEvent;
 
-pub struct PromptKeymapPlugin;
+pub struct InputKeymapPlugin;
 
-impl Plugin for PromptKeymapPlugin {
+impl Plugin for InputKeymapPlugin {
     fn build(&self, app: &mut App) {
         app.insert_resource(PromptKeymap::default());
     }

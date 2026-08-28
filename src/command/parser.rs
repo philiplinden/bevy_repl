@@ -1,15 +1,14 @@
 use super::ReplCommand;
-use crate::repl::{Repl, ReplSubmitEvent};
+use crate::repl::{Repl, ReplSet, ReplSubmitEvent};
 use crate::repl_println;
 use bevy::prelude::*;
-use bevy_ratatui::event::InputSet;
 pub struct ParserPlugin;
 
 impl Plugin for ParserPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(
             Update,
-            parse_input_buffer_for_commands.in_set(InputSet::EmitBevy),
+            parse_input_buffer_for_commands.in_set(ReplSet::Parse),
         );
     }
 }

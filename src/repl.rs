@@ -24,55 +24,22 @@ use std::collections::HashMap;
 ///
 /// # Note
 /// For a complete batteries-included REPL experience, consider using the [`ReplPlugins`] group.
-pub struct ReplPlugin {
-    enable_on_startup: bool,
-}
-
-impl Default for ReplPlugin {
-    fn default() -> Self {
-        Self {
-            enable_on_startup: true,
-        }
-    }
-}
-
-impl ReplPlugin {
-    /// Create a REPL plugin that starts enabled (default).
-    pub fn enabled() -> Self {
-        Self {
-            enable_on_startup: true,
-        }
-    }
-
-    /// Create a REPL plugin that starts disabled (no runtime toggle in v1).
-    pub fn disabled() -> Self {
-        Self {
-            enable_on_startup: false,
-        }
-    }
-
-    /// Configure whether the REPL starts enabled.
-    pub fn with_enabled(enabled: bool) -> Self {
-        Self {
-            enable_on_startup: enabled,
-        }
-    }
-}
-
-pub fn repl_is_enabled(repl: Res<Repl>) -> bool {
-    repl.enabled
-}
+pub struct ReplPlugin;
 
 impl Plugin for ReplPlugin {
     fn build(&self, app: &mut App) {
-        app.insert_resource(Repl {
-            enabled: self.enable_on_startup,
-            ..default()
-        });
+        if !app.is_plugin_added::<bevy::log::LogPlugin>() {
+            debug!("No global tracing subscriber exists yet!");
+            info!("Configuring tracing layer for REPL...");
+            let _ = tracing_subscriber::registry()
+                .with(crate::tracing::repl_tracing_layer())
+                .try_init();
+        }
+        app.insert_resource(Repl::default());
         app.add_message::<ReplSubmitEvent>();
         app.add_message::<ReplBufferEvent>();
         app.add_message::<ReplLifecycleEvent>();
-        app.add_systems(Startup, emit_enable_if_enabled);
+        app.add_systems(Startup, init_repl);
         app.add_systems(Last, on_app_exit_emit_disable);
         app.configure_sets(
             Update,
@@ -81,17 +48,14 @@ impl Plugin for ReplPlugin {
                 ReplSet::Capture,
                 ReplSet::Buffer,
                 ReplSet::Parse,
-                ReplSet::Render,
+                ReplSet::Print,
                 ReplSet::Post,
             )
                 .chain(),
         );
         // Wrapper set to anchor all REPL systems at the end of the PreUpdate set.
         // All of the REPL sets only run when the REPL is enabled.
-        app.configure_sets(
-            Update,
-            ReplSet::All.in_set(PreUpdate).run_if(repl_is_enabled),
-        );
+        app.configure_sets(PreUpdate, ReplSet::All.run_if(repl_is_enabled));
     }
 }
 
@@ -122,6 +86,15 @@ impl Default for Repl {
 }
 
 impl Repl {
+    pub fn enable(&self) {
+        self.enabled = true
+
+    pub fn disable(&self) {
+        self.enabled = false
+    }
+    pub fn toggle(&self) {
+        self.enabled = !self.enabled
+    }
     pub fn clear_terminal() -> std::io::Result<()> {
         use crossterm::{
             cursor::MoveTo,
@@ -181,21 +154,26 @@ impl Repl {
     }
 }
 
+/// A simple helper function to control the `run_if` condition for the repl systems
+pub fn repl_is_enabled(repl: Res<Repl>) -> bool {
+    repl.enabled
+}
+
 #[derive(SystemSet, Debug, Hash, PartialEq, Eq, Clone)]
 pub enum ReplSet {
-    /// Wrapper for all REPL systems to allow global ordering and run conditions
+    /// Global wrapper set to anchor all REPL systems and apply `run_if(repl_is_enabled)`
     All,
     /// Pre stage for consuming/forwarding behavior
     Pre,
-    /// Read terminal key events (when enabled)
+    ///  Read keys from crossterm (when REPL is enabled)
     Capture,
-    /// Update REPL buffer state from captured input
+    /// Update REPL buffer and cursor position from captured input
     Buffer,
-    /// Parse commands from buffered REPL input
+    /// Parse and dispatch commands+args from buffered REPL input
     Parse,
-    /// Render the prompt / UI to the console
-    Render,
-    /// Post stage for consuming/forwarding behavior
+    /// Output the prompt line to stdout
+    Print,
+    /// Post stage for input suppression / cleanup
     Post,
 }
 
@@ -220,30 +198,6 @@ pub struct ReplSubmitEvent(pub String);
 pub enum ReplLifecycleEvent {
     Enable,
     Disable,
-}
-
-/// Function that emits a `ReplLifecycleEvent::Enable` message if the REPL is enabled.
-///
-/// The primary purpose of this function is to emit the `Enable` event when the plugin is initialized
-/// to start up the REPL immediately. See also [`ReplPlugin.enabled_on_startup`].
-fn emit_enable_if_enabled(repl: Res<Repl>, mut writer: MessageWriter<ReplLifecycleEvent>) {
-    if repl.enabled {
-        writer.write(ReplLifecycleEvent::Enable);
-    }
-}
-
-/// Function that emits a `ReplLifecycleEvent::Disable` message when the application exits.
-///
-/// The primary purpose of this function is to trigger the event that notifies
-/// other systems to clean up resources, stop the REPL, and restore the terminal
-/// to its nominal state.
-fn on_app_exit_emit_disable(
-    mut exit: MessageReader<AppExit>,
-    mut writer: MessageWriter<ReplLifecycleEvent>,
-) {
-    for _ in exit.read() {
-        writer.write(ReplLifecycleEvent::Disable);
-    }
 }
 
 pub fn handle_repl_lifecycle(

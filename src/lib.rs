@@ -17,21 +17,19 @@
 
 pub mod built_ins;
 pub mod command;
-pub mod log_ecs;
+pub mod input;
+pub mod keymap;
 pub mod print;
-pub mod prompt;
 pub mod repl;
+pub mod tracing;
 
 pub mod prelude {
     pub use crate::built_ins::ReplDefaultCommandsPlugin;
     #[cfg(not(feature = "derive"))]
     pub use crate::command::ReplCommand;
     pub use crate::command::{ReplAppExt, ReplResult};
-    pub use crate::prompt::{
-        PromptPlugin, ReplPrompt, ReplPromptConfig,
-        keymap::{Binding as ReplKeybind, PromptKeymap},
-        renderer::{ActiveRenderer, PromptRenderPlugin, PromptRenderer, simple::SimpleRenderer},
-    };
+    pub use crate::input::InputPlugin;
+    pub use crate::keymap::{Binding as ReplKeybind, PromptKeymap};
     pub use crate::repl::{
         Repl, ReplBufferEvent, ReplPlugin, ReplSet, ReplSubmitEvent, repl_is_enabled,
     };
@@ -41,7 +39,7 @@ pub mod prelude {
     // Low-level printer if callers prefer a function over the macro.
     pub use crate::print::repl_print;
 
-    pub use crate::log_ecs::{
+    pub use crate::tracing::{
         LogEvent, custom_layer as repl_log_custom_layer, print_log_events_system,
         tracing_to_repl_fmt, tracing_to_repl_fmt_with_level,
     };
@@ -63,8 +61,9 @@ impl PluginGroup for ReplPlugins {
         PluginGroupBuilder::start::<Self>()
             .add(crate::repl::ReplPlugin::default())
             .add(crate::command::ParserPlugin)
-            .add(crate::prompt::PromptPlugin::default())
-            .add(crate::log_ecs::ReplLogPrintPlugin)
+            .add(crate::input::InputPlugin)
+            .add(crate::keymap::PromptKeymapPlugin)
+            .add(crate::tracing::ReplLogPrintPlugin)
             // only adds commands that are enabled by feature flags
             .add(crate::built_ins::ReplDefaultCommandsPlugin)
     }

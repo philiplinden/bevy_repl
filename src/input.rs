@@ -2,14 +2,14 @@ use bevy::input::keyboard::KeyboardInput;
 use bevy::prelude::*;
 use bevy_ratatui::crossterm::event::KeyEventKind as CrosstermKeyEventKind;
 use bevy_ratatui::event::KeyMessage;
-use std::io::{stdout, Write};
+use std::io::{Write, stdout};
 
-use crate::prompt::keymap::PromptKeymap;
+use crate::keymap::PromptKeymap;
 use crate::repl::{Repl, ReplBufferEvent, ReplSet, ReplSubmitEvent};
 
-pub struct PromptInputPlugin;
+pub struct InputPlugin;
 
-impl Plugin for PromptInputPlugin {
+impl Plugin for InputPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(
             Update,

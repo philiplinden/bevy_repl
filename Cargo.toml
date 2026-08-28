@@ -12,7 +12,7 @@ keywords = ["bevy", "repl", "console", "debugging", "dev_tools", "tracing", "cli
 categories = ["game-development", "development-tools", "command-line-utilities"]
 
 [dependencies]
-bevy = { version = "0.19", default-features = false, features = ["bevy_log"] }
+bevy = { version = "0.19", default-features = false, features = ["keyboard", "bevy_log"] }
 tracing-subscriber = { version = "0.3", features = ["fmt", "ansi", "registry"] }
 crossterm = "0.28"
 clap = { version = "4.6" }
