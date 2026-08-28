@@ -1,6 +1,4 @@
 use bevy::prelude::*;
-use bevy_ratatui::event::InputSet;
-
 use std::collections::HashMap;
 
 /// A Bevy plugin that provides a Read-Eval-Print Loop (REPL) interface for interactive command input.
@@ -20,6 +18,9 @@ use std::collections::HashMap;
 /// use your_crate::ReplPlugin;
 /// App::new().add_plugin(ReplPlugin::enabled());
 /// ```
+///
+/// # Note
+/// For a complete batteries-included REPL experience, consider using the [`ReplPlugins`] group.
 pub struct ReplPlugin {
     enable_on_startup: bool,
 }
@@ -72,20 +73,24 @@ impl Plugin for ReplPlugin {
                 ReplSet::Pre,
                 ReplSet::Capture,
                 ReplSet::Buffer,
+                ReplSet::Parse,
                 ReplSet::Render,
                 ReplSet::Post,
             )
                 .chain(),
         );
-        // Wrapper set to anchor all REPL systems at the end of the ratatui set.
+        // Wrapper set to anchor all REPL systems at the end of the PreUpdate set.
         // All of the REPL sets only run when the REPL is enabled.
         app.configure_sets(
             Update,
-            ReplSet::All.in_set(InputSet::Post).run_if(repl_is_enabled),
+            ReplSet::All.in_set(PreUpdate).run_if(repl_is_enabled),
         );
     }
 }
 
+/// The REPL resource holds the state of the REPL, including the buffer, cursor position, and commands.
+/// Core functions for interacting with the REPL itself and managing the buffer are implemented as methods on this resource.
+/// Custom app commands should be registered with the [`register_command`] method, not the [`Repl`] resource itself.
 #[derive(Resource)]
 pub struct Repl {
     pub enabled: bool,
@@ -162,24 +167,36 @@ pub enum ReplSet {
     Capture,
     /// Update REPL buffer state from captured input
     Buffer,
-    /// Render the prompt / UI
+    /// Parse commands from buffered REPL input
+    Parse,
+    /// Render the prompt / UI to the console
     Render,
     /// Post stage for consuming/forwarding behavior
     Post,
 }
 
+/// Event emitted when the REPL is enabled or disabled to notify other systems of the change.
 #[derive(Message, Clone)]
 pub enum ReplLifecycleEvent {
     Enable,
     Disable,
 }
 
+/// Function that emits a `ReplLifecycleEvent::Enable` message if the REPL is enabled.
+///
+/// The primary purpose of this function is to emit the `Enable` event when the plugin is initialized
+/// to start up the REPL immediately. See also [`ReplPlugin.enabled_on_startup`].
 fn emit_enable_if_enabled(repl: Res<Repl>, mut writer: MessageWriter<ReplLifecycleEvent>) {
     if repl.enabled {
         writer.write(ReplLifecycleEvent::Enable);
     }
 }
 
+/// Function that emits a `ReplLifecycleEvent::Disable` message when the application exits.
+///
+/// The primary purpose of this function is to trigger the event that notifies
+/// other systems to clean up resources, stop the REPL, and restore the terminal
+/// to its nominal state.
 fn on_app_exit_emit_disable(
     mut exit: MessageReader<AppExit>,
     mut writer: MessageWriter<ReplLifecycleEvent>,

@@ -22,6 +22,9 @@ ctrlc = "3"
 bevy_repl_derive = { version = "0.1.0", path = "./bevy_repl_derive", optional = true }
 tracing-subscriber = { version = "0.3", optional = true, features = ["fmt", "ansi", "registry"] }
 
+# FIXME(remove this after nothing depends on it)
+bevy_ratatui = "0.11.1"
+
 [features]
 default = [
     "derive",
