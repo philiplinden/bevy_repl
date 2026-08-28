@@ -26,7 +26,7 @@ use std::collections::HashMap;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 
-#[derive(Default)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct ReplPlugin;
 
 impl Plugin for ReplPlugin {
@@ -39,7 +39,7 @@ impl Plugin for ReplPlugin {
                 .with(crate::tracing::make_repl_layer())
                 .try_init();
         }
-        app.insert_resource(Repl::default());
+        app.init_resource::<Repl>();
         app.add_message::<ReplBufferEvent>();
         app.add_message::<ReplLifecycleEvent>();
         app.add_systems(Startup, init_repl);
@@ -113,6 +113,22 @@ impl Default for Repl {
 }
 
 impl Repl {
+    /// Create a REPL resource configuration that starts enabled (default).
+    pub fn enabled() -> Self {
+        Self {
+            enabled: true,
+            ..Self::default()
+        }
+    }
+
+    /// Create a REPL resource configuration that starts disabled.
+    pub fn disabled() -> Self {
+        Self {
+            enabled: false,
+            ..Self::default()
+        }
+    }
+
     pub fn enable(&mut self) {
         self.enabled = true;
     }

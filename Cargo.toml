@@ -3,7 +3,7 @@ members = [".", "bevy_repl_derive"]
 
 [package]
 name = "bevy_repl"
-version = "0.6.0"
+version = "1.0.0"
 edition = "2024"
 description = "Add a REPL to the terminal for interactive headless or windowed Bevy applications"
 license = "MIT"
@@ -55,6 +55,10 @@ path = "examples/custom_log_layer.rs"
 [[example]]
 name = "default"
 path = "examples/default.rs"
+
+[[example]]
+name = "disabled"
+path = "examples/disabled.rs"
 
 [[example]]
 name = "demo"

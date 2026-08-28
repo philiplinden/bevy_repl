@@ -58,7 +58,7 @@ pub struct ReplPlugins;
 impl PluginGroup for ReplPlugins {
     fn build(self) -> PluginGroupBuilder {
         PluginGroupBuilder::start::<Self>()
-            .add(crate::repl::ReplPlugin)
+            .add(crate::repl::ReplPlugin::default())
             .add(crate::command::ParserPlugin)
             .add(crate::input::InputPlugin)
             .add(crate::keymap::InputKeymapPlugin)

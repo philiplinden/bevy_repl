@@ -69,6 +69,10 @@ impl ReplCommand for StartTimerCommand {
     fn clap_command() -> clap::Command {
         clap::Command::new("start").about("Starts the timer")
     }
+
+    fn to_event(_matches: &clap::ArgMatches) -> Result<Self, clap::Error> {
+        Ok(Self)
+    }
 }
 
 #[derive(Debug, Clone, Event, Default)]
@@ -78,6 +82,10 @@ impl ReplCommand for StopTimerCommand {
     fn clap_command() -> clap::Command {
         clap::Command::new("stop").about("Stops the timer")
     }
+
+    fn to_event(_matches: &clap::ArgMatches) -> Result<Self, clap::Error> {
+        Ok(Self)
+    }
 }
 
 #[derive(Debug, Clone, Event, Default)]
@@ -86,6 +94,10 @@ struct ResetTimerCommand;
 impl ReplCommand for ResetTimerCommand {
     fn clap_command() -> clap::Command {
         clap::Command::new("reset").about("Resets the timer to 0")
+    }
+
+    fn to_event(_matches: &clap::ArgMatches) -> Result<Self, clap::Error> {
+        Ok(Self)
     }
 }
 
@@ -149,9 +161,11 @@ fn instructions() {
 fn main() {
     App::new()
         .add_plugins((
-            DefaultPlugins.set(bevy::app::ScheduleRunnerPlugin::run_loop(
-                std::time::Duration::from_secs_f64(1.0 / 60.0),
-            )),
+            DefaultPlugins
+                .set(bevy::app::ScheduleRunnerPlugin::run_loop(
+                    std::time::Duration::from_secs_f64(1.0 / 60.0),
+                ))
+                .adapt_for_repl(),
             ReplPlugins,
         ))
         .init_resource::<TimerResource>()

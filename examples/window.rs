@@ -12,6 +12,10 @@ impl ReplCommand for PingCommand {
     fn clap_command() -> clap::Command {
         clap::Command::new("ping").about("Test command")
     }
+
+    fn to_event(_matches: &clap::ArgMatches) -> Result<Self, clap::Error> {
+        Ok(Self)
+    }
 }
 
 fn on_ping(_trigger: On<PingCommand>) {
@@ -33,13 +37,15 @@ fn instructions() {
 fn main() {
     App::new()
         .add_plugins((
-            DefaultPlugins.set(WindowPlugin {
-                primary_window: Some(Window {
-                    title: "Bevy REPL".to_string(),
+            DefaultPlugins
+                .set(WindowPlugin {
+                    primary_window: Some(Window {
+                        title: "Bevy REPL".to_string(),
+                        ..default()
+                    }),
                     ..default()
-                }),
-                ..default()
-            }),
+                })
+                .adapt_for_repl(),
             ReplPlugins,
         ))
         .add_repl_command::<PingCommand>()
