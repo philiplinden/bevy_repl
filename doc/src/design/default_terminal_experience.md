@@ -1,20 +1,5 @@
 # Bevy from the Terminal
 
-Bevy's input system doesn't make it easy to interact with an app with a Command
-Line Interface (CLI) or command console. Out of the box, text input is handled
-by a user interface and parsing the text into events or other game behavior is
-left to the app developer.
-
-1. Text input requires a windowed app with a renderer, and the text is handled
-   by a GUI element, like
-   [bevy-console](https://github.com/makspll/bevy-console); or
-2. The default renderer is replaced by a TUI (which is just a renderer that
-   happens to not leave the terminal), like
-   [bevy_ratatui](https://github.com/ratatui/bevy_ratatui) and
-   [bevyterm](https://github.com/Mimea005/bevyterm).
-3. There is no windowing system or renderer, but then consequently no text
-   input system.
-
 ## Headless mode
 
 "Headless" mode is when a Bevy app runs in the terminal without a window. All
