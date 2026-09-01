@@ -11,6 +11,10 @@ Enable the `derive` feature to use clap's derive pattern with `#[derive(ReplComm
 bevy_repl = { version = "0.4", features = ["derive"] }
 ```
 
+## Examples
+
+### No arguments
+
 ```rust
 use bevy::prelude::*;
 use bevy_repl::prelude::*;
@@ -27,11 +31,20 @@ fn main() {
     App::new()
         .add_plugins((
             MinimalPlugins,
-            bevy::input::InputPlugin::default(),
             ReplPlugins,
         ))
         .add_repl_command::<Ping>()
         .add_observer(on_ping)
         .run();
 }
+```
+
+### With arguments
+```rust
+use bevy::prelude::*;
+use bevy_repl::prelude::*;
+use clap::Parser;
+
+/// TODO
+
 ```

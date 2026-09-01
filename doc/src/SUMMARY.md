@@ -12,6 +12,7 @@
     - [Keybinds](config/keybinds.md)
     - [Prompt Styling](config/prompt_styling.md)
 - [Design](design/index.md)
+    - [Bevy from the Terminal](design/default_terminal_experience.md)
     - [Command Parsing](design/command_parsing.md)
     - [Logging](design/logging.md)
     - [Scheduling](design/scheduling.md)

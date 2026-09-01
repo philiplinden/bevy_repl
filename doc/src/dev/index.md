@@ -3,7 +3,16 @@
 This chapter contains developer notes, to-dos, known issues, and other
 information for those who want to contribute to the crate.
 
-## Aspirations
+## TUI Mode
+
+TUI (terminal user interface) mode is the original approach to the REPL,
+where the prompt and logs are captured and redirected away from the builtin
+log handler to the TUI renderer.
+
+The TUI adds large dependencies and can break the normal logging behavior.
+On the other hand, it is togglable at runtime and supports custom keybinds.
+
+### Feature Wishlist
 
 - [x] **Derive pattern** (_Added in v0.3.0_) - Describe commands with clap's
   derive pattern.
@@ -33,3 +42,12 @@ information for those who want to contribute to the crate.
   discovery.
 - [ ] **Customizable prompt** - Allow the user to configure the REPL prompt for
   all REPL controls, not just the toggle key.
+
+## Non-TUI Mode
+
+Starting in v0.5.0, the REPL can be used in non-TUI mode where the prompt
+and logs are printed to stdout together with the builtin log handler. This
+mode is lightweight and intended to be a minimal layer on top of the Bevy app.
+
+Here, _lightweight_ means that the REPL adds minimal dependencies and is purely
+additive with no disruptions to the normal logging behavior.
