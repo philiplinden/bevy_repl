@@ -14,14 +14,11 @@
   - [Prompt Styling](_archive/config/prompt_styling.md)-->
 
 # Understanding BevyREPL
-- [Design](design/index.md)
-  - [Bevy from the Terminal](design/default_terminal_experience.md)
-  - [Vision for BevyREPL](design/vision.md)
+- [Bevy from the Terminal](design/index.md)
+  - [Default Terminal Experience](design/default_terminal_experience.md)
 - [How it Works](how_it_works/index.md)
   - [Command Parsing](how_it_works/command_parsing.md)
   - [Logging](how_it_works/logging.md)
-  - [Scheduling](how_it_works/scheduling.md)
-  <!--- [Terminal Screens](_archive/terminal_screens.md)-->
 - [Development](dev/index.md)
   - [Known Issues & Limitations](dev/known_issues.md)
   - [Changelog](dev/changelog.md)

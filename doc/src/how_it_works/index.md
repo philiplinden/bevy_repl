@@ -1,4 +1,4 @@
-# Design
+# How It Works
 
 BevyREPL is read-execute-print-loop designed to be an interactive console for
 the Bevy app at runtime. It provides a command line interface (CLI) to trigger
