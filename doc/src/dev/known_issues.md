@@ -2,32 +2,55 @@
 
 <!-- toc -->
 
-## TUI Mode
+## Windows and Unix behave differently
 
-- Built-in `help` and `clear` commands are not yet implemented.
-- Ctrl+Enter and other advanced key combinations do not work.
-- Directly modifying the terminal can be fragile if raw mode isn't restored.
+The terminal backend (`crossterm`) works differently on Windows and on Unix.
+macOS uses the same Unix backend as Linux, so expect it to behave like Linux.
+Known differences:
 
-**Tips:**
+- **Raw mode and newlines.** On Unix, raw mode also turns off output
+  processing, so a bare `\n` moves down a line without returning to column 0
+  and output "stair-steps". On Windows, raw mode leaves output alone. Print
+  with `repl_println!`, which writes `\r\n`.
+- **Key release events.** Windows reports key releases as well as presses;
+  Unix reports presses only. The REPL only acts on presses and repeats.
+- **Prompt visibility.** In the ratatui era, the prompt text and cursor were
+  invisible while typing on Windows. This hasn't been rechecked since the
+  crossterm rewrite.
 
-- Place your input event reader system before `bevy_repl::ReplSet::Pre` if you need to read inputs while REPL is enabled.
-- If the terminal state is left odd after an abnormal exit, restart your
-  terminal.
-- If you are on Windows, use the REPL with `bevy_ratatui` added too.
-  (See the `examples/alt_screen.rs` example.)
+If a bug seems to come and go, check whether you switched operating systems or
+terminals between runs.
 
-### Built-in `help` and `clear` commands are not yet implemented
-I have `help` and `clear` implemented as placeholders. I don't consider this
-crate to be feature-complete until these are implemented.
+## Code that doesn't match the docs yet
 
-### Terminal behavior is inconsistent between Windows and Linux
-The input buffer and cursor behavior is inconsistent between Windows and Linux.
-On Linux, the cursor is always visible and input appears in the buffer as it is
-typed. On Windows, the cursor and input buffer are not visible while typing. The
-buffer is clearly interpreted as normal, but the user can't see it.
+These are gaps between the current code and the behavior the book describes.
 
-Interestingly, the cursor and input buffer are visible while typing in the
-prompt when using the `bevy_ratatui` crate in conjunction with `bevy_repl`.
+- **Logging isn't additive yet.** Most examples call
+  `DefaultPlugins.adapt_for_repl()`, which disables `LogPlugin` so the REPL can
+  install its own log writer. Log lines written while the user types can garble
+  the prompt. See [Logging](../how_it_works/logging.md).
+- **Toggle machinery is still in the code.** The `F3` toggle, the `enabled`
+  flag, and the lifecycle actions are left over from earlier versions. Toggling
+  isn't part of the current plan.
 
-### Keybinds with modifier keys are not reliably detected
-This might be related to not using Kitty protocol.
+- **`MinimalPlugins` is untested.** Every example uses `DefaultPlugins`. The
+  system that keeps typed keys away from the game reads Bevy's keyboard input
+  resources, which `MinimalPlugins` doesn't add.
+
+## Bugs
+
+- **Non-ASCII input panics.** The buffer is indexed by bytes rather than
+  characters, so inserting or deleting around a multi-byte character can panic.
+  The prompt's cursor column has the same byte/character mix-up.
+- **Unknown arguments are silent.** If a command gets an argument it doesn't
+  recognize, the parse error isn't shown to the user.
+- **Ctrl+C always exits.** The keymap binds Ctrl+C to clear the line, but the
+  exit check runs first, so that binding never fires.
+- **Shift+Enter inserts a newline** into the single-row prompt.
+- **`help` output is unordered.** Commands are listed in hash-map order, and
+  aliases appear as separate entries.
+
+## Tips
+
+- If the terminal is left in an odd state after an abnormal exit, run `reset`
+  (Unix) or restart the terminal.

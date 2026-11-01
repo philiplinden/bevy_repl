@@ -1,25 +1,29 @@
 # How It Works
 
-BevyREPL is read-execute-print-loop designed to be an interactive console for
+BevyREPL is a read-eval-print loop designed to be an interactive console for
 the Bevy app at runtime. It provides a command line interface (CLI) to trigger
 commands and inspect the app state without a window or renderer. The REPL leans
 on common CLI patterns and conventions, including all features supported by
 [`clap`](https://docs.rs/clap), for a familiar and intuitive user experience.
 
-This chapter documents the design of the REPL and its components. It serves as
-here as a reference for myself and for anyone who wants to understand how the
+This chapter documents the design of the REPL and its components. It serves as a
+reference for myself and for anyone who wants to understand how the
 REPL works.
 
 <!-- toc -->
 
 ## Command Parsing
 
-Input is parsed via `clap` commands and corresponding observer systems that
-execute when triggered by the REPL.
+When the user presses Enter, the REPL:
+
+1. splits the input line into shell-style `argv` tokens with `shell-words`;
+2. matches the tokens against each registered command's `clap::Command`;
+3. converts the matches into the command struct with `ReplCommand::to_event`;
+4. triggers the command struct as an event, which runs its observers.
 
 ### Minimal example (builder pattern)
 
-```rust
+```rust,ignore
 use bevy::prelude::*;
 use bevy_repl::prelude::*;
 
@@ -35,7 +39,12 @@ impl ReplCommand for Say {
     }
 }
 
-fn on_say(t: Trigger<Say>) { println!("{}", t.msg); }
+fn on_say(t: On<Say>) { repl_println!("{}", t.event().msg); }
 ```
 
-See `examples/` for more.
+See [`examples/`](https://github.com/philiplinden/bevy_repl/tree/main/examples)
+for more.
+
+## Logging
+
+See [Logging](logging.md).

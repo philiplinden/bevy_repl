@@ -80,13 +80,11 @@ is disabled.
 - [examples/app/headless_renderer.rs](https://github.com/bevyengine/bevy/blob/main/examples/app/headless_renderer.rs)
 - [examples/app/externally_driven_headless_renderer.rs](https://github.com/bevyengine/bevy/blob/main/examples/app/externally_driven_headless_renderer.rs)
 
-> [!WARNING]
-> The `keyboard` feature is required for the engine to recognize keystrokes as
-> input events. It is usually disabled in headless mode by default. Managing keyboard
-> inputs is kind of a pain anyway, and parsing text rather than registering keypresses
-> ends up being an exercise in UI frustration (even when there's no UI!). Be
-> sure to also enable plugins like `InputPlugin` so the app can handle keyboard 
-> inputs for critical behavior such as quitting the app.
+> [!NOTE]
+> Bevy's `keyboard` feature and `InputPlugin` are usually off in headless apps,
+> so Bevy itself sees no keystrokes. The REPL reads keys straight from the
+> terminal with `crossterm` instead of through Bevy's input system, so typing
+> at the prompt doesn't depend on them.
 
 ### Logging
 

@@ -22,16 +22,14 @@ Bevy REPL is powered by `clap` for command parsing and `crossterm` for
 terminal input and output. The plugin adds a text input area below the terminal
 output for interaction even in headless mode.
 
-- Unobtrusive TUI console below normal terminal output to stdout
+- A one-line prompt pinned below normal terminal output, with no TUI
 - Command parsing and CLI features from `clap`
 - Observer-based command execution system with full Bevy ECS access for both
   read and write operations
-- Integration with `bevy_log` and `tracing` that shows Bevy logs with rich
-  formatting in the REPL (if you disable Bevy's `LogPlugin`)
+- Bevy logs and `println!` output keep printing above the prompt, with no
+  changes to `LogPlugin` or `DefaultPlugins`
 - Works in terminal with headless and windowed apps
 - Built-in `quit`, `help`, and `clear` commands
-- Support for custom prompt rendering
-- (_Experimental_) Custom keybind support for REPL cursor controls 
 
 The REPL is designed as an alternative to
 [makspll/bevy-console](https://github.com/makspll/bevy-console) for Bevy apps
@@ -43,6 +41,7 @@ _This is my first public Bevy plugin, and I vibe-coded a large part of it._
 
 | Version | Bevy | Notes |
 | --- | --- | --- |
+| 1.0.0 (unreleased) | 0.20 | Rewrite on `crossterm` without `ratatui`. Work in progress on `main`. |
 | 0.5.0 | 0.19.0 | Compatibility update for [Bevy 0.19.0](https://github.com/bevyengine/bevy/releases/tag/0.19.0). Depends on https://github.com/ratatui/bevy_ratatui/pull/98 |
 | 0.4.1 | 0.16.1 | Better docs: [philiplinden.github.io/bevy_repl](https://philiplinden.github.io/bevy_repl/) |
 | 0.4.0 | 0.16.1 | Removed the "pretty" renderer in favor of getting simple prompt features working. Changed the interface slightly. This is a breaking change! See [examples](https://github.com/philiplinden/bevy_repl/tree/main/examples) for help. |
@@ -72,13 +71,6 @@ repository directly:
 bevy = "0.20"
 bevy_repl = { git = "https://github.com/philiplinden/bevy_repl" }
 ```
-
-**Optional features:**
-
-| Feature Flag | Description | Default |
-| --- | --- | --- |
-| `derive` | Support clap's derive pattern for REPL commands | `true` |
-| `default_commands` | Enable all built-in commands | `true` |
 
 ### ReplPlugins
 
