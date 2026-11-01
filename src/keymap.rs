@@ -89,20 +89,20 @@ pub enum KeymapLifecycleAction {
 impl ReplKeymap {
     /// Check if the key event matches any lifecycle transitions (enable, disable, toggle).
     pub fn check_lifecycle(&self, event: &KeyEvent) -> Option<KeymapLifecycleAction> {
-        if let Some(b) = &self.toggle {
-            if b.matches(event) {
-                return Some(KeymapLifecycleAction::Toggle);
-            }
+        if let Some(b) = &self.toggle
+            && b.matches(event)
+        {
+            return Some(KeymapLifecycleAction::Toggle);
         }
-        if let Some(b) = &self.enable {
-            if b.matches(event) {
-                return Some(KeymapLifecycleAction::Enable);
-            }
+        if let Some(b) = &self.enable
+            && b.matches(event)
+        {
+            return Some(KeymapLifecycleAction::Enable);
         }
-        if let Some(b) = &self.disable {
-            if b.matches(event) {
-                return Some(KeymapLifecycleAction::Disable);
-            }
+        if let Some(b) = &self.disable
+            && b.matches(event)
+        {
+            return Some(KeymapLifecycleAction::Disable);
         }
         None
     }
@@ -129,12 +129,12 @@ impl ReplKeymap {
             return Some(ev);
         }
 
-        if self.allow_plain_char_insert {
-            if let KeyCode::Char(c) = event.code {
-                // Allow insertion when no modifiers or only SHIFT are pressed.
-                if event.modifiers.is_empty() || event.modifiers == KeyModifiers::SHIFT {
-                    return Some(ReplBufferEvent::Insert(c));
-                }
+        if self.allow_plain_char_insert
+            && let KeyCode::Char(c) = event.code
+        {
+            // Allow insertion when no modifiers or only SHIFT are pressed.
+            if event.modifiers.is_empty() || event.modifiers == KeyModifiers::SHIFT {
+                return Some(ReplBufferEvent::Insert(c));
             }
         }
         None

@@ -36,9 +36,18 @@ fn instructions() {
 
     repl_println!();
     repl_println!("Try these commands in the REPL:");
-    repl_println!("  quit   - Exit the app ({})", yes_no(cfg!(feature = "quit")));
-    repl_println!("  help   - Show available commands ({})", yes_no(cfg!(feature = "help")));
-    repl_println!("  clear  - Clear the screen ({})", yes_no(cfg!(feature = "clear")));
+    repl_println!(
+        "  quit   - Exit the app ({})",
+        yes_no(cfg!(feature = "quit"))
+    );
+    repl_println!(
+        "  help   - Show available commands ({})",
+        yes_no(cfg!(feature = "help"))
+    );
+    repl_println!(
+        "  clear  - Clear the screen ({})",
+        yes_no(cfg!(feature = "clear"))
+    );
     repl_println!();
     repl_println!("To control which are enabled, run with Cargo feature flags.");
     repl_println!("Examples:");

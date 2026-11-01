@@ -36,54 +36,54 @@ pub fn capture_terminal_input(
     keymap: Res<ReplKeymap>,
 ) {
     while event::poll(Duration::ZERO).unwrap_or(false) {
-        if let Ok(Event::Key(key_event)) = event::read() {
-            if matches!(key_event.kind, KeyEventKind::Press | KeyEventKind::Repeat) {
-                // 1. Check for lifecycle transitions (toggle, enable, disable) - ALWAYS ACTIVE
-                if let Some(action) = keymap.check_lifecycle(&key_event) {
-                    match action {
-                        KeymapLifecycleAction::Enable => repl.enable(),
-                        KeymapLifecycleAction::Disable => repl.disable(),
-                        KeymapLifecycleAction::Toggle => repl.toggle(),
+        if let Ok(Event::Key(key_event)) = event::read()
+            && matches!(key_event.kind, KeyEventKind::Press | KeyEventKind::Repeat)
+        {
+            // 1. Check for lifecycle transitions (toggle, enable, disable) - ALWAYS ACTIVE
+            if let Some(action) = keymap.check_lifecycle(&key_event) {
+                match action {
+                    KeymapLifecycleAction::Enable => repl.enable(),
+                    KeymapLifecycleAction::Disable => repl.disable(),
+                    KeymapLifecycleAction::Toggle => repl.toggle(),
+                }
+                continue;
+            }
+
+            // If REPL is disabled, ignore all regular typing (pass-through)
+            if !repl.enabled {
+                continue;
+            }
+
+            // 2. Ctrl+C in raw mode: immediately restore terminal and exit
+            if key_event
+                .modifiers
+                .contains(crossterm::event::KeyModifiers::CONTROL)
+                && key_event.code == crossterm::event::KeyCode::Char('c')
+            {
+                let _ = Repl::restore_terminal();
+                app_exit.write(AppExit::Success);
+                return;
+            }
+
+            // 3. Map key event to buffer action and apply immediately
+            if let Some(action) = keymap.map(&key_event) {
+                match action {
+                    ReplBufferEvent::Insert(c) => repl.insert(c),
+                    ReplBufferEvent::Backspace => repl.backspace(),
+                    ReplBufferEvent::Delete => repl.delete(),
+                    ReplBufferEvent::MoveLeft => repl.left(),
+                    ReplBufferEvent::MoveRight => repl.right(),
+                    ReplBufferEvent::JumpToStart => repl.home(),
+                    ReplBufferEvent::JumpToEnd => repl.end(),
+                    ReplBufferEvent::Clear => repl.clear_buffer(),
+                    ReplBufferEvent::ClearToStart => repl.clear_to_start(),
+                    ReplBufferEvent::ClearScreen => {
+                        let _ = Repl::clear_terminal();
                     }
-                    continue;
-                }
-
-                // If REPL is disabled, ignore all regular typing (pass-through)
-                if !repl.enabled {
-                    continue;
-                }
-
-                // 2. Ctrl+C in raw mode: immediately restore terminal and exit
-                if key_event
-                    .modifiers
-                    .contains(crossterm::event::KeyModifiers::CONTROL)
-                    && key_event.code == crossterm::event::KeyCode::Char('c')
-                {
-                    let _ = Repl::restore_terminal();
-                    app_exit.write(AppExit::Success);
-                    return;
-                }
-
-                // 3. Map key event to buffer action and apply immediately
-                if let Some(action) = keymap.map(&key_event) {
-                    match action {
-                        ReplBufferEvent::Insert(c) => repl.insert(c),
-                        ReplBufferEvent::Backspace => repl.backspace(),
-                        ReplBufferEvent::Delete => repl.delete(),
-                        ReplBufferEvent::MoveLeft => repl.left(),
-                        ReplBufferEvent::MoveRight => repl.right(),
-                        ReplBufferEvent::JumpToStart => repl.home(),
-                        ReplBufferEvent::JumpToEnd => repl.end(),
-                        ReplBufferEvent::Clear => repl.clear_buffer(),
-                        ReplBufferEvent::ClearToStart => repl.clear_to_start(),
-                        ReplBufferEvent::ClearScreen => {
-                            let _ = Repl::clear_terminal();
-                        }
-                        ReplBufferEvent::Submit => {
-                            let input = repl.drain_buffer();
-                            if !input.is_empty() {
-                                commands.trigger(ReplSubmitEvent(input));
-                            }
+                    ReplBufferEvent::Submit => {
+                        let input = repl.drain_buffer();
+                        if !input.is_empty() {
+                            commands.trigger(ReplSubmitEvent(input));
                         }
                     }
                 }

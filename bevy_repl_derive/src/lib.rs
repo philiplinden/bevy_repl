@@ -1,12 +1,12 @@
 use proc_macro::TokenStream;
 use quote::quote;
-use syn::{parse_macro_input, DeriveInput};
+use syn::{DeriveInput, parse_macro_input};
 
 /// Derive macro that automatically implements `ReplCommand` for structs
 /// that use clap's `Parser` derive.
 ///
 /// # Example
-/// ```rust
+/// ```rust,ignore
 /// use bevy::prelude::*;
 /// use bevy_repl::prelude::*;
 /// use clap::Parser;

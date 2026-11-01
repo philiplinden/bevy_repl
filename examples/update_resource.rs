@@ -92,7 +92,7 @@ fn on_time_scale(trigger: On<TimeScaleCommand>, mut scale: ResMut<TimeScale>) {
 // -------- Systems that read the resource live --------
 fn tick(mut frames: ResMut<FrameCounter>, scale: Res<TimeScale>) {
     frames.0 = frames.0.wrapping_add(1);
-    if frames.0 % 60 == 0 {
+    if frames.0.is_multiple_of(60) {
         repl_println!("Tick: frame={}, time-scale={}", frames.0, scale.0);
     }
 }

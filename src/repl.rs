@@ -2,30 +2,24 @@ use crate::{command::CommandParser, keymap::ReplKeymap};
 
 use bevy::prelude::*;
 use std::collections::HashMap;
+use tracing_subscriber::layer::SubscriberExt;
+use tracing_subscriber::util::SubscriberInitExt;
 
 /// A Bevy plugin that provides a Read-Eval-Print Loop (REPL) interface for interactive command input.
 ///
 /// # Purpose
 /// The `ReplPlugin` enables a REPL terminal within your Bevy application, allowing users to enter commands and interact with the app at runtime.
 ///
-/// # Configuration Options
-/// - `enable_on_startup`: Determines whether the REPL is enabled when the app starts.
-///   - Use [`ReplPlugin::enabled()`] to start enabled (default).
-///   - Use [`ReplPlugin::disabled()`] to start disabled.
-///   - Use [`ReplPlugin::with_enabled(bool)`] for explicit control.
-///
 /// # Usage
 /// Add the plugin to your Bevy app:
 /// ```
-/// use your_crate::ReplPlugin;
-/// App::new().add_plugin(ReplPlugin::enabled());
+/// use bevy::prelude::*;
+/// use bevy_repl::repl::ReplPlugin;
+/// App::new().add_plugins(ReplPlugin);
 /// ```
 ///
 /// # Note
-/// For a complete batteries-included REPL experience, consider using the [`ReplPlugins`] group.
-use tracing_subscriber::layer::SubscriberExt;
-use tracing_subscriber::util::SubscriberInitExt;
-
+/// For a complete batteries-included REPL experience, consider using the [`ReplPlugins`](crate::ReplPlugins) group.
 #[derive(Clone, Copy, Debug, Default)]
 pub struct ReplPlugin;
 
@@ -74,10 +68,10 @@ fn install_safety_hooks() {
 
 fn init_repl(repl: Res<Repl>) {
     let _ = crossterm::terminal::enable_raw_mode();
-    if repl.enabled {
-        if let Ok((_, rows)) = crossterm::terminal::size() {
-            crate::print::set_scroll_region(rows.saturating_sub(1));
-        }
+    if repl.enabled
+        && let Ok((_, rows)) = crossterm::terminal::size()
+    {
+        crate::print::set_scroll_region(rows.saturating_sub(1));
     }
 }
 

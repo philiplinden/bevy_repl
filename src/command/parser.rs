@@ -27,6 +27,12 @@ impl<C: ReplCommand> TypedCommandParser<C> {
     }
 }
 
+impl<C: ReplCommand> Default for TypedCommandParser<C> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<C: ReplCommand> CommandParser for TypedCommandParser<C> {
     fn parse_and_trigger(&self, input: &str, bevy_commands: &mut Commands) -> bool {
         // Tokenize the input like a shell (handles quotes/escapes)

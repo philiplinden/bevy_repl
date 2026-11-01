@@ -68,7 +68,7 @@ fn use_custom_keybinds(mut commands: Commands, bevy_input: Res<ButtonInput<KeyCo
 
 fn detect_bevy_keycode_input(bevy_input: Res<ButtonInput<KeyCode>>) {
     let codes = bevy_input.get_pressed().collect::<Vec<_>>();
-    if codes.len() >= 1 {
+    if !codes.is_empty() {
         info!("Detected Bevy keycodes: {:?}", codes);
     }
 }
