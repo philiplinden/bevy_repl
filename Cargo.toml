@@ -3,7 +3,7 @@ members = [".", "bevy_repl_derive"]
 
 [package]
 name = "bevy_repl"
-version = "1.0.0"
+version = "1.0.0-dev"
 edition = "2024"
 rust-version = "1.97.1"
 description = "Interact with a headless or windowed Bevy application from the terminal with custom commands."

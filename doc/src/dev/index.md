@@ -174,11 +174,16 @@ Pushing a tag like `v1.0.0` starts the `release.yml` workflow. It:
 5. regenerates `CHANGELOG.md` and commits it to `main`;
 6. deploys this book to GitHub Pages.
 
+Between releases, `main` carries the next version with a `-dev` suffix (for
+example `1.0.0-dev`), the same convention Bevy uses. Nothing is ever published
+under a `-dev` version.
+
 To cut a release:
 
-1. Bump `version` in `Cargo.toml`. If `bevy_repl_derive` changed, bump its
-   version too, along with the `bevy_repl_derive` dependency version in the
-   root `Cargo.toml`.
+1. Drop the `-dev` suffix from `version` in `Cargo.toml` (for example
+   `1.0.0-dev` → `1.0.0`). If `bevy_repl_derive` changed, bump its version
+   too, along with the `bevy_repl_derive` dependency version in the root
+   `Cargo.toml`.
 2. Update the version table in `README.md`. While 1.0 is unreleased, the
    README's install line points at the git repository; switch it to the
    crates.io version once that version is published.
@@ -188,6 +193,8 @@ To cut a release:
    git tag v1.0.0
    git push origin v1.0.0
    ```
+
+4. Set `main` to the next development version, for example `1.1.0-dev`.
 
 Tags must start with `v`. git-cliff and the release workflow both ignore tags
 without it.
