@@ -1,37 +1,78 @@
-name: Tests
+name: CI
 
 on:
   pull_request:
   push:
     branches: [main]
+  # The release workflow runs these checks before publishing.
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Cancel superseded runs on the same PR, but let main and release runs finish.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  CARGO_TERM_COLOR: always
+  # `bevy/bevy_window` is a feature of the bevy dependency, not of this crate,
+  # so `--all-features` doesn't cover it. The `window` example needs it.
+  FEATURES: --all-features --features bevy/bevy_window
 
 jobs:
+  fmt:
+    name: Format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+      - run: cargo fmt --all --check
+
+  clippy:
+    name: Clippy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - uses: Swatinem/rust-cache@v2
+      # --all-targets also covers the examples, so this doubles as the
+      # "examples still compile" check.
+      - run: cargo clippy --workspace --all-targets $FEATURES -- -D warnings
+
   test:
+    name: Test
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo test --workspace $FEATURES
 
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
+  docs:
+    name: Docs
+    runs-on: ubuntu-latest
+    env:
+      RUSTDOCFLAGS: -D warnings
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo doc --workspace --no-deps --all-features
 
-      - name: Cache cargo dependencies
-        uses: Swatinem/rust-cache@v2
-
-      - name: Run unit tests
-        run: cargo test --lib
-
-  check-examples:
+  package:
+    name: Package
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Cache cargo dependencies
-        uses: Swatinem/rust-cache@v2
-
-      - name: Check that all examples compile
-        run: cargo check --examples --all-features --features bevy/bevy_window
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      # Builds both crates from their packaged sources, the same way
+      # crates.io will see them.
+      - run: cargo package --workspace
