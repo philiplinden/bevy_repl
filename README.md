@@ -3,13 +3,13 @@
 A Bevy plugin that provides a Read-Eval-Print Loop (REPL) interface for
 interactive command input.
 
-The `ReplPlugins` plugin group enables a REPL within the terminal while your
+The `ReplPlugins` plugin group adds a REPL to the terminal console while your
 Bevy application runs, allowing users to enter commands and interact with the
-ECS at runtime.
+ECS at runtime with or without a renderer.
 
 ```rust
 use bevy::prelude::*;
-use bevy_repl::prelude::*;
+use bevy_repl::ReplPlugins;
 
 fn main() {
     App::new().add_plugins((DefaultPlugins, ReplPlugins));
@@ -18,7 +18,7 @@ fn main() {
 
 ![Made with VHS](https://vhs.charm.sh/vhs-6kUt4mnyvUcmbpVfWzHx4s.gif)
 
-Bevy REPL is powered by `clap` for command parsing and `bevy_ratatui` for
+Bevy REPL is powered by `clap` for command parsing and `crossterm` for
 terminal input and output. The plugin adds a text input area below the terminal
 output for interaction even in headless mode.
 
@@ -29,14 +29,14 @@ output for interaction even in headless mode.
 - Integration with `bevy_log` and `tracing` that shows Bevy logs with rich
   formatting in the REPL (if you disable Bevy's `LogPlugin`)
 - Works in terminal with headless and windowed apps
-- Built-in commands for common tasks (just `quit` for now)
+- Built-in `quit`, `help`, and `clear` commands
 - Support for custom prompt rendering
 - (_Experimental_) Custom keybind support for REPL cursor controls 
 
 The REPL is designed as an alternative to
 [makspll/bevy-console](https://github.com/makspll/bevy-console) for Bevy apps
 that want a terminal-like console to modify the game at runtime without
-implementing a full TUI or rendering features.
+implementing a full TUI, and something that works with or without a renderer.
 
 _This is my first public Bevy plugin, and I vibe-coded a large part of it._ 
 **_You have been warned_.**
@@ -56,30 +56,30 @@ additional features at your own risk.
 
 | Feature Flag | Description | Default |
 | --- | --- | --- |
-| `derive` | Support clap's derive pattern for REPL commands | `false` |
+| `derive` | Support clap's derive pattern for REPL commands | `true` |
 | `default_commands` | Enable all built-in commands | `true` |
 | `quit` | Enable the `quit` command | `true` (included in `default_commands`) |
-| `help` | Enable the `help` command | `false` |
-| `clear` | Enable the `clear` command | `false` |
+| `help` | Enable the `help` command | `true` (included in `default_commands`) |
+| `clear` | Enable the `clear` command | `true` (included in `default_commands`) |
 
 ## Batteries-included setup
 
 ```toml
 [dependencies]
-bevy = "0.16.1"
-bevy_repl = { version = "0.4.1", default-features = true }
+bevy = "0.20"
+bevy_repl = "1.0"
 ```
 
 **Optional features:**
 
 | Feature Flag | Description | Default |
 | --- | --- | --- |
-| `derive` | Support clap's derive pattern for REPL commands | `false` |
+| `derive` | Support clap's derive pattern for REPL commands | `true` |
 | `default_commands` | Enable all built-in commands | `true` |
 
 ### ReplPlugins
 
-```rust
+```rust,no_run
 use bevy::prelude::*;
 use bevy_repl::ReplPlugins;
 
@@ -90,7 +90,7 @@ fn main() {
             DefaultPlugins
                 .set(bevy::app::ScheduleRunnerPlugin::run_loop(
                     std::time::Duration::from_secs_f32(1.0/60.0)
-                ))
+                )),
             ReplPlugins,
         ))
         .run();
@@ -102,11 +102,12 @@ fn main() {
 Input is parsed via `clap` commands and corresponding observer systems that
 execute when triggered by the command.
 
-1. Define a command type by deriving `Event` and implementing `ReplCommand` (or deriving it if you have the `derive` feature enabled).
-2. Register the command with the app with `.add_repl_command::<YourReplCommand>()`.
+1. Define a command type by deriving `Event` and implementing `ReplCommand`
+   (or deriving it if you have the `derive` feature enabled).
+2. Register the command with the app with `.add_repl_command::<YourCommand>()`.
 3. Handle the command event with an observer: `.add_observer(on_command)`.
 
-The REPL parses prompt input to a `YourReplCommand` event, where the fields are
+The REPL parses prompt input to a `YourCommand` event, where the fields are
 the parsed arguments and options. Use observers to handle the event with full
 ECS access.
 
@@ -115,7 +116,8 @@ ECS access.
 The Bevy REPL Book is a collection of docs and notes about the Bevy REPL, how to
 use it, and how it works under the hood.
 
-The book is available at [philiplinden.github.io/bevy_repl](https://philiplinden.github.io/bevy_repl/).
+The book is available at
+[philiplinden.github.io/bevy_repl](https://philiplinden.github.io/bevy_repl/).
 
 ## License
 
