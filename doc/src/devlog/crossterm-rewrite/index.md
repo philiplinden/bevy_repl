@@ -1,6 +1,6 @@
 # The Crossterm Rewrite
 
-August 2026 onward, v1.0. Dropping ratatui for a native crossterm loop with a pinned prompt, and rethinking how logs reach the terminal.
+August 2026 onward, working toward v1.0. Dropping ratatui for a native crossterm loop with a pinned prompt, and rethinking how logs reach the terminal.
 
 - [2026-08-27: Research: Architecture and Implementation of `bevyterm`](2026-08-27-bevyterm_research.md)
 - [2026-08-27](2026-08-27.md)

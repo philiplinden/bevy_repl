@@ -13,4 +13,4 @@ The log falls roughly into three stretches:
 - [**Keeping Up with Bevy**](keeping-up-with-bevy/index.md) (October 2025 –
   March 2026, v0.5)
 - [**The Crossterm Rewrite**](crossterm-rewrite/index.md) (August 2026 onward,
-  v1.0)
+  toward v1.0)

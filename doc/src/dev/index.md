@@ -179,7 +179,9 @@ To cut a release:
 1. Bump `version` in `Cargo.toml`. If `bevy_repl_derive` changed, bump its
    version too, along with the `bevy_repl_derive` dependency version in the
    root `Cargo.toml`.
-2. Update the version table in `README.md`.
+2. Update the version table in `README.md`. While 1.0 is unreleased, the
+   README's install line points at the git repository; switch it to the
+   crates.io version once that version is published.
 3. Merge to `main`, then tag that commit and push the tag:
 
    ```bash

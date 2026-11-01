@@ -64,10 +64,13 @@ additional features at your own risk.
 
 ## Batteries-included setup
 
+1.0 isn't on crates.io yet. To try the current work toward it, depend on this
+repository directly:
+
 ```toml
 [dependencies]
 bevy = "0.20"
-bevy_repl = "1.0"
+bevy_repl = { git = "https://github.com/philiplinden/bevy_repl" }
 ```
 
 **Optional features:**
