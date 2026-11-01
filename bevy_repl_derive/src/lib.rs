@@ -31,7 +31,7 @@ pub fn derive_repl_command(input: TokenStream) -> TokenStream {
             }
 
             fn to_event(matches: &clap::ArgMatches) -> bevy_repl::command::ReplResult<Self> {
-                Ok(<#name as clap::FromArgMatches>::from_arg_matches(matches)?)
+                <#name as clap::FromArgMatches>::from_arg_matches(matches)
             }
         }
     };

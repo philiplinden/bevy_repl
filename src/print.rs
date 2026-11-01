@@ -97,7 +97,7 @@ pub fn render_prompt(repl: Res<Repl>) {
     let _ = out.flush();
 }
 
-/// Low-level function used by [`repl_println!`] to print a formatted line with
+/// Low-level function used by [`repl_println!`](crate::repl_println) to print a formatted line with
 /// explicit CRLF (`\r\n`) and cursor coordination within the scroll region.
 pub fn repl_print(args: std::fmt::Arguments) -> std::io::Result<()> {
     let mut out = stdout();

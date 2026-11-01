@@ -83,7 +83,7 @@ fn on_app_exit_restore(mut exit: MessageReader<AppExit>) {
 
 /// The REPL resource holds the state of the REPL, including the buffer, cursor position, and commands.
 /// Core functions for interacting with the REPL itself and managing the buffer are implemented as methods on this resource.
-/// Custom app commands should be registered with the [`register_command`] method, not the [`Repl`] resource itself.
+/// Custom app commands should be registered with [`ReplAppExt::add_repl_command`](crate::command::ReplAppExt::add_repl_command), not the [`Repl`] resource itself.
 #[derive(Resource)]
 pub struct Repl {
     pub enabled: bool,
