@@ -1,15 +1,73 @@
-# Design
+# Vision for BevyREPL
 
-This section documents the design of the REPL and its components. I include it
-here as a reference for myself and for anyone who wants to understand how the
-REPL works.
+As a developer, I see the terminal as a view to the engine running "under the
+hood". The engine logs its behavior and other messages at runtime that aren't
+necessarily shown to the user, and are not part of the end user's experience. In
+my opinion, this means that the terminal should give _access_ to the engine
+under the hood as well.
 
-<!-- toc -->
+## The current experience
 
-## Headless Bevy
+Bevy's input system doesn't make it easy to interact with an app with a Command
+Line Interface (CLI) or command console. Out of the box, text input is handled
+by a user interface and parsing the text into events or other game behavior is
+left to the app developer.
 
-The REPL is designed to be an interactive console for the Bevy app at runtime.
-It runs in the terminal while your Bevy app is running, even in headless mode.
+1. Text input requires a windowed app with a renderer, and the text is handled
+   by a GUI element, like
+   [bevy-console](https://github.com/makspll/bevy-console); or
+2. The default renderer is replaced by a TUI (which is just a renderer that
+   happens to not leave the terminal), like
+   [bevy_ratatui](https://github.com/ratatui/bevy_ratatui) and
+   [bevyterm](https://github.com/Mimea005/bevyterm).
+3. There is no windowing system or renderer, but then consequently no text
+   input system.
+
+The developer experience of a quake-style console is a good example of this
+vision. For Bevy, however,
+[bevy-console](https://github.com/NiklasEi/bevy_console) is built upon
+[egui](https://github.com/emilk/egui) and therefore only available in windowed
+applications. Not to mention that Egui is a large dependency to add, especially
+for an app that is not using Egui for anyhing else.
+
+Interaction with Bevy from the terminal usually calls for a TUI (terminal user
+interface) renderer like [bevy_ratatui](https://github.com/ratatui/bevy_ratatui)
+or [bevyterm](https://github.com/Mimea005/bevyterm), which is a lot of overhead
+for a developer tool, especially when the app doesn't use the terminal for
+anything in the app nominally. On top of that, the developer would have to route
+logs to the TUI, add custom input areas and command parsing, and so on.
+
+## The ideal experience
+
+An ideal experience would be a terminal-based REPL (Read-Eval-Print Loop) that
+is available out of the box with no configuration or setup beyond adding a new
+plugin to the app. It should be simple to add custom commands and arguments to
+the REPL without much boilerplate, and should feel familiar to setting up any
+other conventional CLI.
+
+Nice-to-haves would be to see the nominal log messages from the engine alongside
+the REPL output, having the REPL output and logs persist in the terminal stdout
+after the app exits, and having command history or tab completion for commands.
+
+**The BevyREPL plugin should...**
+1. provide a developer interface for adding custom commands and arguments to the
+   REPL that feels like building a standard CLI;
+2. print to stdout, rather than a separate TUI screen that disappears when the
+   app exits;
+3. not conflict with nominal logging or printing to the terminal stdout;
+4. allow the user to type in commands directly into the terminal without
+   triggering key presses in the app itself at runtime;
+6. have the same behavior whether the app has a window/rendering or not;
+7. have a minimal footprint and not require any large additional dependencies;
+8. not require disabling Bevy features or changing the base setup (i.e., the
+   behavior should be added with the plugin alone, and all other setup would
+   remain the same, so no modifications of the `DefaultPlugins` or anything like
+   that)
+9. simple and direct integration with Bevy ECS.
+
+## Bevy from the Terminal
+
+### Headless mode
 
 "Headless" mode is when a Bevy app runs in the terminal without a window. All
 systems run as normal, such as input detection and asset loading, but the app
@@ -18,57 +76,55 @@ app runs headless if the `bevy_window` feature is disabled or the `WindowPlugin`
 is disabled.
 
 **Bevy headless examples:**
-- https://github.com/bevyengine/bevy/blob/main/examples/app/headless.rs
-- https://github.com/bevyengine/bevy/blob/main/examples/app/headless_renderer.rs
+- [examples/app/headless.rs](https://github.com/bevyengine/bevy/blob/main/examples/app/headless.rs)
+- [examples/app/headless_renderer.rs](https://github.com/bevyengine/bevy/blob/main/examples/app/headless_renderer.rs)
+- [examples/app/externally_driven_headless_renderer.rs](https://github.com/bevyengine/bevy/blob/main/examples/app/externally_driven_headless_renderer.rs)
 
-### Headless app with default features except windowing
+> [!NOTE]
+> Bevy's `keyboard` feature and `InputPlugin` are usually off in headless apps,
+> so Bevy itself sees no keystrokes. The REPL reads keys straight from the
+> terminal with `crossterm` instead of through Bevy's input system, so typing
+> at the prompt doesn't depend on them.
 
-The preferred way to run a Bevy app headless is to disable default bevy features
-and explicitly add the desire features, leaving out `bevy_winit` and
-`bevy_window`. (Note that Bevy Repl requires `bevy_log` and `trace` features.)
+### Logging
+
+Bevy's `LogPlugin` (enabled by feature flag `bevy_log`) sets up the engine to
+print log messages to the terminal, with or without a renderer or app window. In
+a headless app, this is the primary way information and state is conveyed.
+
+The `bevy_log` feature is enabled by default and the `LogPlugin` is included in
+Bevy's `DefaultPlugins` group. Additional instrumentation and integration with
+[`tracing` and `tracing-subscriber`](https://github.com/tokio-rs/tracing)
+creates via the `trace` feature, though it is completely optional.
+
+While the `LogPlugin` is _not_ a member of the `MinimalPlugins` group, it 
+is compatible with headless mode and has relatively small overhead in terms of
+compiling and running the Bevy app. Custom logging behavior is set up by modifying
+the `LogPlugin` configuration when building `DefaultPlugins` or by disabling it
+altogether and replacing it with a custom logging implementation. The
+"canonical" way to set up logging is to add a custom log layer or to capture
+log messages via a custom sink.
+
+**Bevy logging examples:**
+- [examples/app/logs.rs](https://github.com/bevyengine/bevy/blob/main/examples/app/logs.rs)
+- [examples/app/log_layers.rs](https://github.com/bevyengine/bevy/blob/main/examples/app/log_layers.rs)
+- [examples/app/log_layers_ecs.rs](https://github.com/bevyengine/bevy/blob/main/examples/app/log_layers_ecs.rs)
+
+### Minimal Example
 
 ```toml
 [dependencies]
 
 bevy = { 
   version = "*", # replace "*" with the most recent version of bevy
-  default-features = false,
-  features = [
-    "bevy_log", "trace", # Bevy REPL needs `bevy_log` and `trace`.
-    # include all the other feature flags you need here.
-    # see: https://docs.rs/bevy/latest/bevy/#features
-  ]
+  default-features = false, # disable all default features for demonstration
+  features = ["bevy_log" ] # see: https://docs.rs/bevy/latest/bevy/#features
 }
 ```
 
 ```rust
-use bevy::prelude::*;
-
-fn main() {
-    let mut app = App::new();
-
-    app.add_plugins((
-        // with bevy_window and bevy_winit disabled, those plugins aren't in
-        // DefaultPlugins. All we have to do is tell the runner to run at 60 fps
-        // so it doesn't consume the whole CPU core.
-        DefaultPlugins,
-        bevy::app::ScheduleRunnerPlugin::run_loop(
-            std::time::Duration::from_secs_f64(1.0 / 60.0),
-        )
-    ));
-
-    // Exit with Ctrl+C
-    app.run();
-}
-```
-
-### Minimal headless app (no default features)
-
-Even with all the default features, Bevy ships `MinimalPlugins` with the minimum
-set of plugins required to run a Bevy app. Be sure to also enable `InputPlugin`
-so the app can handle keyboard inputs, like for the REPL or Ctrl+C interrupts.
-
-```rust
+//! A minimal headless app that runs at 60 fps and exits on Ctrl+C. This example
+//! has the same behavior whether or not Bevy's default features are enabled.
 use bevy::prelude::*;
 
 fn main() {
@@ -76,8 +132,10 @@ fn main() {
 
     // Run in headless mode at 60 fps
     app.add_plugins((
+        // Only what's necessary to run Bevy
         MinimalPlugins,
-        bevy::input::InputPlugin::default(),
+        // Exit with Ctrl+C (included in DefaultPlugins)
+        TerminalCtrlCHandlerPlugin,
         // The ScheduleRunnerPlugin handles the app run loop. In a headless Bevy
         // app (no window) using the schedule runner with no frame wait
         // configured, the loop runs as fast as possible (busy-loop on native),
@@ -87,52 +145,6 @@ fn main() {
         )
     ));
 
-    // Exit with Ctrl+C
-    app.run();
-}
-```
-
-### Headless app with default features and windowing disabled
-
-If you need to keep the windowing features, you can disable the `WindowPlugin`
-and `WinitPlugin` to run the app in headless mode.
-
- > [!TIP]
- > Bevy REPL still runs in the terminal even if you spawn windows, so this
- > is probably only useful if you are running the app in CI or some other headless
- > environment.
-
-```rust
-use bevy::{
-    prelude::*, // WindowPlugin is in the prelude
-    window::ExitCondition,
-    winit::WinitPlugin,
-};
-
-fn main() {
-    let mut app = App::new();
-
-    app.add_plugins((
-        DefaultPlugins
-            .set(WindowPlugin {
-                // Don't make a new window at startup
-                primary_window: None,
-                // Don’t automatically exit due to having no windows.
-                // Instead, run until an `AppExit` event is produced.
-                exit_condition: ExitCondition::DontExit,
-                ..default()
-            })
-            // WinitPlugin will panic in environments without a display server.
-            .disable::<WinitPlugin>(),
-        // We still want to set the FPS so the app doesn't melt the CPU.
-        // ScheduleRunnerPlugin replaces the bevy_winit app runner, though, so
-        // disabling the windowing plugins is redundant.
-        bevy::app::ScheduleRunnerPlugin::run_loop(
-            std::time::Duration::from_secs_f64(1.0 / 60.0),
-        ),
-    ));
-
-    // Exit with Ctrl+C
     app.run();
 }
 ```

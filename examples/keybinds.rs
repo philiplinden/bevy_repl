@@ -1,6 +1,6 @@
 //! Custom keybinds example for Bevy REPL.
 //!
-//! Demonstrates how to configure the PromptKeymap resource to use
+//! Demonstrates how to configure the ReplKeymap resource to use
 //! exact key + modifier combinations for REPL actions, and how the
 //! fallback character insertion works.
 //!
@@ -8,8 +8,8 @@
 //! NOT Bevy keycodes and modifiers.
 
 use bevy::prelude::*;
-use bevy_ratatui::crossterm::event::{KeyCode as CrosstermKeyCode, KeyModifiers};
 use bevy_repl::prelude::*;
+use crossterm::event::{KeyCode as CrosstermKeyCode, KeyModifiers};
 
 #[derive(Debug, Clone, Event, Default)]
 struct PingCommand;
@@ -17,6 +17,10 @@ struct PingCommand;
 impl ReplCommand for PingCommand {
     fn clap_command() -> clap::Command {
         clap::Command::new("ping").about("Test command")
+    }
+
+    fn to_event(_matches: &clap::ArgMatches) -> Result<Self, clap::Error> {
+        Ok(Self)
     }
 }
 
@@ -48,7 +52,7 @@ fn use_custom_keybinds(mut commands: Commands, bevy_input: Res<ButtonInput<KeyCo
         && bevy_input.just_pressed(KeyCode::KeyS)
     {
         info!("Using custom keybinds");
-        commands.insert_resource(PromptKeymap {
+        commands.insert_resource(ReplKeymap {
             submit: Some(ReplKeybind {
                 code: CrosstermKeyCode::Char('Y'),
                 mods: KeyModifiers::CONTROL,
@@ -64,7 +68,7 @@ fn use_custom_keybinds(mut commands: Commands, bevy_input: Res<ButtonInput<KeyCo
 
 fn detect_bevy_keycode_input(bevy_input: Res<ButtonInput<KeyCode>>) {
     let codes = bevy_input.get_pressed().collect::<Vec<_>>();
-    if codes.len() >= 1 {
+    if !codes.is_empty() {
         info!("Detected Bevy keycodes: {:?}", codes);
     }
 }
@@ -74,7 +78,7 @@ fn use_default_keybinds(mut commands: Commands, bevy_input: Res<ButtonInput<KeyC
         && bevy_input.just_pressed(KeyCode::KeyD)
     {
         info!("Using default keybinds");
-        commands.insert_resource(PromptKeymap::default());
+        commands.insert_resource(ReplKeymap::default());
     }
 }
 
@@ -83,7 +87,7 @@ fn clear_all_keybinds(mut commands: Commands, bevy_input: Res<ButtonInput<KeyCod
         && bevy_input.just_pressed(KeyCode::KeyA)
     {
         info!("Clearing all keybinds");
-        commands.insert_resource(PromptKeymap::none());
+        commands.insert_resource(ReplKeymap::unset());
     }
 }
 
@@ -120,11 +124,7 @@ fn main() {
                 .set(bevy::app::ScheduleRunnerPlugin::run_loop(
                     std::time::Duration::from_secs_f64(1.0 / 60.0),
                 ))
-                .set(bevy::log::LogPlugin {
-                    filter: "info,bevy_repl=trace".to_string(),
-                    level: bevy::log::Level::TRACE,
-                    ..default()
-                }),
+                .adapt_for_repl(),
             ReplPlugins,
             ExamplePlugin,
         ))

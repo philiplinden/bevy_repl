@@ -1,67 +1,61 @@
 # Builder pattern
 
 Use clap's [builder pattern] to describe the command and its arguments or
-options. Then add the command to the app with
-`.add_repl_command<YourReplCommand>()`. The REPL fires an event when the command
-is parsed from the prompt. The REPL command struct is also the event. When it is
-read by an observer or event reader, you can treat the command as an ordinary
-event where its fields are the parsed arguments and options.
+options by implementing `ReplCommand`:
 
-Make an observer for the command with `.add_observer(your_observer)`. The
-observer is a one-shot system that receives a trigger event with the command's
-arguments and options. As a system, it is executed in the `PostUpdate` schedule
-and has full access to the Bevy ECS.
+- `clap_command()` returns the `clap::Command` that describes the command.
+- `to_event()` converts the parsed `clap::ArgMatches` into the command struct.
 
-[builder pattern]: https://docs.rs/clap/latest/clap/_tutorial/index.html#tutorial-for-the-builder-api
+Then add the command to the app with `.add_repl_command::<SayCommand>()` and
+handle it with an observer. The command struct is also the event, so the
+observer reads its fields as the parsed arguments and options.
 
-```rust
+**Example**:
+[builder.rs](https://github.com/philiplinden/bevy_repl/blob/main/examples/builder.rs)
+
+[builder pattern]: https://docs.rs/clap/latest/clap/_tutorial/index.html
+
+```rust,ignore
 use bevy::prelude::*;
 use bevy_repl::prelude::*;
 
-fn main() {
-    let frame_time = Duration::from_secs_f32(1. / 60.);
-
-    let mut app = App::new()
-        .add_plugins((
-            MinimalPlugins.set(ScheduleRunnerPlugin::run_loop(frame_time)),
-        ));
-
-    app.add_plugins((
-        ReplPlugin,
-        ReplDefaultCommandsPlugin,
-    ))
-    .add_repl_command::<SayCommand>()
-    .add_observer(on_say);
-
-    app.run();
-}
-
+#[derive(Debug, Clone, Event, Default)]
 struct SayCommand {
     message: String,
 }
 
 impl ReplCommand for SayCommand {
-    fn command() -> clap::Command {
+    fn clap_command() -> clap::Command {
         clap::Command::new("say")
             .about("Say something")
             .arg(
                 clap::Arg::new("message")
-                    .short('m')
-                    .long("message")
                     .help("Message to say")
-                    .required(true)
-                    .takes_value(true)
+                    .required(true),
             )
     }
 
     fn to_event(matches: &clap::ArgMatches) -> ReplResult<Self> {
         Ok(SayCommand {
-            message: matches.get_all::<String>("message").unwrap().join(" "),
+            message: matches.get_one::<String>("message").unwrap().clone(),
         })
     }
 }
 
-fn on_say(trigger: Trigger<SayCommand>) {
-    println!("{}", trigger.message);
+fn on_say(trigger: On<SayCommand>) {
+    repl_println!("{}", trigger.event().message);
+}
+
+fn main() {
+    App::new()
+        .add_plugins((
+            DefaultPlugins.set(bevy::app::ScheduleRunnerPlugin::run_loop(
+                std::time::Duration::from_secs_f64(1.0 / 60.0),
+            )),
+            ReplPlugins,
+        ))
+        .add_repl_command::<SayCommand>()
+        .add_observer(on_say)
+        .run();
 }
 ```

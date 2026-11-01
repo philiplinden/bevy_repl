@@ -44,10 +44,10 @@ fn on_list(trigger: On<ListCommand>, query: Query<(Entity, Option<&Name>)>) {
     let mut count = 0usize;
     for (entity, name_opt) in query.iter() {
         let name_str = name_opt.map(|n| n.as_str()).unwrap_or("<unnamed>");
-        if let Some(substr) = needle {
-            if !name_str.contains(substr) {
-                continue;
-            }
+        if let Some(substr) = needle
+            && !name_str.contains(substr)
+        {
+            continue;
         }
         repl_println!("  {:?}: {}", entity, name_str);
         count += 1;

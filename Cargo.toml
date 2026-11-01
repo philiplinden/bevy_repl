@@ -3,39 +3,37 @@ members = [".", "bevy_repl_derive"]
 
 [package]
 name = "bevy_repl"
-version = "0.5.0"
+version = "1.0.0-dev"
 edition = "2024"
-description = "Add a REPL to headless Bevy applications"
-license = "MIT"
+rust-version = "1.97.1"
+description = "Interact with a headless or windowed Bevy application from the terminal with custom commands."
+license = "MIT OR Apache-2.0"
 repository = "https://github.com/philiplinden/bevy_repl"
-keywords = ["bevy", "repl", "console", "debugging"]
-categories = ["game-development", "development-tools"]
+homepage = "https://philiplinden.github.io/bevy_repl/"
+documentation = "https://docs.rs/bevy_repl"
+readme = "README.md"
+keywords = ["bevy", "repl", "console", "terminal", "headless"]
+categories = ["game-development", "development-tools", "command-line-utilities"]
+include = ["/src", "/examples", "/README.md", "/CHANGELOG.md", "/LICENSE-MIT", "/LICENSE-APACHE"]
 
 [dependencies]
-bevy = { version = "0.19", default-features = false, features = ["bevy_log", "trace"]}
-bevy_ratatui = { git = "https://github.com/apekros/bevy_ratatui", rev = "631c06f160ca04ae9960c58bb399cb23513a60eb", features = ["crossterm"] }
-ratatui = "0.30.2"
-clap = { version = "4.6.1" }
+bevy = { version = "0.20", default-features = false, features = ["keyboard", "bevy_log"] }
+tracing-subscriber = { version = "0.3", features = ["fmt", "ansi", "registry"] }
+crossterm = "0.29"
+clap = { version = "4.6" }
 shell-words = "1.1"
-bevy_repl_derive = { version = "0.1.0", path = "./bevy_repl_derive", optional = true }
 ctrlc = "3"
-anyhow = "1.0.103"
-color-eyre = "0.6.5"
 
-# Error handling and logging
-tracing = { version = "0.1", features = [
-    "max_level_trace",
-    "release_max_level_warn",
-] }
+# Optional features
+bevy_repl_derive = { version = "0.1.1", path = "./bevy_repl_derive", optional = true }
 
 [features]
 default = [
-    "dev",
+    "derive",
     "default_commands",
 ]
-dev = ["bevy/dynamic_linking"]
 derive = ["bevy_repl_derive", "clap/derive"]
-default_commands = ["quit", "help"]
+default_commands = ["quit", "help", "clear"]
 quit = []
 help = []
 clear = []
@@ -43,10 +41,6 @@ clear = []
 [[example]]
 name = "aliases"
 path = "examples/aliases.rs"
-
-[[example]]
-name = "alt_screen"
-path = "examples/alt_screen.rs"
 
 [[example]]
 name = "builder"
@@ -61,12 +55,12 @@ name = "custom_log_layer"
 path = "examples/custom_log_layer.rs"
 
 [[example]]
-name = "custom_renderer"
-path = "examples/custom_renderer.rs"
-
-[[example]]
 name = "default"
 path = "examples/default.rs"
+
+[[example]]
+name = "disabled"
+path = "examples/disabled.rs"
 
 [[example]]
 name = "demo"

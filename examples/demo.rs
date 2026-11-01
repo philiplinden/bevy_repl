@@ -24,6 +24,10 @@ impl ReplCommand for NextCommand {
     fn clap_command() -> clap::Command {
         clap::Command::new("next").about("Advance the demo to the next step")
     }
+
+    fn to_event(_matches: &clap::ArgMatches) -> Result<Self, clap::Error> {
+        Ok(Self)
+    }
 }
 
 #[derive(Debug, Clone, Event, Default)]
@@ -32,6 +36,10 @@ struct BackCommand;
 impl ReplCommand for BackCommand {
     fn clap_command() -> clap::Command {
         clap::Command::new("back").about("Go back to the previous demo step")
+    }
+
+    fn to_event(_matches: &clap::ArgMatches) -> Result<Self, clap::Error> {
+        Ok(Self)
     }
 }
 
@@ -202,6 +210,10 @@ impl ReplCommand for StartCommand {
     fn clap_command() -> clap::Command {
         clap::Command::new("start").about("Start a demo log stream (auto-stops after 5s)")
     }
+
+    fn to_event(_matches: &clap::ArgMatches) -> Result<Self, clap::Error> {
+        Ok(Self)
+    }
 }
 
 #[derive(Debug, Clone, Event, Default)]
@@ -209,6 +221,10 @@ struct StopCommand;
 impl ReplCommand for StopCommand {
     fn clap_command() -> clap::Command {
         clap::Command::new("stop").about("Stop the demo log stream")
+    }
+
+    fn to_event(_matches: &clap::ArgMatches) -> Result<Self, clap::Error> {
+        Ok(Self)
     }
 }
 
@@ -234,12 +250,12 @@ fn log_streamer(time: Res<Time>, mut stream: ResMut<LogStream>) {
             // Use logging to stdout to demonstrate scrolling above prompt
             bevy::log::info!("demo log tick at {:.2}s", time.elapsed_secs());
         }
-        if let Some(timer) = stream.auto_stop.as_mut() {
-            if timer.tick(time.delta()).is_finished() {
-                stream.active = false;
-                stream.auto_stop = None;
-                repl_println!("Auto-stopped log stream.");
-            }
+        if let Some(timer) = stream.auto_stop.as_mut()
+            && timer.tick(time.delta()).is_finished()
+        {
+            stream.active = false;
+            stream.auto_stop = None;
+            repl_println!("Auto-stopped log stream.");
         }
     }
 }
@@ -250,6 +266,10 @@ struct PingCommand;
 impl ReplCommand for PingCommand {
     fn clap_command() -> clap::Command {
         clap::Command::new("ping").about("Send a ping event; the observer replies with pong")
+    }
+
+    fn to_event(_matches: &clap::ArgMatches) -> Result<Self, clap::Error> {
+        Ok(Self)
     }
 }
 
@@ -288,6 +308,10 @@ struct ListCommand;
 impl ReplCommand for ListCommand {
     fn clap_command() -> clap::Command {
         clap::Command::new("list").about("List all entities with a Name component")
+    }
+
+    fn to_event(_matches: &clap::ArgMatches) -> Result<Self, clap::Error> {
+        Ok(Self)
     }
 }
 fn on_list(_t: On<ListCommand>, query: Query<(Entity, &Name)>) {
@@ -365,6 +389,10 @@ struct TimeCommand;
 impl ReplCommand for TimeCommand {
     fn clap_command() -> clap::Command {
         clap::Command::new("time").about("Show the current time (since startup)")
+    }
+
+    fn to_event(_matches: &clap::ArgMatches) -> Result<Self, clap::Error> {
+        Ok(Self)
     }
 }
 fn on_time(_t: On<TimeCommand>, time: Res<Time>) {
@@ -536,9 +564,11 @@ Type `quit` to exit, or `next` to restart at the beginning.
 fn main() {
     App::new()
         .add_plugins((
-            DefaultPlugins.set(bevy::app::ScheduleRunnerPlugin::run_loop(
-                std::time::Duration::from_secs_f64(1.0 / 60.0),
-            )),
+            DefaultPlugins
+                .set(bevy::app::ScheduleRunnerPlugin::run_loop(
+                    std::time::Duration::from_secs_f64(1.0 / 60.0),
+                ))
+                .adapt_for_repl(),
             ReplPlugins,
             DemoPlugin,
         ))

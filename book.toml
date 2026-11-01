@@ -13,8 +13,6 @@ command = "mdbook-toc"
 renderer = ["html"]
 max-level = 3
 
-[preprocessor.alerts]
-
 [output.html]
 # Link back to the repository
 git-repository-url = "https://github.com/philiplinden/bevy_repl"
@@ -22,5 +20,5 @@ git-repository-url = "https://github.com/philiplinden/bevy_repl"
 site-url = "/bevy_repl/"
 
 [output.html.fold]
-enable = false # whether or not to enable section folding
+enable = true  # whether or not to enable section folding
 level = 1      # the depth to start folding

@@ -1,9 +1,23 @@
-# Routing Bevy logs to the REPL
+# Terminal Screens
 
-By default, Bevy REPL integrates with Bevy's `LogPlugin` without additional
-setup. To only print the REPL to stdout, disable Bevy's `LogPlugin`.
+Ratatui TUIs often use an alternate screen (separate from stdout). Bevy REPL favors a "partial-TUI" that renders the prompt while keeping stdout usable.
 
-## Using an alternate TUI screen (experimental)
+- When REPL is active, the terminal runs in raw mode and prints to stdout.
+- Prefer `bevy_repl::repl_println!` over `println!` while REPL is active to avoid cursor/newline glitches.
+- If you enable a full alternate screen via `bevy_ratatui::RatatuiPlugins`, REPL still works but output behavior changes.
+
+`repl_println!` ensures safe, consistent output:
+
+```rust
+fn on_ping(_t: Trigger<Ping>) {
+    bevy_repl::repl_println!("Pong");
+}
+
+fn instructions() {
+    bevy_repl::repl_println!();
+    bevy_repl::repl_println!("Welcome to the Bevy REPL!");
+}
+```
 
 If you are using an alternate TUI screen (like with `RatatuiPlugins`), Bevy log
 messages will not be visible in the REPL unless you disable Bevy's `LogPlugin`.
