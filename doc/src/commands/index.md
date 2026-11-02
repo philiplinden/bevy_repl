@@ -4,7 +4,7 @@ The REPL works the same way in headless and windowed apps. In both cases you
 type commands into the terminal the app was started from.
 
 Add `bevy_repl::ReplPlugins` to your app to enable the REPL. By default, the
-REPL includes the [built-in commands](../features/default_commands.md) `quit`,
+REPL includes the [built-in commands](default_commands.md) `quit`,
 `help`, and `clear`.
 
 Add a command to the app with `.add_repl_command::<YourCommand>()`. The command
