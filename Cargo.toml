@@ -1,5 +1,8 @@
 [workspace]
-members = [".", "bevy_repl_derive"]
+members = [".", "bevy_repl_derive", "proto"]
+
+[workspace.dependencies]
+bevy = { version = "0.20", default-features = false }
 
 [package]
 name = "bevy_repl"
@@ -17,7 +20,7 @@ categories = ["game-development", "development-tools", "command-line-utilities"]
 include = ["/src", "/examples", "/README.md", "/CHANGELOG.md", "/LICENSE-MIT", "/LICENSE-APACHE"]
 
 [dependencies]
-bevy = { version = "0.20", default-features = false, features = ["keyboard", "bevy_log"] }
+bevy = { workspace = true, features = ["keyboard", "bevy_log"] }
 tracing-subscriber = { version = "0.3", features = ["fmt", "ansi", "registry"] }
 crossterm = "0.29"
 clap = { version = "4.6" }

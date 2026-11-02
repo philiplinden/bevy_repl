@@ -75,4 +75,4 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       # Builds both crates from their packaged sources, the same way
       # crates.io will see them.
-      - run: cargo package --workspace
+      - run: cargo package --workspace --exclude proto

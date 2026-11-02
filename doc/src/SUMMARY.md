@@ -49,3 +49,4 @@
       - [2026-08-31: Handoff: Implement ADR 0003 (`fmt_layer` direct integration)](devlog/03-crossterm-rewrite/2026-08-31-fmt-layer-integration-handoff.md)
       - [2026-09-02: Reconsidering Tracing & The Clean-Slate Architecture](devlog/03-crossterm-rewrite/2026-09-02.md)
       - [2026-11-01: Picking Back Up: Bevy 0.20 and Finishing the Crossterm Migration](devlog/03-crossterm-rewrite/2026-11-01.md)
+      - [2026-11-01: Prototyping the Design Assumptions](devlog/03-crossterm-rewrite/2026-11-01-assumption-prototypes.md)
