@@ -11,7 +11,7 @@
 //! echoed by the terminal and left unread, and the shell probably receives it
 //! after the app exits.
 //!
-//! Proof and results are in the devlog:
-//! doc/src/devlog/03-crossterm-rewrite/2026-11-01-assumption-prototypes.md
+//! Proof, notes and results:
+//! doc/src/prototypes/0-line-mode.md
 
 fn main() {}

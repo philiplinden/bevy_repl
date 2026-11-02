@@ -10,7 +10,7 @@
 //! Baseline: Each log event is one write on a locked stderr, but a prompt
 //! redraw is several writes, so another write can land between them.
 //!
-//! Proof and results are in the devlog:
-//! doc/src/devlog/03-crossterm-rewrite/2026-11-01-assumption-prototypes.md
+//! Proof, notes and results:
+//! doc/src/prototypes/7-write-ordering.md
 
 fn main() {}

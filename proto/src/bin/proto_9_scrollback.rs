@@ -9,7 +9,7 @@
 //! Baseline: Plain terminal output stays in scrollback. TUIs that use the
 //! alternate screen lose it on exit.
 //!
-//! Proof and results are in the devlog:
-//! doc/src/devlog/03-crossterm-rewrite/2026-11-01-assumption-prototypes.md
+//! Proof, notes and results:
+//! doc/src/prototypes/9-scrollback.md
 
 fn main() {}

@@ -11,7 +11,7 @@
 //! terminal and the game window shouldn't see each other's keys. The current
 //! crate has a suppression system anyway.
 //!
-//! Proof and results are in the devlog:
-//! doc/src/devlog/03-crossterm-rewrite/2026-11-01-assumption-prototypes.md
+//! Proof, notes and results:
+//! doc/src/prototypes/4-input-isolation.md
 
 fn main() {}

@@ -19,10 +19,12 @@ asks. Propose text for the devlog and let him write or approve it.
 ## Read first
 
 - `proto/README.md`: where prototypes live and the rules for them.
-- `doc/src/devlog/03-crossterm-rewrite/2026-11-01-assumption-prototypes.md`:
-  the list of assumptions. This session covers **0** (line mode), **1a**
-  (raw mode restored on every exit), **1b** (inline editing in raw mode) and
-  **1c** (inline editing while logs are busy). Each has a stub in
+- `doc/src/prototypes/index.md`: the list of prototypes, with one page each
+  in `doc/src/prototypes/` and a log of decisions in
+  `doc/src/prototypes/devlog.md`. This session covers **0** (line mode),
+  **1a** (raw mode restored on every exit), **1b** (inline editing in raw
+  mode) and **1c** (inline editing while logs are busy). Prototype 0's page
+  has prep notes checked against the sources. Each has a stub in
   `proto/src/bin/` whose header states its objective, assumption and
   baseline.
 - `doc/src/design/index.md` and `doc/src/design/vision.md`: what the REPL is
@@ -87,4 +89,5 @@ Then help Philip compare the two modes:
 - Which problems are left for a TUI to solve?
 
 Propose a short summary for the **Result** entries of prototypes 0 and
-1a–1c in the devlog note. Philip decides the wording.
+1a–1c on their pages, and an entry for `doc/src/prototypes/devlog.md`.
+Philip decides the wording.

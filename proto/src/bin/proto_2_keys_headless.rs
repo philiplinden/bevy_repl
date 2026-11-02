@@ -10,7 +10,7 @@
 //! Baseline: A headless app sees no keys. `MinimalPlugins` doesn't add
 //! `InputPlugin`, and Bevy's keyboard events come from a window.
 //!
-//! Proof and results are in the devlog:
-//! doc/src/devlog/03-crossterm-rewrite/2026-11-01-assumption-prototypes.md
+//! Proof, notes and results:
+//! doc/src/prototypes/2-keys-headless.md
 
 fn main() {}

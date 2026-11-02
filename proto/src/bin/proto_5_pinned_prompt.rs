@@ -11,7 +11,7 @@
 //! Baseline: Without a scroll region, all output scrolls the whole screen,
 //! including anything drawn on the bottom row.
 //!
-//! Proof and results are in the devlog:
-//! doc/src/devlog/03-crossterm-rewrite/2026-11-01-assumption-prototypes.md
+//! Proof, notes and results:
+//! doc/src/prototypes/5-pinned-prompt.md
 
 fn main() {}

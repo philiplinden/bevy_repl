@@ -10,7 +10,7 @@
 //! Baseline: A clap struct isn't a Bevy event. It needs Bevy's `Event` trait as
 //! well.
 //!
-//! Proof and results are in the devlog:
-//! doc/src/devlog/03-crossterm-rewrite/2026-11-01-assumption-prototypes.md
+//! Proof, notes and results:
+//! doc/src/prototypes/11-command-observer.md
 
 fn main() {}

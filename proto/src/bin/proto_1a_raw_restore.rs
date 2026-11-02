@@ -10,7 +10,7 @@
 //! on Unix, broken newlines. While raw mode is on, Ctrl+C is a key press, so
 //! nothing happens unless the app reads it.
 //!
-//! Proof and results are in the devlog:
-//! doc/src/devlog/03-crossterm-rewrite/2026-11-01-assumption-prototypes.md
+//! Proof, notes and results:
+//! doc/src/prototypes/1a-raw-restore.md
 
 fn main() {}

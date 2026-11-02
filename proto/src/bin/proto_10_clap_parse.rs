@@ -10,7 +10,7 @@
 //! Baseline: clap's `get_matches` prints and exits the process on a parse error
 //! or `--help`.
 //!
-//! Proof and results are in the devlog:
-//! doc/src/devlog/03-crossterm-rewrite/2026-11-01-assumption-prototypes.md
+//! Proof, notes and results:
+//! doc/src/prototypes/10-clap-parse.md
 
 fn main() {}

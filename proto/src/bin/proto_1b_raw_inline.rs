@@ -10,7 +10,7 @@
 //! Baseline: In raw mode the terminal echoes nothing and edits nothing. Typed
 //! keys are invisible until the app draws them.
 //!
-//! Proof and results are in the devlog:
-//! doc/src/devlog/03-crossterm-rewrite/2026-11-01-assumption-prototypes.md
+//! Proof, notes and results:
+//! doc/src/prototypes/1b-raw-inline.md
 
 fn main() {}

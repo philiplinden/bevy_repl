@@ -10,7 +10,7 @@
 //! a line without returning to column 0 and output stair-steps. Windows raw
 //! mode leaves output alone.
 //!
-//! Proof and results are in the devlog:
-//! doc/src/devlog/03-crossterm-rewrite/2026-11-01-assumption-prototypes.md
+//! Proof, notes and results:
+//! doc/src/prototypes/8-raw-newlines.md
 
 fn main() {}
