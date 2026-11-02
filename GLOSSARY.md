@@ -1,4 +1,4 @@
-# Bevy REPL
+# BevyREPL
 
 A command prompt for Bevy apps that lives in the host terminal, in both headless and windowed apps. Add `ReplPlugins` and the bottom line of the terminal becomes a prompt for `clap` commands, while Bevy's logs and `println!` output keep printing above it as usual.
 

@@ -1,4 +1,4 @@
-//! Derive-based command example for Bevy REPL.
+//! Derive-based command example for BevyREPL.
 //!
 //! Demonstrates:
 //! - Defining a command with clap's derive macros
@@ -46,7 +46,7 @@ fn on_say(trigger: On<SayCommand>) {
 
 fn instructions() {
     repl_println!();
-    repl_println!("Welcome to the Bevy REPL derive example!");
+    repl_println!("Welcome to the BevyREPL derive example!");
     repl_println!();
     repl_println!("Try typing a command:");
     repl_println!("  `say <message>`            - Say a message");

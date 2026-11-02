@@ -18,7 +18,7 @@ fn main() {
 
 ![Made with VHS](https://vhs.charm.sh/vhs-6kUt4mnyvUcmbpVfWzHx4s.gif)
 
-Bevy REPL is powered by `clap` for command parsing and `crossterm` for
+BevyREPL is powered by `clap` for command parsing and `crossterm` for
 terminal input and output. The plugin adds a text input area below the terminal
 output for interaction even in headless mode.
 
@@ -106,9 +106,9 @@ The REPL parses prompt input to a `YourCommand` event, where the fields are
 the parsed arguments and options. Use observers to handle the event with full
 ECS access.
 
-## Bevy REPL Book
+## BevyREPL Book
 
-The Bevy REPL Book is a collection of docs and notes about the Bevy REPL, how to
+The BevyREPL Book is a collection of docs and notes about the BevyREPL, how to
 use it, and how it works under the hood.
 
 The book is available at

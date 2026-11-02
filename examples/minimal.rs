@@ -1,4 +1,4 @@
-//! Minimal Bevy REPL example.
+//! Minimal BevyREPL example.
 //!
 //! This example shows the minimum amount of dependencies needed to use the REPL.
 //!
@@ -28,7 +28,7 @@ fn on_ping(_trigger: On<PingCommand>) {
 
 fn instructions() {
     repl_println!();
-    repl_println!("Welcome to the Bevy REPL stdout example!");
+    repl_println!("Welcome to the BevyREPL stdout example!");
     repl_println!();
     repl_println!("Try typing a command:");
     repl_println!("  `ping`    - Trigger the ping command. (it outputs Pong)");

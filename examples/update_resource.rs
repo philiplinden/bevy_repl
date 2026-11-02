@@ -99,7 +99,7 @@ fn tick(mut frames: ResMut<FrameCounter>, scale: Res<TimeScale>) {
 
 fn instructions() {
     repl_println!();
-    repl_println!("Bevy REPL resource mutation example");
+    repl_println!("BevyREPL resource mutation example");
     repl_println!();
     repl_println!("Try typing in the REPL:");
     repl_println!("  time-scale");

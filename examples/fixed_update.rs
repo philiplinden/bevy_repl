@@ -1,4 +1,4 @@
-//! Resource interaction example for Bevy REPL.
+//! Resource interaction example for BevyREPL.
 //!
 //! Demonstrates:
 //! - Creating and mutating a Bevy `Resource`
@@ -146,7 +146,7 @@ fn update_timer(mut timer: ResMut<TimerResource>, time: Res<Time>) {
 
 fn instructions() {
     repl_println!();
-    repl_println!("Welcome to the Bevy REPL resource example!");
+    repl_println!("Welcome to the BevyREPL resource example!");
     repl_println!();
     repl_println!("Try typing a command:");
     repl_println!("  `start`   - Start the timer");

@@ -1,4 +1,4 @@
-# Bevy REPL TUI Testing Strategy and Decisions (2025-08-19)
+# BevyREPL TUI Testing Strategy and Decisions (2025-08-19)
 
 This note summarizes the decisions made to establish a robust, repeatable testing approach for the terminal UI (TUI) renderers.
 

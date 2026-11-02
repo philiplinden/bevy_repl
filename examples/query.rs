@@ -65,7 +65,7 @@ fn spawn_entities(mut commands: Commands) {
 
 fn instructions() {
     repl_println!();
-    repl_println!("Welcome to the Bevy REPL query example!");
+    repl_println!("Welcome to the BevyREPL query example!");
     repl_println!();
     repl_println!("Try typing a command:");
     repl_println!("  `list`                         - List all entities");

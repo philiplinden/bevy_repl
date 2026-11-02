@@ -1,4 +1,4 @@
-//! Builder-pattern command example for Bevy REPL.
+//! Builder-pattern command example for BevyREPL.
 //!
 //! Demonstrates:
 //! - Defining a command with clap's builder API
@@ -78,7 +78,7 @@ fn on_say(trigger: On<SayCommand>) {
 
 fn instructions() {
     repl_println!();
-    repl_println!("Welcome to the Bevy REPL builder example!");
+    repl_println!("Welcome to the BevyREPL builder example!");
     repl_println!();
     repl_println!("Try typing a command:");
     repl_println!("  `say <message>`            - Say a message");

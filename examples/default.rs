@@ -1,4 +1,4 @@
-//! Default Bevy REPL example.
+//! Default BevyREPL example.
 //!
 //! This is the minimal code required to use the REPL with example commands that
 //! generate logs or print directly to the console using the builder pattern.
@@ -78,7 +78,7 @@ fn on_log(trigger: On<LogCommand>) {
 
 fn instructions() {
     repl_println!();
-    repl_println!("Bevy REPL default example");
+    repl_println!("BevyREPL default example");
     repl_println!();
     repl_println!("Try typing in the REPL:");
     repl_println!("  print <message>  - Print a message to the console");

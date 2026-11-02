@@ -440,7 +440,7 @@ fn run_step_instructions(mut state: ResMut<DemoState>) {
 
             repl_print_block(
                 r#"
-Welcome to the Bevy REPL demo!
+Welcome to the BevyREPL demo!
 This is a short interactive walkthrough of the main features of the REPL.
 
 Quit at any time with `quit` or `Ctrl+C`.

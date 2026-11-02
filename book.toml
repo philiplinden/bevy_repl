@@ -1,5 +1,5 @@
 [book]
-title = "Bevy REPL Book"
+title = "BevyREPL Book"
 authors = ["Philip Linden"]
 language = "en"
 src = "doc/src"

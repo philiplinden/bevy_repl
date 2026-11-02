@@ -1,4 +1,4 @@
-//! Windowed Bevy REPL example.
+//! Windowed BevyREPL example.
 //!
 //! Demonstrates:
 //! - Using the REPL while a Bevy window is open
@@ -24,7 +24,7 @@ fn on_ping(_trigger: On<PingCommand>) {
 
 fn instructions() {
     repl_println!();
-    repl_println!("Welcome to the Bevy REPL window example!");
+    repl_println!("Welcome to the BevyREPL window example!");
     repl_println!();
     repl_println!("Try typing a command:");
     repl_println!("  `ping`    - Trigger the ping command. (it outputs Pong)");
@@ -40,7 +40,7 @@ fn main() {
             DefaultPlugins
                 .set(WindowPlugin {
                     primary_window: Some(Window {
-                        title: "Bevy REPL".to_string(),
+                        title: "BevyREPL".to_string(),
                         ..default()
                     }),
                     ..default()

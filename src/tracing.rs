@@ -1,4 +1,4 @@
-//! Direct tracing subscriber integration for Bevy REPL.
+//! Direct tracing subscriber integration for BevyREPL.
 
 use bevy::log::BoxedLayer;
 use bevy::prelude::*;

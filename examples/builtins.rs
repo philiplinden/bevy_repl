@@ -1,4 +1,4 @@
-//! Built-in commands and feature flags example for Bevy REPL.
+//! Built-in commands and feature flags example for BevyREPL.
 //!
 //! Demonstrates:
 //! - How built-in REPL commands are controlled via Cargo features
@@ -29,7 +29,7 @@ fn yes_no(v: bool) -> &'static str {
 
 fn instructions() {
     repl_println!();
-    repl_println!("Bevy REPL built-in commands (feature flags) example");
+    repl_println!("BevyREPL built-in commands (feature flags) example");
     repl_println!();
     repl_println!("This example shows how built-in commands are compiled via features.");
     repl_println!("Available built-ins at compile-time:");

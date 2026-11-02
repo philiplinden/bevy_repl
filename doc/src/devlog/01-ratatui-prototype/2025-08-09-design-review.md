@@ -1,4 +1,4 @@
-# Bevy REPL – Design Review (2025-08-09)
+# BevyREPL – Design Review (2025-08-09)
 
 This note summarizes the current crate design, input/terminal handling, command flow, and open issues. It captures decisions made today and recommendations for next steps.
 

@@ -1,4 +1,4 @@
-//! Aliases example for Bevy REPL using clap.
+//! Aliases example for BevyREPL using clap.
 //!
 //! Demonstrates:
 //! - Defining a REPL command with multiple aliases via clap
@@ -51,7 +51,7 @@ fn on_say(trigger: On<SayCommand>) {
 
 fn instructions() {
     repl_println!();
-    repl_println!("Bevy REPL aliases example (clap)");
+    repl_println!("BevyREPL aliases example (clap)");
     repl_println!();
     repl_println!("These are all equivalent:");
     repl_println!("  say     <message>");

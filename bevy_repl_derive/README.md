@@ -21,7 +21,7 @@ The generated code calls `clap` directly, so your crate needs `clap` as a
 dependency with its `derive` feature enabled.
 
 See the [`bevy_repl` repository](https://github.com/philiplinden/bevy_repl) and
-the [Bevy REPL Book](https://philiplinden.github.io/bevy_repl/) for more.
+the [BevyREPL Book](https://philiplinden.github.io/bevy_repl/) for more.
 
 ## License
 

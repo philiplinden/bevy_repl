@@ -1,4 +1,4 @@
-//! Custom keybinds example for Bevy REPL.
+//! Custom keybinds example for BevyREPL.
 //!
 //! Demonstrates how to configure the ReplKeymap resource to use
 //! exact key + modifier combinations for REPL actions, and how the
@@ -93,7 +93,7 @@ fn clear_all_keybinds(mut commands: Commands, bevy_input: Res<ButtonInput<KeyCod
 
 fn instructions() {
     repl_println!();
-    repl_println!("Bevy REPL custom keybinds example (experimental)");
+    repl_println!("BevyREPL custom keybinds example (experimental)");
     repl_println!();
     repl_println!("This example shows how Bevy key events and REPL keybinds can");
     repl_println!("be configured to customize the REPL, even at runtime.");

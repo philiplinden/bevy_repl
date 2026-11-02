@@ -51,7 +51,7 @@ fn on_spawn(trigger: On<SpawnEntityCommand>, mut commands: Commands) {
 
 fn instructions() {
     repl_println!();
-    repl_println!("Welcome to the Bevy REPL spawn example!");
+    repl_println!("Welcome to the BevyREPL spawn example!");
     repl_println!();
     repl_println!("Try typing a command:");
     repl_println!("  `spawn`                  - Spawn an unnamed entity");
