@@ -17,4 +17,4 @@ scroll region like `println!` does and handles raw mode on every platform.
 > Most examples still call `DefaultPlugins.adapt_for_repl()`, which disables
 > `LogPlugin` so the REPL can install its own log writer, and log lines written
 > while the user is typing can garble the prompt. See the
-> [2026-11-01 devlog](../devlog/crossterm-rewrite/2026-11-01.md) for the plan.
+> [2026-11-01 devlog](../devlog/03-crossterm-rewrite/2026-11-01.md) for the plan.
