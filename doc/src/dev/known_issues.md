@@ -28,7 +28,7 @@ These are gaps between the current code and the behavior the book describes.
 - **Logging isn't additive yet.** Most examples call
   `DefaultPlugins.adapt_for_repl()`, which disables `LogPlugin` so the REPL can
   install its own log writer. Log lines written while the user types can garble
-  the prompt. See [Logging](../how_it_works/logging.md).
+  the prompt. See [Logging](logging.md).
 - **Toggle machinery is still in the code.** The `F3` toggle, the `enabled`
   flag, and the lifecycle actions are left over from earlier versions. Toggling
   isn't part of the current plan.

@@ -8,9 +8,9 @@ current design, start at
 
 The log falls roughly into three stretches:
 
-- [**The ratatui Prototype**](ratatui-prototype/index.md) (August 2025,
+- [**The ratatui Prototype**](01-ratatui-prototype/index.md) (August 2025,
   v0.1–v0.4)
-- [**Keeping Up with Bevy**](keeping-up-with-bevy/index.md) (October 2025 –
+- [**Keeping Up with Bevy**](02-keeping-up-with-bevy/index.md) (October 2025 –
   March 2026, v0.5)
-- [**The Crossterm Rewrite**](crossterm-rewrite/index.md) (August 2026 onward,
+- [**The Crossterm Rewrite**](03-crossterm-rewrite/index.md) (August 2026 onward,
   toward v1.0)
