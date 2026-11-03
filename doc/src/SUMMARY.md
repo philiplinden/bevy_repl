@@ -16,6 +16,7 @@
 
 - [Design Approach](design/index.md)
   - [Thoughts about vanilla headless Bevy](design/vanilla.md)
+  - [Lessons learned](design/lessons.md)
 - [Implementation Details](dev/index.md)
   - [Known Issues & Limitations](dev/known_issues.md)
   - [Build Guide](dev/build_guide.md)
