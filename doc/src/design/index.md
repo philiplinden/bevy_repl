@@ -1,19 +1,13 @@
 # Design Approach
 
-The Bevy engine logs its behavior and other messages at runtime that communicate what's happening to the developer under the hood.
-User interaction is usually handled by the app logic, leaving the console to be read-only or emulated with a TUI.
-Since TUIs are renderers, the commands and logs are discarded as soon as the app closes.
-Normal (read-only) logging sends messages directly to the console, so messages can still be read after closing the app.
+The design is being rewritten. On 2026-11-02 it restarted from its intent,
+assumptions and scope, recorded in the
+[2026-11-02 devlog](../devlog/03-crossterm-rewrite/2026-11-02.md). The spec
+that comes out of that work will live here.
 
-> 1. I want the normal headless logging experience **and** an
->    interactive CLI console while running my app, even without a
->    renderer, but
-> 2. I do **not** want to maintain a second input system for
->    headless mode, and
-> 3. I want the console to behave the same way **with and without**
->    an active renderer.
+The earlier design approach and vision were written before deciding on a TUI,
+runtime toggling, and a `custom_layer` for logs. They're kept in the archive
+(`doc/src/_archive/design/`).
 
 - [Thoughts about vanilla headless Bevy](vanilla.md): how Bevy
   behaves in a terminal without the REPL.
-- [Vision for a better terminal experience](vision.md): what
-  BevyREPL 1.0 should do, and what it won't.

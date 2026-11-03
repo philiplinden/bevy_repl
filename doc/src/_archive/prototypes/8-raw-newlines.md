@@ -1,5 +1,7 @@
 # Prototype 8: Newlines behave in raw mode
 
+_Archived 2026-11-02 from `prototypes/8-raw-newlines.md`. Part of the first prototype plan, superseded when the design was restarted. See the [2026-11-02 devlog](../../devlog/03-crossterm-rewrite/2026-11-02.md)._
+
 - **Objective:** Find out whether normal `\n` output can work in raw mode on
   Unix.
 - **Claim:** On Unix, turning output post-processing (`OPOST | ONLCR`) back on

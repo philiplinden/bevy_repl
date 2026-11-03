@@ -1,5 +1,7 @@
 # Prototype 1c: Inline editing in raw mode while logs are busy
 
+_Archived 2026-11-02 from `prototypes/1c-raw-inline-logs.md`. Part of the first prototype plan, superseded when the design was restarted. See the [2026-11-02 devlog](../../devlog/03-crossterm-rewrite/2026-11-02.md)._
+
 - **Objective:** Find out how raw-mode inline editing holds up against Bevy's
   logs. This is the half of the no-TUI baseline that gets compared with
   line mode (0).

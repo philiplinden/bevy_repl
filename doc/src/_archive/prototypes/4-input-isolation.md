@@ -1,5 +1,7 @@
 # Prototype 4: Typing in the terminal doesn't reach the game
 
+_Archived 2026-11-02 from `prototypes/4-input-isolation.md`. Part of the first prototype plan, superseded when the design was restarted. See the [2026-11-02 devlog](../../devlog/03-crossterm-rewrite/2026-11-02.md)._
+
 - **Objective:** Find out whether the crate needs any code to keep REPL typing
   away from the game.
 - **Claim:** Keys typed into the terminal never show up in Bevy's

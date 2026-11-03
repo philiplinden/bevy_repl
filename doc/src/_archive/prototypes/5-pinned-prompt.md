@@ -1,5 +1,7 @@
 # Prototype 5: A prompt can be pinned to the bottom row
 
+_Archived 2026-11-02 from `prototypes/5-pinned-prompt.md`. Part of the first prototype plan, superseded when the design was restarted. See the [2026-11-02 devlog](../../devlog/03-crossterm-rewrite/2026-11-02.md)._
+
 - **Objective:** First TUI step. Find out whether a scroll region keeps a
   prompt in place while output scrolls.
 - **Claim:** A DECSTBM scroll region over every row but the last keeps a

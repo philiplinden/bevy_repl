@@ -18,30 +18,30 @@ fn main() {
 
 ![Made with VHS](https://vhs.charm.sh/vhs-6kUt4mnyvUcmbpVfWzHx4s.gif)
 
-BevyREPL is powered by `clap` for command parsing and `crossterm` for
-terminal input and output. The plugin adds a text input area below the terminal
-output for interaction even in headless mode.
+> [!NOTE]
+> 1.0 is being redesigned. As of 2026-11-02 it's planned as a thin TUI in the
+> terminal, with a log pane and a console pane that F3 switches between. It
+> will ask for one change to `LogPlugin` so the log pane gets its logs. The
+> design is recorded in the book's devlog as it's worked out. Until it
+> settles, treat anything below about how the terminal looks as out of date.
 
-- A one-line prompt pinned below normal terminal output, with no TUI
 - Command parsing and CLI features from `clap`
 - Observer-based command execution system with full Bevy ECS access for both
   read and write operations
-- Bevy logs and `println!` output keep printing above the prompt, with no
-  changes to `LogPlugin` or `DefaultPlugins`
 - Works in terminal with headless and windowed apps
 - Built-in `quit`, `help`, and `clear` commands
 
 The REPL is designed as an alternative to
 [makspll/bevy-console](https://github.com/makspll/bevy-console) for Bevy apps
-that want a terminal-like console to modify the game at runtime without
-implementing a full TUI, and something that works with or without a renderer.
+that want a terminal-like console to modify the game at runtime, and something
+that works with or without a renderer.
 
 _This is my first public Bevy plugin, and I vibe-coded a large part of it._ 
 **_You have been warned_.**
 
 | Version | Bevy | Notes |
 | --- | --- | --- |
-| 1.0.0 (unreleased) | 0.20 | Rewrite on `crossterm` without `ratatui`. Work in progress on `main`. |
+| 1.0.0 (unreleased) | 0.20 | ~~Rewrite on `crossterm` without `ratatui`.~~ Being redesigned as a thin TUI. Work in progress. |
 | 0.5.0 | 0.19.0 | Compatibility update for [Bevy 0.19.0](https://github.com/bevyengine/bevy/releases/tag/0.19.0). Depends on [ratatui/bevy_ratatui#98](https://github.com/ratatui/bevy_ratatui/pull/98) |
 | 0.4.1 | 0.16.1 | Better docs: [philiplinden.github.io/bevy_repl](https://philiplinden.github.io/bevy_repl/) |
 | 0.4.0 | 0.16.1 | Removed the "pretty" renderer in favor of getting simple prompt features working. Changed the interface slightly. This is a breaking change! See [examples](https://github.com/philiplinden/bevy_repl/tree/main/examples) for help. |

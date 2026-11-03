@@ -1,5 +1,7 @@
 # Prototypes Devlog
 
+_Archived 2026-11-02 from `prototypes/devlog.md`. Part of the first prototype plan, superseded when the design was restarted. See the [2026-11-02 devlog](../../devlog/03-crossterm-rewrite/2026-11-02.md)._
+
 Working notes for the prototype work, newest last. What each prototype found
 goes on its own page; this log records the decisions and how the plan changed.
 

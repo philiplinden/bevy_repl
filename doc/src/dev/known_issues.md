@@ -28,10 +28,12 @@ These are gaps between the current code and the behavior the book describes.
 - **Logging isn't additive yet.** Most examples call
   `DefaultPlugins.adapt_for_repl()`, which disables `LogPlugin` so the REPL can
   install its own log writer. Log lines written while the user types can garble
-  the prompt. See [Logging](logging.md).
+  the prompt.
 - **Toggle machinery is still in the code.** The `F3` toggle, the `enabled`
   flag, and the lifecycle actions are left over from earlier versions. Toggling
-  isn't part of the current plan.
+  is back in the plan as of the
+  [2026-11-02 devlog](../devlog/03-crossterm-rewrite/2026-11-02.md), so this
+  code may be reused.
 
 - **`MinimalPlugins` is untested.** Every example uses `DefaultPlugins`. The
   system that keeps typed keys away from the game reads Bevy's keyboard input

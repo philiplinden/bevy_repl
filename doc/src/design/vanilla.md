@@ -40,8 +40,7 @@ While the `LogPlugin` is _not_ a member of the `MinimalPlugins` group, it
 is compatible with headless mode and has relatively small overhead in terms of
 compiling and running the Bevy app. Custom logging behavior is set up by modifying
 the `LogPlugin` configuration when building `DefaultPlugins` or by disabling it
-altogether and replacing it with a custom logging implementation. BevyREPL does
-neither. See [Preserving normal Logging](../dev/logging.md).
+altogether and replacing it with a custom logging implementation.
 
 **Bevy logging examples:**
 
@@ -58,7 +57,7 @@ A headless app that runs at 60 fps, logs, and exits on Ctrl+C.
 bevy = { version = "0.20", default-features = false, features = ["bevy_log"] }
 ```
 
-```rust,ignore
+```rust
 use std::time::Duration;
 use bevy::{
     app::{ScheduleRunnerPlugin, TerminalCtrlCHandlerPlugin},

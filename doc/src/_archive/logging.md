@@ -1,5 +1,7 @@
 # Logging
 
+_Archived 2026-11-02 from `dev/logging.md`. Describes the pinned prompt and scroll region with no log capture, dropped when the design was restarted. See the [2026-11-02 devlog](../devlog/03-crossterm-rewrite/2026-11-02.md)._
+
 The REPL is purely additive: Bevy's logs and anything printed with `println!`
 should keep printing the way they would without the REPL, above the prompt. You
 shouldn't need to change `LogPlugin`, disable it, or modify `DefaultPlugins`.

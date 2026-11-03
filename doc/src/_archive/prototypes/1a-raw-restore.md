@@ -1,5 +1,7 @@
 # Prototype 1a: Raw mode can be entered and always restored
 
+_Archived 2026-11-02 from `prototypes/1a-raw-restore.md`. Part of the first prototype plan, superseded when the design was restarted. See the [2026-11-02 devlog](../../devlog/03-crossterm-rewrite/2026-11-02.md)._
+
 - **Objective:** Find out what it takes to leave the terminal usable no matter
   how the app ends. No input handling beyond what exiting needs.
 - **Claim:** A Bevy app can turn on raw mode at startup and restore the

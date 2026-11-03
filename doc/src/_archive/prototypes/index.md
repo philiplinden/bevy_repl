@@ -1,9 +1,11 @@
 # Prototypes
 
+_Archived 2026-11-02 from `prototypes/index.md`. Part of the first prototype plan, superseded when the design was restarted. See the [2026-11-02 devlog](../../devlog/03-crossterm-rewrite/2026-11-02.md)._
+
 ## Why
 
-The [design approach](../design/index.md) and the
-[vision](../design/vision.md) rest on assumptions about Bevy, crossterm,
+The [design approach](../../design/index.md) and the
+[vision](../../design/vision.md) rest on assumptions about Bevy, crossterm,
 clap and terminals that nobody has checked in a running program. Before
 changing the crate to match the vision, prove each one by building the
 smallest working example of it, as its own program in a `proto` crate.
@@ -14,7 +16,7 @@ Rules:
 - Each prototype says what it claims, which vision item depends on it, and
   what counts as proof.
 - Every result records the OS and terminal it ran on (see the Windows/Unix
-  pitfall in the [2026-11-01 note](../devlog/03-crossterm-rewrite/2026-11-01.md)).
+  pitfall in the [2026-11-01 note](../../devlog/03-crossterm-rewrite/2026-11-01.md)).
 - Merging prototypes into one comes after all of them have a result.
 
 ## The baseline: no TUI
@@ -130,4 +132,4 @@ Then the merged version is what the plugin gets measured against.
 - Raw mode is split into 1a–1c. Whether this numbering and grouping is
   right is still open; revisit once the baseline has results.
 - The "Spike: prove option B" plan in the
-  [2026-11-01 note](../devlog/03-crossterm-rewrite/2026-11-01.md) covers 5, 6, 7 and 8 in one example. This list splits it up.
+  [2026-11-01 note](../../devlog/03-crossterm-rewrite/2026-11-01.md) covers 5, 6, 7 and 8 in one example. This list splits it up.

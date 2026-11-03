@@ -1,5 +1,7 @@
 # Prototype 2: Keys can be read inside the schedule, headless
 
+_Archived 2026-11-02 from `prototypes/2-keys-headless.md`. Part of the first prototype plan, superseded when the design was restarted. See the [2026-11-02 devlog](../../devlog/03-crossterm-rewrite/2026-11-02.md)._
+
 - **Objective:** Find out whether reading the terminal fits in Bevy's loop
   without a thread or runner of its own.
 - **Claim:** With `MinimalPlugins`, a system in `PreUpdate` can read keys with

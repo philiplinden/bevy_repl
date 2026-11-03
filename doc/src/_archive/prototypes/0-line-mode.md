@@ -1,5 +1,7 @@
 # Prototype 0: A line-mode REPL might be good enough without raw mode
 
+_Archived 2026-11-02 from `prototypes/0-line-mode.md`. Part of the first prototype plan, superseded when the design was restarted. See the [2026-11-02 devlog](../../devlog/03-crossterm-rewrite/2026-11-02.md)._
+
 - **Objective:** Find out how usable a REPL is when the terminal does all the
   input work. This is one half of the no-TUI baseline.
 - **Claim:** With raw mode off, a small thread reads whole lines from stdin
@@ -66,7 +68,7 @@ Each step runs on its own before the next one is added.
 
 1. **Vanilla headless app.** `MinimalPlugins` at 60 fps, `LogPlugin`, and
    `TerminalCtrlCHandlerPlugin`, as on the
-   [vanilla page](../design/vanilla.md). A system logs `tick {n}` every
+   [vanilla page](../../design/vanilla.md). A system logs `tick {n}` every
    100 ms. Check that Ctrl+C exits.
 2. **Reader thread.** Before building the app, make a channel and spawn a
    thread that loops on `read_line` and sends each line. Stop on `Ok(0)` (end

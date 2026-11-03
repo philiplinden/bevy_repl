@@ -1,5 +1,7 @@
 # Prototype 6: Bevy's unmodified logs land above the prompt
 
+_Archived 2026-11-02 from `prototypes/6-logs-above-prompt.md`. Part of the first prototype plan, superseded when the design was restarted. See the [2026-11-02 devlog](../../devlog/03-crossterm-rewrite/2026-11-02.md)._
+
 - **Objective:** Find out whether the pinned prompt works with Bevy's own
   logger, untouched.
 - **Claim:** With `LogPlugin::default()` left alone, Bevy's log lines (stderr)

@@ -1,5 +1,7 @@
 # Prototype 1b: Inline editing in raw mode, quiet
 
+_Archived 2026-11-02 from `prototypes/1b-raw-inline.md`. Part of the first prototype plan, superseded when the design was restarted. See the [2026-11-02 devlog](../../devlog/03-crossterm-rewrite/2026-11-02.md)._
+
 - **Objective:** Find out what the app has to do itself to edit a line once
   the terminal stops helping. No logging, so editing is tested on its own.
 - **Claim:** Keys read in raw mode go into a buffer, and redrawing the current

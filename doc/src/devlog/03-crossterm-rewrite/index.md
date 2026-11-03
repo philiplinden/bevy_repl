@@ -9,6 +9,7 @@ August 2026 onward, working toward v1.0. Dropping ratatui for a native crossterm
 - [2026-08-31: Handoff: Implement ADR 0003 (`fmt_layer` direct integration)](2026-08-31-fmt-layer-integration-handoff.md)
 - [2026-09-02: Reconsidering Tracing & The Clean-Slate Architecture](2026-09-02.md)
 - [2026-11-01: Picking Back Up: Bevy 0.20 and Finishing the Crossterm Migration](2026-11-01.md)
+- [2026-11-02: Stepping Back: Intent, Assumptions, Questions](2026-11-02.md)
 
-The work continues in [Prototypes](../../prototypes/index.md), which tests the
-design's assumptions one at a time.
+On 2026-11-02 the design was restarted from its intent. The first prototype
+plan is archived in [Prototypes](../../_archive/prototypes/index.md).

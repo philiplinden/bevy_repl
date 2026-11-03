@@ -1,33 +1,26 @@
 # proto
 
-Small throwaway programs that test the assumptions BevyREPL's design rests on,
-one at a time, before the crate is changed to match the
-[vision](../doc/src/design/vision.md). The list of assumptions, what counts as
-proof, and the results live in the book's
-[Prototypes](../doc/src/prototypes/index.md) section, with one page per
-prototype and a [devlog](../doc/src/prototypes/devlog.md).
+Small throwaway programs that answer BevyREPL's open design questions before
+the crate is changed. The questions come out of the design work that
+restarted on 2026-11-02 (see that day's devlog in the book).
+
+The first set of prototypes was written for a design that has since been
+dropped. Its plan is archived in `doc/src/_archive/prototypes/`, and its code
+is on the `prototypes` branch.
 
 This crate is a workspace member and is never published.
 
 ## Layout
 
-Each file in `src/bin/` is one prototype, named after its number in the
-book (`proto_0_line_mode.rs`, `proto_1a_raw_restore.rs`, ...). Cargo finds
-them on its own. Each file starts with what the prototype explores (objective),
-the assumption it tests, and what happens without it (baseline). Prototype 12
-(footprint) is measured with `cargo` and has no file. `minimal_repl.rs` is
-reserved for merging the prototypes together once they all have a result.
+Each file in `src/bin/` is one prototype, and Cargo finds them on its own.
+Run one with:
 
 ```sh
-cargo run -p proto --bin proto_0_line_mode
+cargo run -p proto --bin <name>
 ```
 
-## Rules
+## Practical notes
 
-- **One prototype proves one thing.** No prototype uses another's code.
-- **Prototypes don't depend on `bevy_repl`.** Its panic hook, Ctrl+C handler
-  and log setup would run too. Only the merge stage, or a prototype that
-  compares against the current crate, depends on it.
 - **Bevy comes from `[workspace.dependencies]`**, so `proto` and `bevy_repl`
   share one copy. Add the Bevy features and other crates a prototype needs
   here, in `proto/Cargo.toml`.

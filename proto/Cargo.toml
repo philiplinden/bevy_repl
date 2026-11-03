@@ -3,9 +3,8 @@ name = "proto"
 version = "0.0.0"
 edition = "2024"
 publish = false
-description = "Throwaway prototypes that test BevyREPL's design assumptions one at a time."
+description = "Throwaway prototypes that answer BevyREPL's open design questions."
 
 # Every file in src/bin/ is its own prototype. Add dependencies here as a
 # prototype needs them, not to bevy_repl.
 [dependencies]
-bevy = { workspace = true, features = ["bevy_log"] }

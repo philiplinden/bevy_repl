@@ -1,5 +1,7 @@
 # Vision for BevyREPL
 
+_Archived 2026-11-02 from `design/vision.md`. Written before deciding on a TUI, runtime toggling and a `custom_layer` for logs. See the [2026-11-02 devlog](../../devlog/03-crossterm-rewrite/2026-11-02.md)._
+
 Out of the box, Bevy captures keypresses as events. This leaves developers to pick one of three setups, and each one costs something:
 
 1. Text input requires a windowed app with a renderer, and the text is handled
